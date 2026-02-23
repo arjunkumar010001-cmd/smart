@@ -150,8 +150,11 @@ def register():
             print("✅ Candidate profile created")
         
         print("🎫 Generating access token...")
-        # Generate JWT token
-        access_token = create_access_token(identity={'user_id': user_id, 'role': role})
+        # Generate JWT token - identity is always a string (user_id), role in additional_claims
+        access_token = create_access_token(
+            identity=user_id,
+            additional_claims={'role': role}
+        )
         
         # P0 FIX: Send verification email AND welcome email
         verification_email_sent = False

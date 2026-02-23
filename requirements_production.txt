@@ -58,9 +58,10 @@ spacy==3.7.2  # Core spaCy library
 # python -m spacy download en_core_web_sm
 
 # --- Advanced Transformers & LLMs ---
-transformers==4.36.2  # Hugging Face transformers (BERT, GPT, T5)
+transformers==4.36.2  # Hugging Face transformers (BERT, GPT, T5, Flan-T5)
 torch==2.1.2  # PyTorch for deep learning
 sentence-transformers>=3.0.0  # Semantic similarity using SBERT
+sentencepiece>=0.1.99  # Required tokenizer for T5/Flan-T5 models
 
 # --- Text Processing ---
 nltk==3.8.1  # Natural Language Toolkit

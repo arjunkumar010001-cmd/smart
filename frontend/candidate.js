@@ -1,4 +1,25 @@
 // Candidate Dashboard Module
+// escapeHtml, esc, normalizeStatus, getStatusColor, getStatusIcon,
+// getScoreClass, createModal, closeTopModal, anonymizeId — all from shared-utils.js
+
+// ─── Global ESC-key & backdrop-click handler for candidate modals ───
+(function () {
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            const modals = document.querySelectorAll('.modal.show');
+            if (modals.length > 0) {
+                modals[modals.length - 1].remove();
+                e.preventDefault();
+            }
+        }
+    });
+    document.addEventListener('click', function (e) {
+        if (e.target.classList && e.target.classList.contains('modal') && e.target.classList.contains('show')) {
+            e.target.remove();
+        }
+    });
+})();
+
 function loadCandidateDashboard() {
     const dashboard = document.getElementById('candidateDashboard');
     dashboard.innerHTML = `
@@ -172,6 +193,9 @@ async function viewJobDetails(jobId) {
 
         const modal = document.createElement('div');
         modal.className = 'modal show';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', 'Job details');
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; border-radius: 12px 12px 0 0;">
@@ -204,7 +228,7 @@ async function viewJobDetails(jobId) {
                             <span style="font-size: 20px;">📋</span>
                             <span>Description</span>
                         </div>
-                        <p style="color: #475569; line-height: 1.8; margin: 0; white-space: pre-line;">${(job.description || '').replace(/Requirements?:\s*/i, '').trim()}</p>
+                        <p style="color: #475569; line-height: 1.8; margin: 0; white-space: pre-line;">${escapeHtml((job.description || '').replace(/Requirements?:\s*/i, '').trim())}</p>
                     </div>
                     
                     <!-- Requirements Section -->
@@ -215,8 +239,8 @@ async function viewJobDetails(jobId) {
                         </div>
                         <ul style="margin: 0; padding-left: 24px; color: #475569; line-height: 2;">
                             ${Array.isArray(job.requirements)
-                ? job.requirements.map(r => `<li style="margin-bottom: 10px;">${r}</li>`).join('')
-                : (job.requirements || '').split(/\n|\.(?=\s[A-Z])/).filter(r => r.trim() && !r.match(/^Requirements?:?\s*$/i)).map(r => `<li style="margin-bottom: 10px;">${r.trim()}</li>`).join('')}
+                ? job.requirements.map(r => `<li style="margin-bottom: 10px;">${escapeHtml(r)}</li>`).join('')
+                : (job.requirements || '').split(/\n|\.(?=\s[A-Z])/).filter(r => r.trim() && !r.match(/^Requirements?:?\s*$/i)).map(r => `<li style="margin-bottom: 10px;">${escapeHtml(r.trim())}</li>`).join('')}
                         </ul>
                     </div>
                     
@@ -227,13 +251,13 @@ async function viewJobDetails(jobId) {
                             <span>Required Skills</span>
                         </div>
                         <div class="job-tags" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            ${(job.required_skills || []).map(s => `<span class="tag" style="background: white; border: 2px solid #f97316; color: #ea580c; font-weight: 600; padding: 8px 16px; border-radius: 8px;">${s}</span>`).join('')}
+                            ${(job.required_skills || []).map(s => `<span class="tag" style="background: white; border: 2px solid #f97316; color: #ea580c; font-weight: 600; padding: 8px 16px; border-radius: 8px;">${escapeHtml(s)}</span>`).join('')}
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer" style="background: #f8fafc; padding: 20px 32px; border-radius: 0 0 12px 12px; display: flex; gap: 12px; justify-content: flex-end;">
                     <button class="btn btn-secondary" onclick="this.closest('.modal').remove()" style="padding: 12px 24px; border-radius: 8px; font-weight: 600;">Close</button>
-                    <button class="btn btn-primary" onclick="this.closest('.modal').remove(); applyToJob('${job._id}')" style="padding: 12px 32px; border-radius: 8px; font-weight: 600; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">Apply Now</button>
+                    ${(currentRole === 'candidate') ? `<button class="btn btn-primary" onclick="this.closest('.modal').remove(); applyToJob('${job._id}')" style="padding: 12px 32px; border-radius: 8px; font-weight: 600; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">Apply Now</button>` : ''}
                 </div>
             </div>
         `;
@@ -317,7 +341,7 @@ async function loadCandidateApplications() {
                                 <h3 class="job-title">${escapeHtml(app.job_title)}</h3>
                                 <p class="job-company">${escapeHtml(app.company_name)}</p>
                             </div>
-                            <span class="badge badge-${getStatusColor(app.status)}">${escapeHtml(app.status)}</span>
+                            <span class="badge badge-${getStatusColorClass(app.status)}">${escapeHtml(app.status)}</span>
                         </div>
                         <div class="job-meta">
                             <span>📅 Applied: ${new Date(app.applied_at).toLocaleDateString()}</span>
@@ -328,6 +352,7 @@ async function loadCandidateApplications() {
                                 📅 Interview scheduled: ${new Date(app.interview_date).toLocaleString()}
                             </div>
                         ` : ''}
+                        ${app.status === 'hired' ? buildOnboardingChecklist(app) : ''}
                     </div>
                 `).join('')}
             </div>
@@ -337,7 +362,9 @@ async function loadCandidateApplications() {
     }
 }
 
-function getStatusColor(status) {
+// getStatusColor is now provided by shared-utils.js
+// Legacy wrapper kept for backward compat — candidate.js used string-based color classes
+function getStatusColorClass(status) {
     const colors = {
         'pending': 'warning',
         'reviewing': 'info',
@@ -347,6 +374,65 @@ function getStatusColor(status) {
         'accepted': 'success'
     };
     return colors[status] || 'secondary';
+}
+
+function buildOnboardingChecklist(app) {
+    const onboarding = app.onboarding || {};
+    const steps = [
+        { key: 'offer_accepted', label: 'Accept Offer Letter', icon: '📄', desc: 'Review and accept your offer letter' },
+        { key: 'documents_uploaded', label: 'Upload Documents', icon: '📎', desc: 'ID proof, address proof, education certificates' },
+        { key: 'profile_completed', label: 'Complete Profile', icon: '👤', desc: 'Fill in emergency contacts and bank details' },
+        { key: 'nda_signed', label: 'Sign NDA / Agreements', icon: '✍️', desc: 'Non-disclosure and employment agreements' },
+        { key: 'it_setup_requested', label: 'IT Setup Request', icon: '💻', desc: 'Request laptop, software access, and email' },
+        { key: 'orientation_scheduled', label: 'Schedule Orientation', icon: '📅', desc: 'Pick a slot for your orientation session' }
+    ];
+    const completedCount = steps.filter(s => onboarding[s.key]).length;
+    const progress = Math.round((completedCount / steps.length) * 100);
+
+    return `
+        <div style="margin-top: 12px; background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="margin: 0; color: #166534; font-size: 15px;">🎉 Onboarding Checklist</h4>
+                <span style="font-size: 12px; color: #15803d; font-weight: 600;">${completedCount}/${steps.length} done</span>
+            </div>
+            <div style="background: #d1fae5; border-radius: 6px; height: 8px; margin-bottom: 12px; overflow: hidden;">
+                <div style="background: #10b981; height: 100%; width: ${progress}%; border-radius: 6px; transition: width 0.3s;"></div>
+            </div>
+            ${steps.map((step, idx) => {
+        const done = onboarding[step.key];
+        return `
+                <div style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; ${idx < steps.length - 1 ? 'border-bottom: 1px solid #d1fae5;' : ''}">
+                    <span style="font-size: 18px; cursor: pointer;" onclick="toggleOnboardingStep('${app._id || app.id}', '${step.key}', ${!done})" title="${done ? 'Mark incomplete' : 'Mark complete'}">
+                        ${done ? '✅' : '⬜'}
+                    </span>
+                    <div style="flex: 1;">
+                        <span style="font-size: 13px; font-weight: 600; color: ${done ? '#6b7280' : '#1f2937'}; ${done ? 'text-decoration: line-through;' : ''}">${step.icon} ${step.label}</span>
+                        <p style="margin: 2px 0 0; font-size: 12px; color: #6b7280;">${step.desc}</p>
+                    </div>
+                </div>`;
+    }).join('')}
+        </div>
+    `;
+}
+
+async function toggleOnboardingStep(appId, stepKey, value) {
+    try {
+        const response = await fetch(`${API_URL}/candidates/applications/${appId}/onboarding`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ step: stepKey, completed: value })
+        });
+        if (response.ok) {
+            loadCandidateApplications();
+        } else {
+            showNotification('Failed to update onboarding step', 'error');
+        }
+    } catch (err) {
+        showNotification('Failed to update onboarding step: ' + err.message, 'error');
+    }
 }
 
 async function loadCandidateInterviews() {
@@ -373,7 +459,7 @@ async function loadCandidateInterviews() {
         let interviewApps = [];
         if (appResponse.ok) {
             const appData = await appResponse.json();
-            interviewApps = (appData.applications || []).filter(app => 
+            interviewApps = (appData.applications || []).filter(app =>
                 app.status === 'interviewed' || app.interview_scheduled || app.meeting_link
             );
         }
@@ -400,6 +486,7 @@ async function loadCandidateInterviews() {
                 'waiting': '#F59E0B',
                 'in_progress': '#10B981',
                 'completed': '#6B7280',
+                'paused': '#F59E0B',
                 'expired': '#EF4444',
                 'cancelled': '#EF4444'
             };
@@ -407,27 +494,55 @@ async function loadCandidateInterviews() {
             const isJoinable = ['scheduled', 'waiting'].includes(status);
             const meetingLink = s.meeting_link || '';
             const scheduledTime = s.scheduled_time_display || (s.scheduled_time_utc ? new Date(s.scheduled_time_utc).toLocaleString() : 'ASAP');
+            const interviewType = (s.interview_type || 'ai_automated').replace(/_/g, ' ');
+            const typeIcon = s.interview_type === 'live' ? '👤' : s.interview_type === 'hybrid' ? '🔄' : '🤖';
+            const typeBadgeColor = s.interview_type === 'live' ? '#3b82f6' : s.interview_type === 'hybrid' ? '#8b5cf6' : '#10b981';
+            const hasRecording = s.recording_available || s.recording_path;
+            const malpracticeCount = s.malpractice_events_count || 0;
 
             interviewCards += `
                 <div class="job-card" style="border-left: 4px solid ${statusColor};">
                     <div class="job-header">
                         <div>
                             <h3 class="job-title">🎥 Video Interview</h3>
-                            <p class="job-company">Type: ${escapeHtml(s.interview_type || 'AI Automated')}</p>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+                                <span style="background: ${typeBadgeColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
+                                    ${typeIcon} ${escapeHtml(interviewType)}
+                                </span>
+                                ${hasRecording ? '<span style="background: #fee2e2; color: #991b1b; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">🔴 Recorded</span>' : ''}
+                                ${malpracticeCount > 0 ? `<span style="background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">⚠️ ${malpracticeCount} flags</span>` : ''}
+                            </div>
                         </div>
                         <span class="badge" style="background: ${statusColor}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
-                            ${escapeHtml(status.replace('_', ' ').toUpperCase())}
+                            ${escapeHtml(status.replace(/_/g, ' ').toUpperCase())}
                         </span>
                     </div>
                     <div class="job-meta">
                         <span>📅 ${escapeHtml(scheduledTime)}</span>
                         <span>⏱ ${s.duration_minutes || 90} min</span>
+                        ${s.questions_count ? `<span>❓ ${s.questions_count} questions</span>` : ''}
                     </div>
+                    ${s.evaluation_score !== undefined && status === 'completed' ? `
+                        <div style="margin-top: 12px; background: ${s.evaluation_score >= 70 ? '#f0fdf4' : s.evaluation_score >= 50 ? '#fefce8' : '#fef2f2'}; border-radius: 8px; padding: 12px; border-left: 3px solid ${s.evaluation_score >= 70 ? '#10b981' : s.evaluation_score >= 50 ? '#f59e0b' : '#ef4444'};">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 600; color: #1e293b;">Interview Score</span>
+                                <span style="font-size: 18px; font-weight: 700; color: ${s.evaluation_score >= 70 ? '#10b981' : s.evaluation_score >= 50 ? '#f59e0b' : '#ef4444'};">${s.evaluation_score}%</span>
+                            </div>
+                        </div>
+                    ` : ''}
                     ${isJoinable ? `
                         <div style="margin-top: 12px;">
                             <a href="${escapeHtml(meetingLink)}" target="_blank" 
                                class="btn btn-primary" style="display: inline-block; text-decoration: none; padding: 10px 24px; font-weight: 600;">
                                 🚀 Join Interview
+                            </a>
+                        </div>
+                    ` : ''}
+                    ${status === 'in_progress' ? `
+                        <div style="margin-top: 12px;">
+                            <a href="${escapeHtml(meetingLink)}" target="_blank" 
+                               class="btn btn-primary" style="display: inline-block; text-decoration: none; padding: 10px 24px; font-weight: 600; background: linear-gradient(135deg, #10b981, #059669);">
+                                ▶️ Resume Interview
                             </a>
                         </div>
                     ` : ''}
@@ -590,6 +705,50 @@ async function loadCandidateAssessments() {
                 </div>
             `}
         `;
+
+        // ── AI-Powered Smart Assessments Section ──
+        try {
+            const smartResp = await fetch(`${API_URL}/smart-assessments/available`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            if (smartResp.ok) {
+                const smartData = await smartResp.json();
+                const smartConfigs = smartData.configs || [];
+                if (smartConfigs.length > 0) {
+                    container.innerHTML += `
+                        <div class="card" style="margin-top:24px;border:2px solid #818cf8;background:linear-gradient(135deg,#eef2ff,#fff);">
+                            <h3>🤖 AI-Powered Smart Assessments</h3>
+                            <p style="color:#64748b;margin-bottom:16px;">Advanced assessments with AI-generated questions, live code execution, and intelligent scoring.</p>
+                            <div class="jobs-grid">
+                                ${smartConfigs.map(cfg => `
+                                    <div class="job-card" style="border-left:4px solid #6366f1;">
+                                        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+                                            <h3 style="margin:0;">${escapeHTML ? escapeHTML(cfg.title) : cfg.title}</h3>
+                                            <span class="tag" style="background:#6366f1;color:white;">AI Assessment</span>
+                                        </div>
+                                        <p style="color:#64748b;font-size:13px;margin-bottom:12px;">${escapeHTML ? escapeHTML(cfg.description || cfg.job_role) : (cfg.description || cfg.job_role)}</p>
+                                        <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px;margin-bottom:12px;">
+                                            <span>📝 ${cfg.total_questions} questions</span>
+                                            <span>⏱️ ${cfg.duration_minutes} min</span>
+                                            <span>🎯 ${cfg.passing_score}% to pass</span>
+                                        </div>
+                                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+                                            ${(cfg.question_types || []).map(t => `<span style="padding:2px 8px;background:#f1f5f9;border-radius:4px;font-size:11px;">${t}</span>`).join('')}
+                                        </div>
+                                        <button class="btn btn-primary" onclick="window.location.href='smart-assessment.html?config=${cfg._id}'">
+                                            🚀 Start AI Assessment
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        } catch (smartErr) {
+            console.warn('Smart assessments not available:', smartErr);
+        }
+
     } catch (error) {
         console.error('Failed to load assessments:', error);
         container.innerHTML = `
@@ -625,9 +784,101 @@ async function startQuiz(quizId) {
         }
 
         const data = await response.json();
-        showNotification('✓ Assessment started! Good luck!', 'success');
-        // Reload to show quiz interface
-        loadCandidateAssessments();
+        const attemptId = data.attempt_id || (data.attempt && data.attempt._id);
+        const questions = data.questions || [];
+        const quizInfo = data.quiz || {};
+
+        if (!questions.length) {
+            showNotification('No questions found for this quiz', 'warning');
+            return;
+        }
+
+        // Render inline quiz-taking interface
+        const container = document.getElementById('candidateAssessments');
+        let currentQ = 0;
+        const answers = {};
+        const startTime = Date.now();
+
+        function renderQuestion() {
+            const q = questions[currentQ];
+            const progress = Math.round(((currentQ + 1) / questions.length) * 100);
+            container.innerHTML = `
+                <div class="content-header">
+                    <h2>📝 ${escapeHtml(quizInfo.title || 'Assessment')}</h2>
+                    <button class="btn btn-secondary" onclick="if(confirm('Are you sure? Your progress will be lost.')) loadCandidateAssessments();">✕ Exit</button>
+                </div>
+                <div class="card" style="max-width: 800px; margin: 0 auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-weight: 600; color: #6366f1;">Question ${currentQ + 1} of ${questions.length}</span>
+                        <span style="font-size: 13px; color: #64748b;">⏱️ ${quizInfo.duration || 30} min limit</span>
+                    </div>
+                    <div style="background: #e2e8f0; border-radius: 6px; height: 6px; margin-bottom: 20px; overflow: hidden;">
+                        <div style="background: #6366f1; height: 100%; width: ${progress}%; transition: width 0.3s;"></div>
+                    </div>
+                    <div style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">${escapeHtml(q.question_text)}</div>
+                    ${q.question_type === 'multiple_choice' || q.question_type === 'true_false' ? `
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            ${(q.options || []).map((opt, idx) => `
+                                <label style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 2px solid ${answers[q._id] === opt ? '#6366f1' : '#e2e8f0'}; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: ${answers[q._id] === opt ? '#eef2ff' : 'white'};" 
+                                       onclick="document.querySelectorAll('.quiz-option').forEach(e=>e.style.borderColor='#e2e8f0');this.style.borderColor='#6366f1';this.style.background='#eef2ff';">
+                                    <input type="radio" name="quiz_answer" value="${escapeHtml(opt)}" class="quiz-option" ${answers[q._id] === opt ? 'checked' : ''} onchange="window._quizSelectAnswer('${q._id}', '${escapeHtml(opt)}')" style="display:none;">
+                                    <span style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid ${answers[q._id] === opt ? '#6366f1' : '#cbd5e1'}; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #6366f1; font-weight: bold; flex-shrink: 0; background: ${answers[q._id] === opt ? '#6366f1' : 'white'}; color: ${answers[q._id] === opt ? 'white' : '#6366f1'};">${String.fromCharCode(65 + idx)}</span>
+                                    <span>${escapeHtml(opt)}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <textarea id="shortAnswer" rows="4" class="form-control" placeholder="Type your answer here..." style="width: 100%; resize: vertical;">${answers[q._id] || ''}</textarea>
+                    `}
+                    <div style="display: flex; justify-content: space-between; margin-top: 24px;">
+                        <button class="btn btn-secondary" ${currentQ === 0 ? 'disabled' : ''} onclick="window._quizPrev()">← Previous</button>
+                        ${currentQ < questions.length - 1 ?
+                    `<button class="btn btn-primary" onclick="window._quizNext()">Next →</button>` :
+                    `<button class="btn btn-primary" style="background: #10b981;" onclick="window._quizSubmit()">✓ Submit Assessment</button>`
+                }
+                    </div>
+                </div>
+            `;
+        }
+
+        window._quizSelectAnswer = (qId, answer) => { answers[qId] = answer; };
+        window._quizPrev = () => { if (currentQ > 0) { currentQ--; renderQuestion(); } };
+        window._quizNext = () => {
+            const q = questions[currentQ];
+            if (q.question_type === 'short_answer') {
+                const val = document.getElementById('shortAnswer')?.value;
+                if (val) answers[q._id] = val;
+            }
+            if (currentQ < questions.length - 1) { currentQ++; renderQuestion(); }
+        };
+        window._quizSubmit = async () => {
+            const q = questions[currentQ];
+            if (q.question_type === 'short_answer') {
+                const val = document.getElementById('shortAnswer')?.value;
+                if (val) answers[q._id] = val;
+            }
+            const answeredCount = Object.keys(answers).length;
+            if (answeredCount < questions.length && !confirm(`You've answered ${answeredCount}/${questions.length} questions. Submit anyway?`)) return;
+
+            try {
+                const submitResp = await fetch(`${API_URL}/assessments/attempts/${attemptId}/submit`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ answers, time_spent: Math.round((Date.now() - startTime) / 1000) })
+                });
+                if (submitResp.ok) {
+                    const result = await submitResp.json();
+                    showNotification(`Assessment submitted! Score: ${result.percentage}% ${result.passed ? '✓ Passed!' : ''}`, result.passed ? 'success' : 'warning');
+                } else {
+                    showNotification('Failed to submit assessment', 'error');
+                }
+            } catch (err) {
+                showNotification('Submit error: ' + err.message, 'error');
+            }
+            loadCandidateAssessments();
+        };
+
+        renderQuestion();
     } catch (error) {
         console.error('Start quiz error:', error);
         showNotification('Failed to start assessment: ' + error.message, 'error');
@@ -635,7 +886,68 @@ async function startQuiz(quizId) {
 }
 
 async function viewQuizResults(quizId) {
-    showNotification('Quiz results viewing coming soon!', 'info');
+    try {
+        const attemptsResp = await fetch(`${API_URL}/assessments/my-attempts`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (!attemptsResp.ok) { showNotification('Failed to load results', 'error'); return; }
+        const attData = await attemptsResp.json();
+        const attempt = (attData.attempts || []).find(a => a.quiz_id === quizId && a.status === 'completed');
+        if (!attempt) { showNotification('No completed attempt found', 'warning'); return; }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal show';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', 'Assessment results');
+        const score = attempt.percentage || 0;
+        const passed = attempt.passed;
+        const correct = attempt.correct_count || 0;
+        const incorrect = attempt.incorrect_count || 0;
+        const unanswered = attempt.unanswered_count || 0;
+        const total = correct + incorrect + unanswered;
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 550px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">📊 Assessment Results</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div style="text-align: center; padding: 20px 0;">
+                        <div style="font-size: 56px; font-weight: 800; color: ${passed ? '#10b981' : '#ef4444'};">${Math.round(score)}%</div>
+                        <div style="font-size: 18px; font-weight: 600; color: ${passed ? '#166534' : '#991b1b'}; margin-top: 4px;">
+                            ${passed ? '✓ Passed' : '✗ Did Not Pass'}
+                        </div>
+                        <div style="font-size: 13px; color: #64748b; margin-top: 4px;">
+                            ${attempt.quiz_title || 'Assessment'}
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0;">
+                        <div style="text-align: center; padding: 12px; background: #f0fdf4; border-radius: 8px;">
+                            <div style="font-size: 20px; font-weight: 700; color: #166534;">${correct}</div>
+                            <div style="font-size: 12px; color: #15803d;">Correct</div>
+                        </div>
+                        <div style="text-align: center; padding: 12px; background: #fef2f2; border-radius: 8px;">
+                            <div style="font-size: 20px; font-weight: 700; color: #991b1b;">${incorrect}</div>
+                            <div style="font-size: 12px; color: #b91c1c;">Incorrect</div>
+                        </div>
+                        <div style="text-align: center; padding: 12px; background: #fefce8; border-radius: 8px;">
+                            <div style="font-size: 20px; font-weight: 700; color: #854d0e;">${unanswered}</div>
+                            <div style="font-size: 12px; color: #a16207;">Skipped</div>
+                        </div>
+                    </div>
+                    ${attempt.completed_at ? `<p style="text-align: center; font-size: 12px; color: #94a3b8;">Completed: ${new Date(attempt.completed_at).toLocaleString()}</p>` : ''}
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="this.closest('.modal').remove()">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    } catch (err) {
+        showNotification('Failed to load results: ' + err.message, 'error');
+    }
 }
 
 async function loadCandidateProfile() {
@@ -781,6 +1093,9 @@ async function editProfile() {
     // Create edit profile modal
     const modal = document.createElement('div');
     modal.className = 'modal show';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Edit profile');
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
@@ -883,13 +1198,8 @@ async function editProfile() {
     document.body.appendChild(modal);
 }
 
-// Helper function to escape HTML in template literals
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+// escapeHtml is now provided by shared-utils.js (loaded before this file)
+// Duplicate removed — using global escapeHtml() / esc()
 
 async function submitProfileEdit(e) {
     e.preventDefault();
@@ -956,6 +1266,9 @@ function uploadResume() {
     // Create modern upload modal
     const modal = document.createElement('div');
     modal.className = 'modal show';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Upload resume');
     modal.innerHTML = `
         <div class="modal-content upload-modal">
             <div class="modal-header">
@@ -1147,10 +1460,13 @@ async function submitResume() {
 }
 
 function candidateLogout() {
-    // Clear authentication data
+    // Clear all authentication data including role-specific tokens
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
     localStorage.removeItem('currentRole');
+    localStorage.removeItem('candidate_token');
+    localStorage.removeItem('recruiter_token');
+    localStorage.removeItem('admin_token');
 
     // Reload the page to return to login
     window.location.href = '/';
@@ -1164,8 +1480,8 @@ async function loadCandidateAnalytics() {
     container.innerHTML = '<div class="loading">Loading your analytics...</div>';
 
     try {
-        // Fetch candidate data AND available jobs in parallel
-        const [appsRes, profileRes, jobsRes] = await Promise.all([
+        // Fetch candidate data, available jobs, AND assessment sessions in parallel
+        const [appsRes, profileRes, jobsRes, assessRes] = await Promise.all([
             fetch(`${API_URL}/candidates/applications`, {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             }),
@@ -1174,7 +1490,11 @@ async function loadCandidateAnalytics() {
             }),
             fetch(`${API_URL}/jobs/list?status=open`, {
                 headers: { 'Authorization': `Bearer ${authToken}` }
-            })
+            }),
+            // Bug #5 fix: fetch assessment sessions to make recommendations dynamic
+            fetch(`${API_URL}/smart-assessments/my-sessions`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            }).catch(() => ({ ok: false }))  // non-blocking if endpoint unavailable
         ]);
 
         if (!appsRes.ok || !profileRes.ok) {
@@ -1184,6 +1504,14 @@ async function loadCandidateAnalytics() {
         const appsData = await appsRes.json();
         const profileData = await profileRes.json();
         const jobsData = jobsRes.ok ? await jobsRes.json() : { jobs: [] };
+        // Bug #5 fix: parse assessment sessions for dynamic recommendations
+        let assessSessions = [];
+        if (assessRes && assessRes.ok) {
+            try {
+                const assessData = await assessRes.json();
+                assessSessions = assessData.sessions || [];
+            } catch (_) { /* ignore parse errors */ }
+        }
 
         const applications = appsData.applications || [];
         const profile = profileData.candidate || {};
@@ -1442,7 +1770,7 @@ async function loadCandidateAnalytics() {
                     <p>Personalized tips to improve your job search success</p>
                 </div>
                 <div class="recommendations-grid">
-                    ${generateRecommendations(applications, profile, profileCompletion, avgScore, matchingJobs)}
+                    ${generateRecommendations(applications, profile, profileCompletion, avgScore, matchingJobs, assessSessions)}
                 </div>
             </div>
         `;
@@ -1457,16 +1785,29 @@ async function loadCandidateAnalytics() {
     }
 }
 
+/**
+ * Calculate profile completion percentage.
+ * Bug #3 fix: uses server-provided completion_score when available,
+ * falls back to client-side calc with corrected field names.
+ * @param {Object} profile - Candidate profile object
+ * @returns {number} Completion percentage (0-100)
+ */
 function calculateProfileCompletion(profile) {
+    // Prefer server-computed score (Bug #3 fix)
+    if (typeof profile.completion_score === 'number') {
+        return profile.completion_score;
+    }
+    // Fallback: client-side calculation with corrected field names
     let score = 0;
     const factors = [
-        profile.resume_path,
+        profile.resume_file || profile.resume_uploaded || profile.resume_path,
         profile.skills && profile.skills.length > 0,
-        profile.experience,
+        profile.experience_years || profile.experience,
         profile.education,
         profile.phone,
         profile.location,
-        profile.linkedin
+        profile.linkedin,
+        profile.bio && profile.bio.length > 50
     ];
 
     score = (factors.filter(f => f).length / factors.length) * 100;
@@ -1524,7 +1865,19 @@ function generateSkillsInsights(applications, profile) {
     `;
 }
 
-function generateRecommendations(applications, profile, profileCompletion, avgScore, matchingJobs) {
+/**
+ * Generate dynamic recommendation cards based on candidate data.
+ * Bug #5 fix: recommendations are fully conditional. 'Take Assessments' only
+ * shows when unstarted sessions exist.
+ * @param {Array} applications
+ * @param {Object} profile
+ * @param {number} profileCompletion
+ * @param {number} avgScore
+ * @param {number} matchingJobs
+ * @param {Array} assessSessions - Smart assessment sessions for the candidate
+ * @returns {string} HTML string of recommendation cards
+ */
+function generateRecommendations(applications, profile, profileCompletion, avgScore, matchingJobs, assessSessions = []) {
     const recommendations = [];
 
     // Profile completion
@@ -1575,15 +1928,20 @@ function generateRecommendations(applications, profile, profileCompletion, avgSc
         });
     }
 
-    // Take assessments
-    recommendations.push({
-        icon: '📝',
-        title: 'Take Skill Assessments',
-        desc: 'Complete assessments to validate your skills and stand out to employers.',
-        action: 'View Assessments',
-        color: '#f093fb',
-        onclick: "switchCandidateTab('assessments', event)"
-    });
+    // Bug #5 fix: Only show assessment recommendation if there are unstarted sessions
+    const unstartedSessions = assessSessions.filter(
+        s => s.status === 'assigned' || s.status === 'in_progress'
+    );
+    if (unstartedSessions.length > 0) {
+        recommendations.push({
+            icon: '📝',
+            title: `${unstartedSessions.length} Assessment${unstartedSessions.length > 1 ? 's' : ''} Pending`,
+            desc: `You have ${unstartedSessions.length} assessment${unstartedSessions.length > 1 ? 's' : ''} waiting. Complete them to advance your applications.`,
+            action: 'View Assessments',
+            color: '#f093fb',
+            onclick: "switchCandidateTab('assessments', event)"
+        });
+    }
 
     if (recommendations.length === 0) {
         recommendations.push({

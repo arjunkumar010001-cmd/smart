@@ -5,4 +5,4 @@ This simply imports and exposes the Flask app from backend
 from backend.app import app, application, create_app
 
 if __name__ == '__main__':
-    app.run()
+    app.run(use_reloader=False)

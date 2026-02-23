@@ -142,10 +142,14 @@
     </div>
 
     <script>
-        const API_URL = 'https://my-project-smart-hiring.onrender.com/api';
-        const authToken = localStorage.getItem('authToken');
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? `${window.location.protocol}//${window.location.hostname}:5000/api`
+            : window.location.origin + '/api';
+        const authToken = localStorage.getItem('recruiter_token') || localStorage.getItem('admin_token');
         
-        if (!authToken) window.location.href = 'login.html';
+        if (!authToken) window.location.href = 'index.html';
+
+        function escH(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
         let optionCount = 0;
 
@@ -254,20 +258,20 @@
             grid.innerHTML = questions.map(q => `
                 <div class="question-card">
                     <div class="question-header">
-                        <span class="question-type">${q.question_type.replace('_', ' ').toUpperCase()}</span>
+                        <span class="question-type">${escH(q.question_type.replace('_', ' ').toUpperCase())}</span>
                         <div class="question-actions">
                             <button class="btn-icon btn-delete" onclick="deleteQuestion('${q._id}')">🗑️ Delete</button>
                         </div>
                     </div>
-                    <div class="question-text">${q.question_text}</div>
+                    <div class="question-text">${escH(q.question_text)}</div>
                     ${q.options && q.options.length > 0 ? `
                         <div style="margin-top:12px;">
-                            ${q.options.map((opt, i) => `<div style="font-size:14px;color:#4a5568;">• ${opt}</div>`).join('')}
+                            ${q.options.map((opt, i) => `<div style="font-size:14px;color:#4a5568;">• ${escH(opt)}</div>`).join('')}
                         </div>
                     ` : ''}
                     <div class="question-meta">
-                        <span>📊 ${q.difficulty}</span>
-                        <span>🏷️ ${q.category}</span>
+                        <span>📊 ${escH(q.difficulty)}</span>
+                        <span>🏷️ ${escH(q.category)}</span>
                         <span>⭐ ${q.points} pts</span>
                     </div>
                 </div>
@@ -293,9 +297,10 @@
         }
 
         function logout() {
-            localStorage.removeItem('authToken');
+            localStorage.removeItem('recruiter_token');
+            localStorage.removeItem('admin_token');
             localStorage.removeItem('currentUser');
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         }
 
         loadQuestions();

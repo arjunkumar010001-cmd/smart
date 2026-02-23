@@ -1,12 +1,13 @@
 """
 Enhanced AI Interview Routes with Dynamic Role-Specific Questions,
-LinkedIn Integration, and Fresher-Friendly Scoring
+LinkedIn Integration, Fresher-Friendly Scoring, and Flan-T5 Interview Engine
 """
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 from bson import ObjectId
+import logging
 
 from backend.models.database import get_db
 from backend.services.ai_interviewer_service_v2 import (
@@ -21,6 +22,20 @@ from backend.services.linkedin_career_service import (
     calculate_social_proof_score
 )
 from backend.services.ranking_service import rank_candidates_for_job, get_candidate_insights
+
+# ── Flan-T5 imports (graceful) ────────────────────────────────────────────────
+try:
+    from backend.services.flan_t5_service import (
+        FlanT5QuestionGenerator,
+        run_gap_analysis,
+        generate_gap_based_questions,
+        get_generator,
+    )
+    FLAN_T5_ROUTES = True
+except ImportError:
+    FLAN_T5_ROUTES = False
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('ai_interview_v2', __name__)
 linkedin_service = LinkedInService()
@@ -492,5 +507,326 @@ def get_social_proof(candidate_id):
         
         return jsonify(social_proof), 200
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# FLAN-T5 DYNAMIC INTERVIEW ENGINE
+# ============================================================================
+
+@bp.route('/flan-t5/generate', methods=['POST'])
+@jwt_required()
+def flan_t5_generate_question():
+    """
+    Generate a single interview question using Flan-T5 for a specific skill gap.
+
+    POST /api/ai-interview-v2/flan-t5/generate
+    Body: {
+        "skill_name": "Docker",
+        "job_role": "DevOps Engineer",
+        "difficulty_level": "medium"   // optional, defaults to "medium"
+    }
+
+    Returns: { generated_question, model_answer, skill, difficulty, source }
+    """
+    try:
+        if not FLAN_T5_ROUTES:
+            return jsonify({'error': 'Flan-T5 service not available'}), 503
+
+        user_id, role = get_user_info(get_jwt_identity())
+
+        data = request.get_json()
+        skill_name = data.get('skill_name')
+        job_role = data.get('job_role')
+        difficulty_level = data.get('difficulty_level', 'medium')
+
+        if not skill_name or not job_role:
+            return jsonify({'error': 'skill_name and job_role are required'}), 400
+
+        if difficulty_level not in ('easy', 'medium', 'hard'):
+            return jsonify({'error': 'difficulty_level must be easy, medium, or hard'}), 400
+
+        generator = get_generator()
+        result = generator.generate(
+            skill_name=skill_name,
+            job_role=job_role,
+            difficulty_level=difficulty_level,
+        )
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        logger.exception(f"Flan-T5 generate failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/flan-t5/gap-interview', methods=['POST'])
+@jwt_required()
+def flan_t5_gap_interview():
+    """
+    Full Gap Analysis → Flan-T5 interview question generation pipeline.
+
+    POST /api/ai-interview-v2/flan-t5/gap-interview
+    Body: {
+        "job_id": "job123",
+        "candidate_id": "candidate456",
+        "difficulty_level": "medium",   // optional
+        "max_questions": 10             // optional
+    }
+
+    Flow:
+      1. Fetch job required_skills + candidate skills from DB
+      2. probe_zone = job_skills - candidate_skills  (Set Theory)
+      3. For each missing skill → Flan-T5 generates question + model answer
+      4. Returns gap analysis + generated questions
+    """
+    try:
+        if not FLAN_T5_ROUTES:
+            return jsonify({'error': 'Flan-T5 service not available'}), 503
+
+        user_id, role = get_user_info(get_jwt_identity())
+
+        if role not in ['company', 'recruiter', 'admin']:
+            return jsonify({'error': 'Only recruiters can generate gap-based interviews'}), 403
+
+        data = request.get_json()
+        job_id = data.get('job_id')
+        candidate_id = data.get('candidate_id')
+        difficulty_level = data.get('difficulty_level', 'medium')
+        max_questions = data.get('max_questions', 10)
+
+        if not job_id or not candidate_id:
+            return jsonify({'error': 'job_id and candidate_id are required'}), 400
+
+        db = get_db()
+
+        # Fetch job
+        job = db['jobs'].find_one({'_id': ObjectId(job_id)})
+        if not job:
+            return jsonify({'error': 'Job not found'}), 404
+
+        # Verify ownership
+        if str(job.get('recruiter_id')) != user_id and role != 'admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Fetch candidate
+        candidate = db['candidates'].find_one({'user_id': candidate_id})
+        if not candidate:
+            return jsonify({'error': 'Candidate not found'}), 404
+
+        job_skills = [s.strip() for s in job.get('required_skills', []) if s]
+        candidate_skills = [s.strip() for s in candidate.get('skills', []) if s]
+
+        if not job_skills:
+            return jsonify({'error': 'Job has no required_skills defined'}), 400
+
+        # Run full pipeline
+        result = generate_gap_based_questions(
+            job_required_skills=job_skills,
+            candidate_skills=candidate_skills,
+            job_role=job.get('title', 'Software Developer'),
+            difficulty_level=difficulty_level,
+            max_questions=max_questions,
+        )
+
+        # Persist to DB
+        interview_doc = {
+            'job_id': job_id,
+            'candidate_id': candidate_id,
+            'job_title': job.get('title'),
+            'gap_analysis': result['gap_analysis'],
+            'questions': result['generated_questions'],
+            'summary': result['summary'],
+            'created_at': datetime.utcnow(),
+            'created_by': user_id,
+            'version': 'flan-t5-gap',
+            'is_active': True,
+        }
+        insert_result = db['interview_questions'].insert_one(interview_doc)
+
+        return jsonify({
+            'message': 'Gap-based interview questions generated successfully 🧠',
+            'interview_set_id': str(insert_result.inserted_id),
+            **result,
+        }), 201
+
+    except Exception as e:
+        logger.exception(f"Flan-T5 gap interview failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/flan-t5/evaluate-answer', methods=['POST'])
+@jwt_required()
+def flan_t5_evaluate_answer():
+    """
+    Evaluate a candidate's answer using SBERT cosine similarity
+    against the Flan-T5 generated model answer.
+
+    POST /api/ai-interview-v2/flan-t5/evaluate-answer
+    Body: {
+        "candidate_answer": "My answer text...",
+        "model_answer": "The reference answer from Flan-T5...",
+        "threshold": 0.70   // optional, defaults to 0.70
+    }
+
+    Returns: {
+        similarity_score, passed, threshold, evaluation_method, feedback
+    }
+    """
+    try:
+        if not FLAN_T5_ROUTES:
+            return jsonify({'error': 'Flan-T5 service not available'}), 503
+
+        data = request.get_json()
+        candidate_answer = data.get('candidate_answer', '')
+        model_answer = data.get('model_answer', '')
+        threshold = data.get('threshold', 0.70)
+
+        if not candidate_answer:
+            return jsonify({'error': 'candidate_answer is required'}), 400
+        if not model_answer:
+            return jsonify({'error': 'model_answer is required'}), 400
+
+        generator = get_generator()
+        evaluation = generator.evaluate_answer(
+            candidate_answer=candidate_answer,
+            model_answer=model_answer,
+            threshold=threshold,
+        )
+
+        return jsonify(evaluation), 200
+
+    except Exception as e:
+        logger.exception(f"Flan-T5 answer evaluation failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/flan-t5/full-interview', methods=['POST'])
+@jwt_required()
+def flan_t5_full_interview():
+    """
+    Submit a candidate answer for a Flan-T5 generated question and get
+    full evaluation (SBERT cosine similarity + score).
+
+    POST /api/ai-interview-v2/flan-t5/full-interview
+    Body: {
+        "interview_set_id": "...",
+        "question_index": 0,
+        "candidate_answer": "My answer..."
+    }
+
+    Flow:
+      1. Fetch the interview set from DB
+      2. Get the question + model_answer at question_index
+      3. SBERT-embed candidate_answer and model_answer
+      4. Cosine similarity → threshold 0.70
+      5. Store result and return score
+    """
+    try:
+        if not FLAN_T5_ROUTES:
+            return jsonify({'error': 'Flan-T5 service not available'}), 503
+
+        user_id, role = get_user_info(get_jwt_identity())
+
+        data = request.get_json()
+        interview_set_id = data.get('interview_set_id')
+        question_index = data.get('question_index', 0)
+        candidate_answer = data.get('candidate_answer', '')
+
+        if not interview_set_id:
+            return jsonify({'error': 'interview_set_id is required'}), 400
+        if not candidate_answer:
+            return jsonify({'error': 'candidate_answer is required'}), 400
+
+        db = get_db()
+        interview_set = db['interview_questions'].find_one({'_id': ObjectId(interview_set_id)})
+
+        if not interview_set:
+            return jsonify({'error': 'Interview set not found'}), 404
+
+        questions = interview_set.get('questions', [])
+        if question_index < 0 or question_index >= len(questions):
+            return jsonify({'error': f'Invalid question_index. Must be 0-{len(questions) - 1}'}), 400
+
+        question = questions[question_index]
+        model_answer = question.get('model_answer', '')
+
+        if not model_answer:
+            return jsonify({'error': 'No model answer available for this question'}), 400
+
+        # SBERT evaluation
+        generator = get_generator()
+        evaluation = generator.evaluate_answer(
+            candidate_answer=candidate_answer,
+            model_answer=model_answer,
+            threshold=0.70,
+        )
+
+        # Store the answer + evaluation in DB
+        answer_doc = {
+            'interview_set_id': interview_set_id,
+            'question_index': question_index,
+            'question': question.get('question') or question.get('generated_question', ''),
+            'skill': question.get('skill', ''),
+            'candidate_answer': candidate_answer,
+            'model_answer': model_answer,
+            'evaluation': evaluation,
+            'candidate_id': user_id,
+            'answered_at': datetime.utcnow(),
+        }
+        db['interview_answers'].insert_one(answer_doc)
+
+        # Update question status in interview set
+        db['interview_questions'].update_one(
+            {'_id': ObjectId(interview_set_id)},
+            {'$set': {
+                f'questions.{question_index}.candidate_answer': candidate_answer,
+                f'questions.{question_index}.evaluation': evaluation,
+                f'questions.{question_index}.answered_at': datetime.utcnow().isoformat(),
+            }}
+        )
+
+        return jsonify({
+            'question': question.get('question') or question.get('generated_question', ''),
+            'skill': question.get('skill', ''),
+            'candidate_answer': candidate_answer,
+            'evaluation': evaluation,
+        }), 200
+
+    except Exception as e:
+        logger.exception(f"Flan-T5 full interview evaluation failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/flan-t5/status', methods=['GET'])
+@jwt_required()
+def flan_t5_status():
+    """
+    Check Flan-T5 engine status — whether models are loaded and ready.
+
+    GET /api/ai-interview-v2/flan-t5/status
+    """
+    try:
+        if not FLAN_T5_ROUTES:
+            return jsonify({
+                'flan_t5_available': False,
+                'sbert_available': False,
+                'message': 'Flan-T5 service module not importable',
+            }), 200
+
+        from backend.services.flan_t5_service import FLAN_T5_AVAILABLE, SBERT_AVAILABLE
+
+        generator = get_generator()
+
+        return jsonify({
+            'flan_t5_available': FLAN_T5_AVAILABLE,
+            'flan_t5_model_loaded': generator.is_available,
+            'sbert_available': SBERT_AVAILABLE,
+            'sbert_model_loaded': generator.sbert is not None,
+            'evaluation_threshold': 0.70,
+            'message': 'Flan-T5 engine operational' if generator.is_available else 'Using fallback templates',
+        }), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500

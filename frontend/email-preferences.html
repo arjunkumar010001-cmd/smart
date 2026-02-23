@@ -343,13 +343,17 @@
     </div>
 
     <script>
-        const API_URL = 'https://my-project-smart-hiring.onrender.com/api';
-        let authToken = localStorage.getItem('authToken');
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? `${window.location.protocol}//${window.location.hostname}:5000/api`
+            : window.location.origin + '/api';
+        let authToken = localStorage.getItem('recruiter_token')
+            || localStorage.getItem('admin_token')
+            || localStorage.getItem('candidate_token');
         let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
 
         // Redirect if not logged in
         if (!authToken) {
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         }
 
         // Set dashboard link based on role
@@ -449,9 +453,11 @@
         }
 
         function logout() {
-            localStorage.removeItem('authToken');
+            localStorage.removeItem('recruiter_token');
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('candidate_token');
             localStorage.removeItem('currentUser');
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         }
     </script>
     <script src="a11y.js"></script>

@@ -46,6 +46,32 @@ class Config:
     
     # Frontend
     FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+    
+    # AI Assessment APIs
+    # Primary: Groq (FREE — LLaMA 3 / Mixtral, no credit card needed)
+    # Get your free key at: https://console.groq.com/keys
+    GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+    GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.3-70b-versatile')
+
+    # Fallback 1: Anthropic Claude (PAID — only used if Groq fails)
+    ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
+    # Fallback 2: OpenAI GPT-4o-mini (PAID — only used if both above fail)
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+
+    # Code Execution APIs
+    # Primary: Piston API (FREE — no API key needed, 30+ languages)
+    PISTON_API_URL = os.getenv('PISTON_API_URL', 'https://emkc.org/api/v2/piston')
+
+    # Fallback: Judge0 Code Execution API (RapidAPI — 100 calls/day free)
+    JUDGE0_API_URL = os.getenv('JUDGE0_API_URL', 'https://judge0-ce.p.rapidapi.com')
+    JUDGE0_API_KEY = os.getenv('JUDGE0_API_KEY', '')
+    JUDGE0_API_HOST = os.getenv('JUDGE0_API_HOST', 'judge0-ce.p.rapidapi.com')
+    JUDGE0_SELF_HOSTED = os.getenv('JUDGE0_SELF_HOSTED', 'false')
+
+    # API Cost Guards — daily call limits per provider
+    GROQ_DAILY_LIMIT = int(os.getenv('GROQ_DAILY_LIMIT', '500'))
+    CLAUDE_DAILY_LIMIT = int(os.getenv('CLAUDE_DAILY_LIMIT', '50'))
+    OPENAI_DAILY_LIMIT = int(os.getenv('OPENAI_DAILY_LIMIT', '50'))
 
 class DevelopmentConfig(Config):
     """Development configuration"""

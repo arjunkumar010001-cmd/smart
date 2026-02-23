@@ -110,8 +110,11 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         Permissions.EDIT_ASSESSMENT,
         Permissions.VIEW_ASSESSMENT,
         Permissions.GRADE_ASSESSMENT,
+        Permissions.VIEW_ANALYTICS,
         Permissions.VIEW_COMPANY_ANALYTICS,
         Permissions.EXPORT_REPORTS,
+        Permissions.VIEW_AUDIT_LOGS,      # Fairness audit access
+        Permissions.MANAGE_COMPLIANCE,     # Run fairness audits
     },
     
     'hiring_manager': {
@@ -134,10 +137,18 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         Permissions.PUBLISH_JOB,
         Permissions.VIEW_APPLICATIONS,
         Permissions.MANAGE_APPLICATIONS,
+        Permissions.REVIEW_APPLICATIONS,
         Permissions.VIEW_CANDIDATES,
         Permissions.VIEW_CANDIDATE_PII,
+        Permissions.CREATE_ASSESSMENT,
+        Permissions.EDIT_ASSESSMENT,
         Permissions.VIEW_ASSESSMENT,
+        Permissions.GRADE_ASSESSMENT,
+        Permissions.VIEW_ANALYTICS,
         Permissions.VIEW_COMPANY_ANALYTICS,
+        Permissions.EXPORT_REPORTS,
+        Permissions.VIEW_AUDIT_LOGS,      # Fairness audit access
+        Permissions.MANAGE_COMPLIANCE,     # Run fairness audits
     },
     
     'candidate': {

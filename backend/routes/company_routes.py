@@ -45,6 +45,7 @@ def update_application_status(application_id):
         new_status = data.get('status')
         note = data.get('note', '')
         interview_date = data.get('interview_date')
+        interview_type = data.get('interview_type', 'ai_automated')
         meeting_link = data.get('meeting_link')
         
         # Validate status
@@ -79,7 +80,7 @@ def update_application_status(application_id):
                     job_id=job_id,
                     candidate_id=candidate_id,
                     scheduled_by=user_id,
-                    interview_type='ai_automated',
+                    interview_type=interview_type,
                     duration_minutes=90,
                     base_url=base_url,
                     scheduled_time_utc=scheduled_time,
@@ -121,6 +122,7 @@ def update_application_status(application_id):
             if meeting_link:
                 update_data['meeting_link'] = meeting_link
             update_data['interview_scheduled'] = True
+            update_data['interview_type'] = interview_type
         
         # Update application
         result = applications_collection.update_one(
@@ -130,6 +132,25 @@ def update_application_status(application_id):
         
         if result.modified_count == 0:
             return jsonify({'error': 'Failed to update status'}), 500
+        
+        # Log audit event for fairness tracking
+        try:
+            log_audit_event(
+                event_type='status_changed',
+                user_id=user_id,
+                job_id=str(application.get('job_id', '')),
+                candidate_id=str(application.get('candidate_id', '')),
+                application_id=application_id,
+                details={
+                    'old_status': old_status,
+                    'new_status': new_status,
+                    'note': note,
+                    'recruiter_email': recruiter_email,
+                    'decision_type': new_status
+                }
+            )
+        except Exception as audit_err:
+            print(f"⚠️ Audit log failed (non-blocking): {audit_err}")
         
         # Send email notification to candidate
         try:
@@ -197,7 +218,7 @@ def get_application_history(application_id):
             user_id = current_user.get('user_id')
             role = current_user.get('role')
         
-        if role not in ['company', 'admin', 'candidate']:
+        if role not in ['company', 'recruiter', 'admin', 'candidate']:
             return jsonify({'error': 'Unauthorized'}), 403
         
         db = get_db()
@@ -248,7 +269,7 @@ def get_application_stats():
             user_id = current_user.get('user_id')
             role = current_user.get('role')
         
-        if role != 'company':
+        if role not in ['company', 'recruiter', 'admin']:
             return jsonify({'error': 'Only recruiters can view stats'}), 403
         
         db = get_db()
@@ -331,8 +352,14 @@ def get_ranked_candidates(job_id):
         for app in applications:
             candidate_id = app.get('candidate_id')
             
-            # Get candidate profile
-            candidate = db['candidates'].find_one({'_id': ObjectId(candidate_id)})
+            # Get candidate profile (candidates collection keyed by user_id)
+            candidate = db['candidates'].find_one({'user_id': candidate_id})
+            if not candidate:
+                # Fallback: try by _id
+                try:
+                    candidate = db['candidates'].find_one({'_id': ObjectId(candidate_id)})
+                except Exception:
+                    pass
             if not candidate:
                 continue
             
@@ -343,6 +370,8 @@ def get_ranked_candidates(job_id):
             
             # Extract candidate skills and resume text
             candidate_skills = candidate.get('skills', [])
+            if not isinstance(candidate_skills, list):
+                candidate_skills = []
             resume_text = candidate.get('resume_text', '')
             
             # Calculate skill match
@@ -350,10 +379,23 @@ def get_ranked_candidates(job_id):
             
             # For now, use simplified scoring (TF-IDF requires sklearn which may not be available)
             # Calculate based on skill match and experience
-            experience_years = candidate.get('experience_years', 0) or candidate.get('experience', 0)
+            # Robust extraction: experience_years may be missing, and
+            # 'experience' may be a list of job-history dicts (not a number).
+            experience_years = candidate.get('experience_years', None)
+            if not isinstance(experience_years, (int, float)):
+                exp_raw = candidate.get('experience', 0)
+                if isinstance(exp_raw, (int, float)):
+                    experience_years = exp_raw
+                elif isinstance(exp_raw, list):
+                    experience_years = len(exp_raw)  # approximate from entries
+                else:
+                    try:
+                        experience_years = float(exp_raw)
+                    except (TypeError, ValueError):
+                        experience_years = 0
             
             # Experience score (normalize to 0-1, max at 10 years)
-            experience_score = min(experience_years / 10.0, 1.0)
+            experience_score = min(float(experience_years) / 10.0, 1.0)
             
             # Compute overall score (60% skills, 40% experience)
             overall_score = compute_overall_score(
@@ -368,13 +410,22 @@ def get_ranked_candidates(job_id):
             matched_skills = list(job_skills_set.intersection(candidate_skills_set))
             missing_skills = list(job_skills_set - candidate_skills_set)
             
+            # Safely serialize applied_date (could be datetime, string, or None)
+            raw_date = app.get('applied_date')
+            if hasattr(raw_date, 'isoformat'):
+                applied_date_str = raw_date.isoformat()
+            elif isinstance(raw_date, str):
+                applied_date_str = raw_date
+            else:
+                applied_date_str = datetime.utcnow().isoformat()
+            
             # Add to ranked list
             ranked_candidates.append({
                 'application_id': str(app['_id']),
                 'candidate_id': candidate_id,
                 'candidate_name': user.get('full_name', 'Unknown'),
                 'candidate_email': user.get('email', ''),
-                'applied_date': app.get('applied_date', datetime.utcnow()).isoformat(),
+                'applied_date': applied_date_str,
                 'status': app.get('status', 'pending'),
                 'scores': {
                     'overall_score': overall_score,
@@ -389,7 +440,7 @@ def get_ranked_candidates(job_id):
                     'total_required': len(job_skills)
                 },
                 'experience_years': experience_years,
-                'education': candidate.get('education', 'Not specified'),
+                'education': candidate.get('education', 'Not specified') if isinstance(candidate.get('education'), str) else 'Not specified',
                 'location': candidate.get('location', 'Not specified'),
                 'resume_uploaded': candidate.get('resume_uploaded', False)
             })

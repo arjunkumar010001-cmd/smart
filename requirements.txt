@@ -55,6 +55,10 @@ numpy==1.26.4
 sentence-transformers>=3.0.0
 torch>=2.0.0  # Required by sentence-transformers
 
+# P0 ML: HuggingFace Transformers — Flan-T5 for dynamic interview question generation
+transformers>=4.36.0  # google/flan-t5-base
+sentencepiece>=0.1.99  # Required tokenizer for T5 models
+
 # P0 ML: Fairness evaluation (AIF360 alternative - lighter weight)
 fairlearn==0.9.0
 

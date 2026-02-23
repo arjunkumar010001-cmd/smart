@@ -161,10 +161,18 @@ def get_company_jobs():
         
         print(f"✅ Found {len(jobs)} jobs for recruiter {user_id}")
         
-        # Convert ObjectId to string
+        # Count applications for each job
+        applications_collection = db['applications']
+        
+        # Convert ObjectId to string and add application counts
         for job in jobs:
             job['_id'] = str(job['_id'])
             job['recruiter_id'] = str(job['recruiter_id'])
+            # BUG #12 fix: populate real application count
+            try:
+                job['applications_count'] = applications_collection.count_documents({'job_id': job['_id']})
+            except Exception:
+                job['applications_count'] = 0
             # Convert datetime to ISO format string if present
             if 'posted_date' in job:
                 job['posted_date'] = job['posted_date'].isoformat() if hasattr(job['posted_date'], 'isoformat') else str(job['posted_date'])
@@ -223,17 +231,54 @@ def get_company_stats():
                 {'$group': {'_id': '$status', 'count': {'$sum': 1}}}
             ]
             for doc in applications_collection.aggregate(pipeline):
-                applications_by_status[doc['_id']] = doc['count']
+                applications_by_status[doc['_id'] or 'pending'] = doc['count']
         
-        print(f"✅ Stats: {active_jobs} jobs, {total_applications} applications")
+        # Count matched candidates (applications with overall_score >= 40)
+        matched_candidates = 0
+        if job_ids:
+            matched_candidates = applications_collection.count_documents({
+                'job_id': {'$in': job_ids},
+                'overall_score': {'$gte': 40}
+            })
+        
+        # Count interviews scheduled
+        interviews_scheduled = applications_by_status.get('interviewed', 0)
+        # Also check the interviews collection
+        try:
+            interviews_collection = db['interviews']
+            interview_count = interviews_collection.count_documents({
+                'job_id': {'$in': job_ids},
+                'status': {'$in': ['scheduled', 'waiting', 'in_progress']}
+            })
+            interviews_scheduled = max(interviews_scheduled, interview_count)
+        except Exception:
+            pass
+        
+        # Compute average match score
+        avg_match_score = 0
+        if job_ids:
+            score_pipeline = [
+                {'$match': {'job_id': {'$in': job_ids}, 'overall_score': {'$exists': True, '$gt': 0}}},
+                {'$group': {'_id': None, 'avg': {'$avg': '$overall_score'}}}
+            ]
+            score_result = list(applications_collection.aggregate(score_pipeline))
+            if score_result:
+                avg_match_score = round(score_result[0].get('avg', 0), 1)
+        
+        print(f"✅ Stats: {active_jobs} jobs, {total_applications} applications, {matched_candidates} matched")
         
         return jsonify({
             'active_jobs': active_jobs,
             'total_jobs': len(recruiter_jobs),
             'total_applications': total_applications,
+            'matched_candidates': matched_candidates,
+            'interviews_scheduled': interviews_scheduled,
+            'avg_match_score': avg_match_score,
             'shortlisted': applications_by_status.get('shortlisted', 0),
-            'interviewed': applications_by_status.get('screening', 0),
-            'hired': applications_by_status.get('hired', 0)
+            'interviewed': applications_by_status.get('interviewed', 0),
+            'hired': applications_by_status.get('hired', 0),
+            'rejected': applications_by_status.get('rejected', 0),
+            'pending': applications_by_status.get('pending', 0) + applications_by_status.get('submitted', 0)
         }), 200
         
     except Exception as e:
@@ -343,8 +388,17 @@ def update_job(job_id):
     """Update job posting (recruiter only, own jobs)"""
     try:
         current_user = get_jwt_identity()
+        claims = get_jwt()
         
-        if current_user['role'] not in ['recruiter', 'admin']:
+        # Handle both dict and string JWT identity formats
+        if isinstance(current_user, dict):
+            user_id = current_user.get('user_id', '')
+            role = current_user.get('role', 'candidate')
+        else:
+            user_id = current_user
+            role = claims.get('role', 'candidate')
+        
+        if role not in ['recruiter', 'company', 'admin']:
             return jsonify({'error': 'Only recruiters can update jobs'}), 403
         
         db = get_db()
@@ -355,7 +409,7 @@ def update_job(job_id):
         if not job:
             return jsonify({'error': 'Job not found'}), 404
         
-        if str(job['recruiter_id']) != current_user['user_id'] and current_user['role'] != 'admin':
+        if str(job['recruiter_id']) != user_id and role != 'admin':
             return jsonify({'error': 'Not authorized to update this job'}), 403
         
         data = request.get_json()

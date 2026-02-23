@@ -860,3 +860,306 @@ html {
 [data-theme="dark"] .btn-google:hover {
     background: #374151;
 }
+
+/* ==================== COMPREHENSIVE DARK MODE OVERRIDES ==================== */
+
+/* Modal headers/footers and inline-styled backgrounds */
+[data-theme="dark"] .modal-header {
+    background: var(--bg-secondary) !important;
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-footer {
+    background: var(--bg-secondary) !important;
+    border-top-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+/* Status badges and score badges in tables/cards */
+[data-theme="dark"] .score-badge {
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .status-badge {
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .status-dropdown-menu {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+
+[data-theme="dark"] .status-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Inline-styled elements in JS templates — override with !important */
+[data-theme="dark"] .job-candidate-card,
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*="background:#ffffff"],
+[data-theme="dark"] [style*="background: #fff"] {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] [style*="color: #1e293b"],
+[data-theme="dark"] [style*="color:#1e293b"],
+[data-theme="dark"] [style*="color: #111827"] {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] [style*="color: #64748b"],
+[data-theme="dark"] [style*="color:#64748b"],
+[data-theme="dark"] [style*="color: #4a5568"],
+[data-theme="dark"] [style*="color: #475569"],
+[data-theme="dark"] [style*="color: #94a3b8"] {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] [style*="border-top: 1px solid #e2e8f0"],
+[data-theme="dark"] [style*="border: 2px solid #e2e8f0"],
+[data-theme="dark"] [style*="border: 1px solid #e2e8f0"],
+[data-theme="dark"] [style*="border-bottom: 1px solid #e2e8f0"] {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] [style*="background: #f8fafc"],
+[data-theme="dark"] [style*="background: #f1f5f9"],
+[data-theme="dark"] [style*="background: #f0f9ff"],
+[data-theme="dark"] [style*="background: #fef3f2"],
+[data-theme="dark"] [style*="background: #f0f4ff"],
+[data-theme="dark"] [style*="background: #f3f4f6"],
+[data-theme="dark"] [style*="background: #eef2ff"] {
+    background: var(--bg-secondary) !important;
+}
+
+/* Tab content & filter tabs */
+[data-theme="dark"] .tab-content {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .filter-tab {
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .filter-tab.active {
+    background: rgba(79, 70, 229, 0.2);
+    color: #818cf8;
+    border-color: #4f46e5;
+}
+
+[data-theme="dark"] .status-filter-tabs {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+/* Candidate cards in ranked modal */
+[data-theme="dark"] .modal-body > div[style*="background: white"] {
+    background: var(--card-bg) !important;
+}
+
+/* Score breakdown cards */
+[data-theme="dark"] div[style*="background: #f0f9ff"],
+[data-theme="dark"] div[style*="background: #fef3f2"],
+[data-theme="dark"] div[style*="background: #f0f4ff"],
+[data-theme="dark"] div[style*="background: #fffbeb"] {
+    background: var(--bg-secondary) !important;
+}
+
+/* Checkbox in table */
+[data-theme="dark"] .applications-table input[type="checkbox"] {
+    accent-color: #818cf8;
+}
+
+/* Alert boxes */
+[data-theme="dark"] .alert {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .alert-info {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .alert-success {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="dark"] .alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Analytics containers and KPI cards */
+[data-theme="dark"] .analytics-section,
+[data-theme="dark"] .audit-section {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .kpi-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+/* Bug #2 fix: stat-value / kpi-value / metric-value text visibility */
+[data-theme="dark"] .stat-value,
+[data-theme="dark"] .kpi-value,
+[data-theme="dark"] .metric-value {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .stat-label,
+[data-theme="dark"] .kpi-label,
+[data-theme="dark"] .metric-label,
+[data-theme="dark"] .stat-content .stat-label {
+    color: var(--text-secondary) !important;
+}
+
+/* Analytics KPI grid cards */
+[data-theme="dark"] .analytics-kpi-card,
+[data-theme="dark"] .analytics-kpi-grid > div {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Profile strength progress text */
+[data-theme="dark"] .profile-strength-value,
+[data-theme="dark"] .profile-completion-text {
+    color: var(--text-primary) !important;
+}
+
+/* Recommendation card text */
+[data-theme="dark"] .recommendation-card h4,
+[data-theme="dark"] .skill-insight-card h4 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .recommendation-card p,
+[data-theme="dark"] .skill-insight-card p {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .analytics-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .analytics-table thead {
+    background: var(--bg-secondary);
+}
+
+/* Fairness audit cards */
+[data-theme="dark"] .audit-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .fairness-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+/* Skill tags */
+[data-theme="dark"] .tag {
+    background: rgba(79, 70, 229, 0.15);
+    color: #a5b4fc;
+    border-color: rgba(79, 70, 229, 0.3);
+}
+
+/* Upload zone */
+[data-theme="dark"] .upload-zone {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+/* Timeline items */
+[data-theme="dark"] .timeline-item,
+[data-theme="dark"] .audit-timeline-item {
+    border-color: var(--border-color);
+}
+
+/* Scrollbar for dark mode */
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    border-color: var(--bg-secondary);
+}
+
+/* Dropdown menus */
+[data-theme="dark"] select option {
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+
+/* Flan-T5 question cards */
+[data-theme="dark"] .flan-question-card {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Fairness mode toggle override */
+[data-theme="dark"] div[style*="background: #e2e8f0"] {
+    background: var(--bg-secondary) !important;
+}
+
+/* Recommendation cards */
+[data-theme="dark"] .recommendation-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+/* Skills insight cards */
+[data-theme="dark"] .skill-insight-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+/* Content header */
+[data-theme="dark"] .content-header h2 {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .content-header p {
+    color: var(--text-secondary);
+}
+
+/* Main content area */
+[data-theme="dark"] .main-content {
+    background: var(--bg-primary);
+}
+
+/* Candidate avatar */
+[data-theme="dark"] .candidate-avatar {
+    border-color: var(--border-color);
+}
+
+/* Form labels */
+[data-theme="dark"] .form-group label {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-group small {
+    color: var(--text-secondary);
+}
+
+/* User info in navbar */
+[data-theme="dark"] .user-info {
+    color: var(--text-secondary);
+}

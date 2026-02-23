@@ -252,10 +252,13 @@ async function loadAdminJobs() {
 }
 
 function adminLogout() {
-    // Clear authentication data
+    // Clear all authentication data including role-specific tokens
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
     localStorage.removeItem('currentRole');
+    localStorage.removeItem('candidate_token');
+    localStorage.removeItem('recruiter_token');
+    localStorage.removeItem('admin_token');
 
     // Reload the page to return to login
     window.location.href = '/';

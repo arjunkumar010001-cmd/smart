@@ -15,7 +15,8 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from config.config import config
 from backend.models.database import Database
-from backend.routes import auth_routes, job_routes, candidate_routes, company_routes, email_preferences_routes, assessment_routes, audit_routes, dsr_routes, dashboard_routes, ai_interview_routes, admin_routes, google_oauth_routes, interview_routes
+from backend.routes import auth_routes, job_routes, candidate_routes, company_routes, email_preferences_routes, assessment_routes, audit_routes, dsr_routes, dashboard_routes, ai_interview_routes, admin_routes, google_oauth_routes, interview_routes, analytics_routes, llm_routes
+from backend.routes import smart_assessment_routes
 # Import enhanced v2 routes
 try:
     from backend.routes import ai_interview_routes_v2
@@ -84,7 +85,16 @@ def create_app(config_name=None):
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'"
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "img-src 'self' data: https: blob:; "
+            "font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com; "
+            "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://*.googleapis.com blob:; "
+            "media-src 'self' blob:; "
+            "frame-src 'self' https://accounts.google.com"
+        )
         return response
 
     # Initialize database connection
@@ -103,12 +113,17 @@ def create_app(config_name=None):
     flask_app.register_blueprint(company_routes.bp, url_prefix='/api/company')
     flask_app.register_blueprint(email_preferences_routes.bp, url_prefix='/api/email')
     flask_app.register_blueprint(assessment_routes.bp, url_prefix='/api/assessments')
+    flask_app.register_blueprint(smart_assessment_routes.bp, url_prefix='/api/smart-assessments')
     flask_app.register_blueprint(audit_routes.bp, url_prefix='/api/audit')
     flask_app.register_blueprint(dsr_routes.bp, url_prefix='/api/dsr')
     flask_app.register_blueprint(dashboard_routes.bp, url_prefix='/api/dashboard')
     flask_app.register_blueprint(ai_interview_routes.bp, url_prefix='/api/ai-interview')
     flask_app.register_blueprint(interview_routes.bp, url_prefix='/api/interviews')
     flask_app.register_blueprint(admin_routes.bp, url_prefix='/api/admin')
+
+    # v1 feature routes (analytics & LLM) — url_prefix defined inside the Blueprint
+    flask_app.register_blueprint(analytics_routes.bp)   # /api/analytics
+    flask_app.register_blueprint(llm_routes.bp)          # /api/llm
 
     # Register V2 routes if available
     if V2_ROUTES_AVAILABLE:
@@ -123,8 +138,35 @@ def create_app(config_name=None):
     except ImportError:
         logger.info("ℹ️ Video interview routes not available yet")
 
+    # ── Initialize Flan-T5 Question Generator (load model once at startup) ────
+    if config_name != 'testing':
+        try:
+            from backend.services.flan_t5_service import initialize_flan_t5
+            flan_status = initialize_flan_t5(
+                flan_model=os.getenv('FLAN_T5_MODEL', 'google/flan-t5-base'),
+                sbert_model=os.getenv('SBERT_MODEL', 'all-MiniLM-L6-v2'),
+            )
+            if flan_status.get('flan_t5_loaded'):
+                logger.info("🧠 Flan-T5 interview engine loaded — dynamic question generation enabled")
+            else:
+                logger.warning("⚠️ Flan-T5 not loaded — falling back to static question bank")
+            if flan_status.get('sbert_loaded'):
+                logger.info("🔗 SBERT loaded for Flan-T5 answer evaluation (threshold=0.70)")
+        except Exception as e:
+            logger.warning(f"⚠️ Flan-T5 initialization skipped: {e}")
+
     # Initialize monitoring & observability
     initialize_monitoring(flask_app)
+
+    # Bug #6 fix: Auto-complete stale interviews on startup (fallback for Celery Beat)
+    if config_name != 'testing':
+        try:
+            from backend.utils.interview_cleanup import auto_complete_stale_interviews
+            completed = auto_complete_stale_interviews(stale_hours=24)
+            if completed:
+                logger.info(f"⏰ Startup: auto-completed {completed} stale interview(s)")
+        except Exception as e:
+            logger.warning(f"⚠️ Interview auto-complete skipped: {e}")
 
     # Start background workers if enabled (skip in testing mode)
     if config_name != 'testing' and env_config.enable_background_workers and env_config.enable_redis:
@@ -198,6 +240,10 @@ def create_app(config_name=None):
                 'assessments': '/api/assessments',
                 'dashboard': '/api/dashboard',
                 'video_interview': '/api/video-interview',
+                'analytics': '/api/analytics',
+                'llm': '/api/llm',
+                'ai_interview_v2': '/api/ai-interview-v2',
+                'flan_t5_engine': '/api/ai-interview-v2/flan-t5',
             },
             'documentation': 'See API_DOCUMENTATION.md for details'
         })

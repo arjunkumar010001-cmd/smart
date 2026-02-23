@@ -82,9 +82,11 @@
     </div>
 
     <script>
-        const API_URL = 'https://my-project-smart-hiring.onrender.com/api';
-        const authToken = localStorage.getItem('authToken');
-        if (!authToken) window.location.href = 'login.html';
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? `${window.location.protocol}//${window.location.hostname}:5000/api`
+            : window.location.origin + '/api';
+        const authToken = localStorage.getItem('candidate_token') || localStorage.getItem('recruiter_token') || localStorage.getItem('admin_token');
+        if (!authToken) window.location.href = 'index.html';
 
         const urlParams = new URLSearchParams(window.location.search);
         const quizId = urlParams.get('id');

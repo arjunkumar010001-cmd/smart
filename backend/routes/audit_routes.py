@@ -5,7 +5,7 @@ Track all hiring decisions for compliance and bias detection
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson import ObjectId
 
 from backend.models.database import get_db
@@ -71,8 +71,8 @@ def get_audit_logs():
             user_id = current_user.get('user_id')
             role = current_user.get('role')
         
-        if role != 'admin':
-            return jsonify({'error': 'Admin access required'}), 403
+        if role not in ('admin', 'company', 'recruiter'):
+            return jsonify({'error': 'Admin or company access required'}), 403
         
         db = get_db()
         
@@ -129,7 +129,7 @@ def generate_audit_report():
             user_id = current_user.get('user_id')
             role = current_user.get('role')
         
-        if role not in ['admin', 'company']:
+        if role not in ['admin', 'company', 'recruiter']:
             return jsonify({'error': 'Admin or company access required'}), 403
         
         db = get_db()
@@ -138,9 +138,9 @@ def generate_audit_report():
         days = int(request.args.get('days', 30))
         from_date = datetime.utcnow() - timedelta(days=days)
         
-        # Filter by company for recruiters
+        # Filter by company for recruiters/company users
         query = {'timestamp': {'$gte': from_date}}
-        if role == 'company':
+        if role in ('company', 'recruiter'):
             # Only show logs for this company's jobs
             jobs = list(db['jobs'].find({'recruiter_id': user_id}))
             job_ids = [str(job['_id']) for job in jobs]
@@ -162,17 +162,34 @@ def generate_audit_report():
             'score_distribution': {
                 'excellent': 0,  # 75%+
                 'good': 0,       # 50-74%
-                'poor': 0        # <50%
+                'fair': 0,       # 25-49%
+                'poor': 0        # <25%
             },
             'decisions': {
                 'hired': 0,
                 'rejected': 0,
                 'pending': 0,
-                'shortlisted': 0
+                'shortlisted': 0,
+                'interviewed': 0
+            },
+            # Frontend-compatible keys
+            'decisions_breakdown': {
+                'hired': 0,
+                'rejected': 0,
+                'pending': 0,
+                'shortlisted': 0,
+                'interviewed': 0
+            },
+            'average_scores': {
+                'overall': 0,
+                'skills_match': 0,
+                'experience': 0
             }
         }
         
         total_scores = []
+        skills_scores = []
+        experience_scores = []
         
         for log in logs:
             event_type = log.get('event_type', 'unknown')
@@ -185,21 +202,38 @@ def generate_audit_report():
                 status = log.get('details', {}).get('new_status')
                 if status in report['decisions']:
                     report['decisions'][status] += 1
+                if status in report['decisions_breakdown']:
+                    report['decisions_breakdown'][status] += 1
             elif event_type == 'ranked':
                 report['rankings_performed'] += 1
-                score = log.get('scores', {}).get('overall_score')
+                scores = log.get('scores', {})
+                score = scores.get('overall_score')
                 if score:
                     total_scores.append(score)
                     if score >= 75:
                         report['score_distribution']['excellent'] += 1
                     elif score >= 50:
                         report['score_distribution']['good'] += 1
+                    elif score >= 25:
+                        report['score_distribution']['fair'] += 1
                     else:
                         report['score_distribution']['poor'] += 1
+                skill_score = scores.get('skill_match')
+                if skill_score is not None:
+                    skills_scores.append(skill_score)
+                exp_score = scores.get('experience_score')
+                if exp_score is not None:
+                    experience_scores.append(exp_score)
         
-        # Calculate average score
+        # Calculate average scores
         if total_scores:
-            report['average_score'] = round(sum(total_scores) / len(total_scores), 2)
+            avg_overall = round(sum(total_scores) / len(total_scores), 2)
+            report['average_score'] = avg_overall
+            report['average_scores']['overall'] = avg_overall
+        if skills_scores:
+            report['average_scores']['skills_match'] = round(sum(skills_scores) / len(skills_scores), 2)
+        if experience_scores:
+            report['average_scores']['experience'] = round(sum(experience_scores) / len(experience_scores), 2)
         
         return jsonify(report), 200
         
@@ -227,13 +261,13 @@ def get_job_audit_report(job_id):
             user_id = current_user.get('user_id')
             role = current_user.get('role')
         
-        if role not in ['admin', 'company']:
+        if role not in ['admin', 'company', 'recruiter']:
             return jsonify({'error': 'Unauthorized'}), 403
         
         db = get_db()
         
-        # Verify job access for companies
-        if role == 'company':
+        # Verify job access for companies/recruiters
+        if role in ('company', 'recruiter'):
             job = db['jobs'].find_one({'_id': ObjectId(job_id), 'recruiter_id': user_id})
             if not job:
                 return jsonify({'error': 'Job not found or unauthorized'}), 404
@@ -449,7 +483,3 @@ def run_fairness_audit():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
-# Import at module level to avoid circular imports
-from datetime import timedelta

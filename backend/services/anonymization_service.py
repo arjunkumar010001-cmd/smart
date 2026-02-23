@@ -34,8 +34,8 @@ try:
         logger.info("✅ spaCy NER available for anonymization")
     except OSError:
         logger.warning("⚠️ spaCy model not found - using pattern-based anonymization")
-except ImportError:
-    logger.warning("⚠️ spaCy not installed - using pattern-based anonymization")
+except (ImportError, AttributeError, Exception) as _spacy_err:
+    logger.warning(f"⚠️ spaCy not available ({_spacy_err}) - using pattern-based anonymization")
 
 
 class AnonymizationMetrics:

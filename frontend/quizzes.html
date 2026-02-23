@@ -85,9 +85,11 @@
     </div>
 
     <script>
-        const API_URL = 'https://my-project-smart-hiring.onrender.com/api';
-        const authToken = localStorage.getItem('authToken');
-        if (!authToken) window.location.href = 'login.html';
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? `${window.location.protocol}//${window.location.hostname}:5000/api`
+            : window.location.origin + '/api';
+        const authToken = localStorage.getItem('recruiter_token') || localStorage.getItem('admin_token');
+        if (!authToken) window.location.href = 'index.html';
 
         let allQuestions = [];
         let selectedQuestions = new Set();
@@ -223,8 +225,10 @@
         }
 
         function logout() {
-            localStorage.removeItem('authToken');
-            window.location.href = 'login.html';
+            localStorage.removeItem('recruiter_token');
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('currentUser');
+            window.location.href = 'index.html';
         }
 
         loadQuestions().then(loadQuizzes);
