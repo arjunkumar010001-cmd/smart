@@ -1,5 +1,10 @@
 # Smart Hiring System
 
+[![CI - Build and Test](https://github.com/arjunkumar010001-cmd/smart/actions/workflows/ci.yml/badge.svg)](https://github.com/arjunkumar010001-cmd/smart/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Flask 3.0](https://img.shields.io/badge/flask-3.0-green.svg)](https://flask.palletsprojects.com/)
+[![License](https://img.shields.io/badge/license-see%20LICENSE-lightgrey.svg)](LICENSE)
+
 An AI-powered, bias-aware recruitment platform that automates resume screening, candidate matching, AI-driven interviews, and fairness auditing — built with Flask, MongoDB, and modern ML/NLP libraries.
 
 ---
@@ -97,8 +102,8 @@ smart_hiring/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/smart-hiring.git
-cd smart-hiring
+git clone https://github.com/arjunkumar010001-cmd/smart.git
+cd smart
 ```
 
 ### 2. Set Up Environment
