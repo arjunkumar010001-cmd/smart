@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Assessment Audit Report — {{ session.session_id }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm 2cm;
+
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 9px;
+                color: #94a3b8;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Inter', sans-serif;
+            font-size: 11px;
+            color: #1e293b;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 20px;
+            color: #1e293b;
+            margin: 0 0 4px;
+        }
+
+        h2 {
+            font-size: 14px;
+            color: #334155;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 4px;
+            margin: 18px 0 8px;
+        }
+
+        h3 {
+            font-size: 12px;
+            color: #475569;
+            margin: 12px 0 4px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .header-right {
+            text-align: right;
+            font-size: 10px;
+            color: #64748b;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .badge-completed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-terminated {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-clean {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-warning {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .badge-critical {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .score-card {
+            display: flex;
+            gap: 12px;
+            margin: 10px 0 16px;
+        }
+
+        .score-box {
+            flex: 1;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .score-big {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .score-label {
+            font-size: 9px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .score-green {
+            color: #10b981;
+        }
+
+        .score-yellow {
+            color: #eab308;
+        }
+
+        .score-red {
+            color: #ef4444;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 6px 0;
+        }
+
+        th {
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .3px;
+            padding: 5px 8px;
+            text-align: left;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 4px 8px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 10px;
+        }
+
+        tr:nth-child(even) td {
+            background: #fafafa;
+        }
+
+        .timeline {
+            border-left: 3px solid #e2e8f0;
+            padding-left: 16px;
+            margin: 8px 0;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 6px;
+        }
+
+        .timeline-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #667eea;
+            position: absolute;
+            left: -20px;
+            top: 4px;
+        }
+
+        .timeline-dot.red {
+            background: #ef4444;
+        }
+
+        .timeline-dot.green {
+            background: #10b981;
+        }
+
+        .timeline-time {
+            font-size: 9px;
+            color: #94a3b8;
+        }
+
+        .snapshot-gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 6px 0;
+        }
+
+        .snapshot-thumb {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            width: 150px;
+            text-align: center;
+        }
+
+        .snapshot-thumb img {
+            width: 150px;
+            height: auto;
+            display: block;
+        }
+
+        .snapshot-thumb .label {
+            font-size: 8px;
+            color: #64748b;
+            padding: 2px 4px;
+            background: #f8fafc;
+        }
+
+        .footer {
+            margin-top: 24px;
+            padding-top: 8px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 9px;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .config-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 6px 10px;
+        }
+
+        .config-key {
+            font-size: 9px;
+            color: #64748b;
+        }
+
+        .config-val {
+            font-size: 11px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ── Header ─────────────────────────────────────────────── -->
+    <div class="header">
+        <div>
+            <h1>📋 Assessment Audit Report</h1>
+            <div style="font-size: 12px; color: #64748b;">{{ config.title or 'Smart Assessment' }}</div>
+        </div>
+        <div class="header-right">
+            <div><strong>Session:</strong> {{ session.session_id[:12] }}…</div>
+            <div><strong>Candidate:</strong> {{ candidate_display }}</div>
+            <div><strong>Date:</strong> {{ session.started_at_fmt }}</div>
+            <span class="badge {{ 'badge-terminated' if session.status == 'terminated' else 'badge-completed' }}">
+                {{ session.status|upper }}
+            </span>
+        </div>
+    </div>
+
+    <!-- ── Scoring Summary ────────────────────────────────────── -->
+    <h2>📊 Scoring Summary</h2>
+    <div class="score-card">
+        <div class="score-box">
+            <div class="score-label">Overall Score</div>
+            <div
+                class="score-big {{ 'score-green' if score.percentage >= 70 else 'score-yellow' if score.percentage >= 40 else 'score-red' }}">
+                {{ score.percentage }}%
+            </div>
+            <div class="score-label">{{ score.verdict }}</div>
+        </div>
+        <div class="score-box">
+            <div class="score-label">Proctoring Score</div>
+            <div
+                class="score-big {{ 'score-green' if proctoring.score >= 80 else 'score-yellow' if proctoring.score >= 50 else 'score-red' }}">
+                {{ proctoring.score }}
+            </div>
+            <div class="score-label">/ 100</div>
+        </div>
+        <div class="score-box">
+            <div class="score-label">Total / Max</div>
+            <div class="score-big" style="font-size: 20px;">{{ score.total }} / {{ score.max }}</div>
+        </div>
+        {% if score.penalty_applied %}
+        <div class="score-box" style="border-color: #fca5a5;">
+            <div class="score-label">Penalty Applied</div>
+            <div class="score-big score-red" style="font-size: 20px;">-{{ score.penalty_applied }}%</div>
+            <div class="score-label">Negative Marking</div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if score.type_breakdown %}
+    <h3>Score Breakdown by Type</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Question Type</th>
+                <th>Correct</th>
+                <th>Total</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tb in score.type_breakdown %}
+            <tr>
+                <td>{{ tb.type|capitalize }}</td>
+                <td>{{ tb.correct }}</td>
+                <td>{{ tb.total }}</td>
+                <td>{{ tb.score }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- ── Session Timeline ───────────────────────────────────── -->
+    <h2>⏱️ Session Timeline</h2>
+    <div class="timeline">
+        <div class="timeline-item">
+            <div class="timeline-dot green"></div>
+            <strong>Started</strong> — {{ session.started_at_fmt }}
+            <div class="timeline-time">Session ID: {{ session.session_id }}</div>
+        </div>
+        {% for event in proctoring.events %}
+        <div class="timeline-item">
+            <div class="timeline-dot {{ 'red' if event.consequence == 'blacklist' else '' }}"></div>
+            <strong>{{ event.event_type|replace('_', ' ')|title }}</strong> — {{ event.consequence }}
+            <div class="timeline-time">{{ event.timestamp }} | Score Δ: {{ event.score_delta }}</div>
+        </div>
+        {% endfor %}
+        <div class="timeline-item">
+            <div class="timeline-dot {{ 'red' if session.status == 'terminated' else 'green' }}"></div>
+            <strong>{{ 'Terminated' if session.status == 'terminated' else 'Completed' }}</strong>
+            — {{ session.ended_at_fmt }}
+            {% if session.termination_reason %}
+            <div class="timeline-time">Reason: {{ session.termination_reason }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── Proctoring Report ──────────────────────────────────── -->
+    <h2>🔍 Proctoring Report</h2>
+    <div style="margin-bottom: 8px;">
+        Events: <strong>{{ proctoring.event_count }}</strong> |
+        Final Score: <strong>{{ proctoring.score }}/100</strong> |
+        Blacklist Score: <strong>{{ proctoring.blacklist_score }}</strong>
+        <span
+            class="badge {{ 'badge-clean' if proctoring.event_count == 0 else 'badge-warning' if proctoring.score >= 50 else 'badge-critical' }}">
+            {{ 'Clean' if proctoring.event_count == 0 else 'Flagged' if proctoring.score >= 50 else 'Critical' }}
+        </span>
+    </div>
+
+    {% if proctoring.events %}
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Event Type</th>
+                <th>Consequence</th>
+                <th>Score Δ</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in proctoring.events %}
+            <tr>
+                <td>{{ event.timestamp }}</td>
+                <td>{{ event.event_type|replace('_', ' ')|title }}</td>
+                <td>{{ event.consequence }}</td>
+                <td style="color: {{ '#ef4444' if event.score_delta|int < 0 else '#10b981' }};">{{ event.score_delta }}
+                </td>
+                <td>{{ event.metadata_summary }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- ── Evidence Gallery ────────────────────────────────────── -->
+    {% if snapshots %}
+    <h2>📸 Evidence Snapshots</h2>
+    <p style="font-size: 9px; color: #94a3b8;">Thumbnails shown below (200×150px). Full-resolution originals available
+        via the recordings tab.</p>
+    <div class="snapshot-gallery">
+        {% for snap in snapshots %}
+        <div class="snapshot-thumb">
+            <img src="data:image/jpeg;base64,{{ snap.b64 }}" alt="{{ snap.reason }}">
+            <div class="label">{{ snap.reason }} — {{ snap.timestamp }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ── Assessment Configuration ───────────────────────────── -->
+    <h2>⚙️ Assessment Configuration</h2>
+    <div class="config-grid">
+        <div class="config-item">
+            <div class="config-key">Duration</div>
+            <div class="config-val">{{ config.duration_minutes }} minutes</div>
+        </div>
+        <div class="config-item">
+            <div class="config-key">Question Count</div>
+            <div class="config-val">{{ config.question_count }}</div>
+        </div>
+        <div class="config-item">
+            <div class="config-key">Passing Score</div>
+            <div class="config-val">{{ config.passing_score }}%</div>
+        </div>
+        <div class="config-item">
+            <div class="config-key">Negative Marking</div>
+            <div class="config-val">{{ 'Yes (' ~ config.neg_penalty ~ '× penalty)' if config.neg_marking else 'No' }}
+            </div>
+        </div>
+        <div class="config-item">
+            <div class="config-key">Recording Available</div>
+            <div class="config-val">{{ 'Yes' if has_recording else 'No' }}</div>
+        </div>
+        <div class="config-item">
+            <div class="config-key">Question Types</div>
+            <div class="config-val">{{ config.question_types }}</div>
+        </div>
+    </div>
+
+    <!-- ── Footer ─────────────────────────────────────────────── -->
+    <div class="footer">
+        <div>Generated: {{ generated_at }} | Smart Hiring System v4.2</div>
+        <div>Confidential — Internal Use Only</div>
+    </div>
+
+</body>
+
+</html>

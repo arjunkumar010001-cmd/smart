@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,166 +23,579 @@
             --sa-radius: 12px;
         }
 
-        * { box-sizing: border-box; }
-        body { margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--sa-bg); color: var(--sa-text); }
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--sa-bg);
+            color: var(--sa-text);
+        }
 
         /* ── Header ── */
         .sa-header {
             background: linear-gradient(135deg, #1e40af, #3b82f6);
-            color: white; padding: 16px 24px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
-        .sa-header h1 { margin: 0; font-size: 20px; font-weight: 600; }
-        .sa-header-info { display: flex; gap: 20px; align-items: center; font-size: 14px; }
-        .sa-timer { background: rgba(255,255,255,0.2); padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 16px; font-variant-numeric: tabular-nums; }
-        .sa-timer.warning { background: var(--sa-warning); color: #000; }
-        .sa-timer.danger { background: var(--sa-danger); animation: pulse 1s infinite; }
 
-        @keyframes pulse { 50% { opacity: 0.7; } }
+        .sa-header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .sa-header-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .sa-timer {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .sa-timer.warning {
+            background: var(--sa-warning);
+            color: #000;
+        }
+
+        .sa-timer.danger {
+            background: var(--sa-danger);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            50% {
+                opacity: 0.7;
+            }
+        }
 
         /* ── Progress ── */
-        .sa-progress-bar { height: 4px; background: rgba(255,255,255,0.3); }
-        .sa-progress-fill { height: 100%; background: var(--sa-success); transition: width 0.3s; }
+        .sa-progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .sa-progress-fill {
+            height: 100%;
+            background: var(--sa-success);
+            transition: width 0.3s;
+        }
 
         /* ── Layout ── */
-        .sa-container { display: flex; height: calc(100vh - 68px); }
-        .sa-sidebar { width: 260px; background: var(--sa-card-bg); border-right: 1px solid var(--sa-border); overflow-y: auto; padding: 16px; flex-shrink: 0; }
-        .sa-main { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; }
+        .sa-container {
+            display: flex;
+            height: calc(100vh - 68px);
+        }
+
+        .sa-sidebar {
+            width: 260px;
+            background: var(--sa-card-bg);
+            border-right: 1px solid var(--sa-border);
+            overflow-y: auto;
+            padding: 16px;
+            flex-shrink: 0;
+        }
+
+        .sa-main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
 
         /* ── Question Navigation Sidebar ── */
-        .sa-nav-title { font-size: 13px; font-weight: 600; color: var(--sa-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
-        .sa-nav-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
-        .sa-nav-btn {
-            width: 40px; height: 40px; border-radius: 8px; border: 2px solid var(--sa-border);
-            background: white; cursor: pointer; font-weight: 600; font-size: 14px;
-            display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+        .sa-nav-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--sa-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
         }
-        .sa-nav-btn:hover { border-color: var(--sa-primary); }
-        .sa-nav-btn.active { background: var(--sa-primary); color: white; border-color: var(--sa-primary); }
-        .sa-nav-btn.answered { background: #dbeafe; border-color: var(--sa-primary); color: var(--sa-primary); }
-        .sa-nav-btn.correct { background: #d1fae5; border-color: var(--sa-success); color: var(--sa-success); }
-        .sa-nav-btn.wrong { background: #fee2e2; border-color: var(--sa-danger); color: var(--sa-danger); }
 
-        .sa-nav-legend { font-size: 12px; color: var(--sa-text-muted); margin-top: 16px; }
-        .sa-nav-legend div { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-        .sa-legend-dot { width: 12px; height: 12px; border-radius: 4px; flex-shrink: 0; }
+        .sa-nav-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .sa-nav-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 2px solid var(--sa-border);
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .sa-nav-btn:hover {
+            border-color: var(--sa-primary);
+        }
+
+        .sa-nav-btn.active {
+            background: var(--sa-primary);
+            color: white;
+            border-color: var(--sa-primary);
+        }
+
+        .sa-nav-btn.answered {
+            background: #dbeafe;
+            border-color: var(--sa-primary);
+            color: var(--sa-primary);
+        }
+
+        .sa-nav-btn.correct {
+            background: #d1fae5;
+            border-color: var(--sa-success);
+            color: var(--sa-success);
+        }
+
+        .sa-nav-btn.wrong {
+            background: #fee2e2;
+            border-color: var(--sa-danger);
+            color: var(--sa-danger);
+        }
+
+        .sa-nav-legend {
+            font-size: 12px;
+            color: var(--sa-text-muted);
+            margin-top: 16px;
+        }
+
+        .sa-nav-legend div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .sa-legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
 
         /* ── Question Card ── */
         .sa-question-card {
-            background: var(--sa-card-bg); border-radius: var(--sa-radius);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 24px; flex: 1;
-            display: flex; flex-direction: column;
+            background: var(--sa-card-bg);
+            border-radius: var(--sa-radius);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
-        .sa-question-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
-        .sa-question-meta { display: flex; gap: 8px; flex-wrap: wrap; }
-        .sa-tag { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; }
-        .sa-tag-coding { background: #ede9fe; color: #7c3aed; }
-        .sa-tag-mcq { background: #dbeafe; color: #2563eb; }
-        .sa-tag-debugging { background: #fef3c7; color: #d97706; }
-        .sa-tag-aptitude { background: #d1fae5; color: #059669; }
-        .sa-tag-logical { background: #fce7f3; color: #db2777; }
-        .sa-tag-easy { background: #d1fae5; color: #059669; }
-        .sa-tag-medium { background: #fef3c7; color: #d97706; }
-        .sa-tag-hard { background: #fee2e2; color: #dc2626; }
 
-        .sa-question-text { font-size: 16px; line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap; }
+        .sa-question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .sa-question-meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .sa-tag {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .sa-tag-coding {
+            background: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .sa-tag-mcq {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .sa-tag-debugging {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .sa-tag-aptitude {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .sa-tag-logical {
+            background: #fce7f3;
+            color: #db2777;
+        }
+
+        .sa-tag-easy {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .sa-tag-medium {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .sa-tag-hard {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .sa-question-text {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+        }
 
         /* ── MCQ Options ── */
-        .sa-options { display: flex; flex-direction: column; gap: 10px; }
+        .sa-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
         .sa-option {
-            padding: 14px 16px; border: 2px solid var(--sa-border); border-radius: 10px;
-            cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 12px;
+            padding: 14px 16px;
+            border: 2px solid var(--sa-border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        .sa-option:hover { border-color: var(--sa-primary); background: #f0f7ff; }
-        .sa-option.selected { border-color: var(--sa-primary); background: #dbeafe; }
+
+        .sa-option:hover {
+            border-color: var(--sa-primary);
+            background: #f0f7ff;
+        }
+
+        .sa-option.selected {
+            border-color: var(--sa-primary);
+            background: #dbeafe;
+        }
+
         .sa-option-label {
-            width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 600; font-size: 14px; flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
         }
-        .sa-option.selected .sa-option-label { background: var(--sa-primary); color: white; }
+
+        .sa-option.selected .sa-option-label {
+            background: var(--sa-primary);
+            color: white;
+        }
 
         /* ── Code Editor ── */
-        .sa-code-section { flex: 1; display: flex; flex-direction: column; min-height: 400px; }
-        .sa-editor-toolbar {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px 16px; background: #1e1e1e; border-radius: 8px 8px 0 0;
+        .sa-code-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 400px;
         }
-        .sa-editor-toolbar select {
-            background: #333; color: white; border: 1px solid #555; padding: 6px 10px;
-            border-radius: 6px; font-size: 13px;
-        }
-        #monacoEditor { flex: 1; border-radius: 0 0 8px 8px; overflow: hidden; }
 
-        .sa-test-results { margin-top: 16px; }
-        .sa-test-case {
-            padding: 12px 16px; border-radius: 8px; margin-bottom: 8px;
-            display: flex; justify-content: space-between; align-items: center;
+        .sa-editor-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            background: #1e1e1e;
+            border-radius: 8px 8px 0 0;
         }
-        .sa-test-pass { background: #d1fae5; color: #065f46; }
-        .sa-test-fail { background: #fee2e2; color: #991b1b; }
-        .sa-test-pending { background: #f1f5f9; color: #475569; }
+
+        .sa-editor-toolbar select {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        #monacoEditor {
+            flex: 1;
+            border-radius: 0 0 8px 8px;
+            overflow: hidden;
+        }
+
+        .sa-test-results {
+            margin-top: 16px;
+        }
+
+        .sa-test-case {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sa-test-pass {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .sa-test-fail {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .sa-test-pending {
+            background: #f1f5f9;
+            color: #475569;
+        }
 
         /* ── Constraints / Examples ── */
-        .sa-examples { margin: 16px 0; }
-        .sa-example-box {
-            background: #f8fafc; border: 1px solid var(--sa-border); border-radius: 8px;
-            padding: 12px 16px; margin-bottom: 10px; font-family: 'Fira Code', monospace; font-size: 13px;
+        .sa-examples {
+            margin: 16px 0;
         }
-        .sa-example-box strong { display: block; margin-bottom: 4px; font-size: 12px; color: var(--sa-text-muted); text-transform: uppercase; }
 
-        .sa-constraints { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; }
+        .sa-example-box {
+            background: #f8fafc;
+            border: 1px solid var(--sa-border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+        }
+
+        .sa-example-box strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 12px;
+            color: var(--sa-text-muted);
+            text-transform: uppercase;
+        }
+
+        .sa-constraints {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
 
         /* ── Buttons ── */
         .sa-btn {
-            padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
-            font-weight: 600; font-size: 14px; transition: all 0.15s; display: inline-flex;
-            align-items: center; gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
-        .sa-btn-primary { background: var(--sa-primary); color: white; }
-        .sa-btn-primary:hover { background: #2563eb; }
-        .sa-btn-success { background: var(--sa-success); color: white; }
-        .sa-btn-success:hover { background: #059669; }
-        .sa-btn-danger { background: var(--sa-danger); color: white; }
-        .sa-btn-outline { background: transparent; border: 2px solid var(--sa-border); color: var(--sa-text); }
-        .sa-btn-outline:hover { border-color: var(--sa-primary); color: var(--sa-primary); }
-        .sa-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .sa-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--sa-border); }
+        .sa-btn-primary {
+            background: var(--sa-primary);
+            color: white;
+        }
+
+        .sa-btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .sa-btn-success {
+            background: var(--sa-success);
+            color: white;
+        }
+
+        .sa-btn-success:hover {
+            background: #059669;
+        }
+
+        .sa-btn-danger {
+            background: var(--sa-danger);
+            color: white;
+        }
+
+        .sa-btn-outline {
+            background: transparent;
+            border: 2px solid var(--sa-border);
+            color: var(--sa-text);
+        }
+
+        .sa-btn-outline:hover {
+            border-color: var(--sa-primary);
+            color: var(--sa-primary);
+        }
+
+        .sa-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .sa-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--sa-border);
+        }
 
         /* ── Results ── */
-        .sa-results { max-width: 800px; margin: 40px auto; text-align: center; }
-        .sa-score-circle {
-            width: 160px; height: 160px; border-radius: 50%; margin: 0 auto 24px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 42px; font-weight: 700; border: 6px solid;
+        .sa-results {
+            max-width: 800px;
+            margin: 40px auto;
+            text-align: center;
         }
-        .sa-score-circle.pass { border-color: var(--sa-success); color: var(--sa-success); background: #d1fae540; }
-        .sa-score-circle.fail { border-color: var(--sa-danger); color: var(--sa-danger); background: #fee2e240; }
-        .sa-score-circle.review { border-color: var(--sa-warning); color: var(--sa-warning); background: #fef3c740; }
-        .sa-score-circle small { font-size: 14px; font-weight: 400; color: var(--sa-text-muted); }
 
-        .sa-breakdown { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin: 24px 0; text-align: left; }
-        .sa-breakdown-card { background: var(--sa-card-bg); border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-        .sa-breakdown-card h4 { margin: 0 0 8px; font-size: 13px; color: var(--sa-text-muted); text-transform: uppercase; }
-        .sa-breakdown-card .value { font-size: 24px; font-weight: 700; }
+        .sa-score-circle {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            margin: 0 auto 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 42px;
+            font-weight: 700;
+            border: 6px solid;
+        }
 
-        .sa-hidden { display: none !important; }
+        .sa-score-circle.pass {
+            border-color: var(--sa-success);
+            color: var(--sa-success);
+            background: #d1fae540;
+        }
+
+        .sa-score-circle.fail {
+            border-color: var(--sa-danger);
+            color: var(--sa-danger);
+            background: #fee2e240;
+        }
+
+        .sa-score-circle.review {
+            border-color: var(--sa-warning);
+            color: var(--sa-warning);
+            background: #fef3c740;
+        }
+
+        .sa-score-circle small {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--sa-text-muted);
+        }
+
+        .sa-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+            text-align: left;
+        }
+
+        .sa-breakdown-card {
+            background: var(--sa-card-bg);
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+
+        .sa-breakdown-card h4 {
+            margin: 0 0 8px;
+            font-size: 13px;
+            color: var(--sa-text-muted);
+            text-transform: uppercase;
+        }
+
+        .sa-breakdown-card .value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .sa-hidden {
+            display: none !important;
+        }
 
         /* ── Loading ── */
-        .sa-loading { text-align: center; padding: 80px 20px; }
-        .sa-spinner { width: 48px; height: 48px; border: 4px solid var(--sa-border); border-top-color: var(--sa-primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .sa-loading {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .sa-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--sa-border);
+            border-top-color: var(--sa-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         /* ── Responsive ── */
         @media (max-width: 768px) {
-            .sa-container { flex-direction: column; }
-            .sa-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--sa-border); max-height: 200px; }
-            .sa-nav-grid { grid-template-columns: repeat(8, 1fr); }
+            .sa-container {
+                flex-direction: column;
+            }
+
+            .sa-sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--sa-border);
+                max-height: 200px;
+            }
+
+            .sa-nav-grid {
+                grid-template-columns: repeat(8, 1fr);
+            }
         }
     </style>
 </head>
+
 <body>
     <!-- ── Loading State ── -->
     <div id="saLoading" class="sa-loading">
@@ -201,12 +615,15 @@
             <div class="sa-header-info">
                 <span id="saQuestionCount">0 / 0</span>
                 <div class="sa-timer" id="saTimer">60:00</div>
-                <button class="sa-btn sa-btn-danger" onclick="finishAssessment()" style="font-size: 13px; padding: 6px 14px;">
+                <button class="sa-btn sa-btn-danger" onclick="finishAssessment()"
+                    style="font-size: 13px; padding: 6px 14px;">
                     Finish & Submit
                 </button>
             </div>
         </div>
-        <div class="sa-progress-bar"><div class="sa-progress-fill" id="saProgressFill"></div></div>
+        <div class="sa-progress-bar">
+            <div class="sa-progress-fill" id="saProgressFill"></div>
+        </div>
 
         <!-- Main Content -->
         <div class="sa-container">
@@ -216,8 +633,10 @@
                 <div class="sa-nav-grid" id="saNavGrid"></div>
                 <div class="sa-nav-legend">
                     <div><span class="sa-legend-dot" style="background: var(--sa-primary);"></span> Current</div>
-                    <div><span class="sa-legend-dot" style="background: #dbeafe; border: 1px solid var(--sa-primary);"></span> Answered</div>
-                    <div><span class="sa-legend-dot" style="background: white; border: 1px solid var(--sa-border);"></span> Not visited</div>
+                    <div><span class="sa-legend-dot"
+                            style="background: #dbeafe; border: 1px solid var(--sa-primary);"></span> Answered</div>
+                    <div><span class="sa-legend-dot"
+                            style="background: white; border: 1px solid var(--sa-border);"></span> Not visited</div>
                 </div>
             </div>
 
@@ -228,6 +647,12 @@
         </div>
     </div>
 
+    <!-- ── Proctoring Camera (Phase 2) ── -->
+    <!-- Hidden from candidate. BlazeFace consumes frames from this element.
+         Camera features require HTTPS or localhost; will silently fail otherwise.
+         Recruiter sees snapshots in audit report, NOT a live feed. -->
+    <video id="proctor-cam" autoplay muted playsinline style="display:none"></video>
+
     <!-- ── Results Screen ── -->
     <div id="saResults" class="sa-hidden">
         <!-- Filled dynamically -->
@@ -236,233 +661,291 @@
     <!-- Monaco Editor CDN -->
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
 
+    <!-- ── Proctoring (Phase 2) ── -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.17.0/dist/tf-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.17.0/dist/tf-converter.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.17.0/dist/tf-backend-webgl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.1.0/dist/blazeface.min.js"></script>
+    <script src="proctoring.js"></script>
+
     <script>
-    (function() {
-        'use strict';
+        (function () {
+            'use strict';
 
-        // ── Configuration ──
-        const API_URL = window.location.hostname === 'localhost'
-            ? 'http://localhost:5000/api'
-            : window.location.origin + '/api';
+            // ── Configuration ──
+            const API_URL = window.location.hostname === 'localhost'
+                ? 'http://localhost:5000/api'
+                : window.location.origin + '/api';
 
-        // ── State ──
-        let authToken = localStorage.getItem('candidate_token');
-        let sessionId = null;
-        let configId = null;
-        let questions = [];
-        let currentIndex = 0;
-        let answers = {};           // q_id -> answer
-        let timeSpent = {};         // q_id -> seconds
-        let questionStartTime = 0;  // Tracks when current question was started
-        let timerInterval = null;
-        let totalSeconds = 0;
-        let remainingSeconds = 0;
-        let monacoEditor = null;
-        let monacoReady = false;
-        let codeResults = {};       // q_id -> execution result
-        let sessionData = {};
+            // ── State ──
+            let authToken = localStorage.getItem('candidate_token');
+            let sessionId = null;
+            let configId = null;
+            let questions = [];
+            let currentIndex = 0;
+            let answers = {};           // q_id -> answer
+            let timeSpent = {};         // q_id -> seconds
+            let questionStartTime = 0;  // Tracks when current question was started
+            let timerInterval = null;
+            let totalSeconds = 0;
+            let remainingSeconds = 0;
+            let monacoEditor = null;
+            let monacoReady = false;
+            let codeResults = {};       // q_id -> execution result
+            let sessionData = {};
+            let timerSyncInterval = null;  // 30s timer PATCH interval
 
-        // ── Parse URL params ──
-        const urlParams = new URLSearchParams(window.location.search);
-        configId = urlParams.get('config') || urlParams.get('config_id');
-        sessionId = urlParams.get('session') || urlParams.get('session_id');
+            // ── Parse URL params ──
+            const urlParams = new URLSearchParams(window.location.search);
+            configId = urlParams.get('config') || urlParams.get('config_id');
+            sessionId = urlParams.get('session') || urlParams.get('session_id');
 
-        // ── Initialize Monaco ──
-        require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
-        require(['vs/editor/editor.main'], function () {
-            monacoReady = true;
-        });
+            // ── Initialize Monaco ──
+            require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
+            require(['vs/editor/editor.main'], function () {
+                monacoReady = true;
+            });
 
-        // ── Boot ──
-        if (configId) {
-            startAssessment(configId);
-        } else if (sessionId) {
-            resumeSession(sessionId);
-        } else {
-            document.getElementById('saLoading').innerHTML = `
+            // ── Boot ──
+            if (configId) {
+                startAssessment(configId);
+            } else if (sessionId) {
+                resumeSession(sessionId);
+            } else {
+                document.getElementById('saLoading').innerHTML = `
                 <h2>No Assessment Selected</h2>
                 <p style="color:var(--sa-text-muted);">Please start an assessment from your dashboard.</p>
                 <a href="index.html" class="sa-btn sa-btn-primary" style="margin-top:16px;">← Back to Dashboard</a>
             `;
-        }
-
-        // ── API Helper ──
-        async function apiFetch(url, options = {}) {
-            const defaults = {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                }
-            };
-            const resp = await fetch(`${API_URL}${url}`, { ...defaults, ...options });
-            if (resp.status === 401) {
-                alert('Session expired. Please log in again.');
-                window.location.href = 'index.html';
-                return null;
             }
-            return resp;
-        }
 
-        // ── Start Assessment ──
-        async function startAssessment(cfgId) {
-            try {
-                const resp = await apiFetch(`/smart-assessments/sessions/${cfgId}/start`, {
-                    method: 'POST',
-                    body: JSON.stringify({})
+            // ── API Helper ──
+            async function apiFetch(url, options = {}) {
+                const defaults = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                };
+                const resp = await fetch(`${API_URL}${url}`, { ...defaults, ...options });
+                if (resp.status === 401) {
+                    alert('Session expired. Please log in again.');
+                    window.location.href = 'index.html';
+                    return null;
+                }
+                return resp;
+            }
+
+            // ── Start Assessment ──
+            async function startAssessment(cfgId) {
+                try {
+                    const resp = await apiFetch(`/smart-assessments/sessions/${cfgId}/start`, {
+                        method: 'POST',
+                        body: JSON.stringify({})
+                    });
+                    if (!resp || !resp.ok) {
+                        const err = await resp.json().catch(() => ({}));
+                        throw new Error(err.error || 'Failed to start assessment');
+                    }
+                    const data = await resp.json();
+
+                    sessionId = data.session_id || (data.session && data.session._id);
+                    questions = data.questions || [];
+                    sessionData = data.session || {};
+
+                    if (questions.length === 0) {
+                        throw new Error('No questions were generated. Check API key configuration.');
+                    }
+
+                    totalSeconds = (sessionData.duration_minutes || 60) * 60;
+                    remainingSeconds = totalSeconds;
+
+                    initUI();
+                } catch (err) {
+                    document.getElementById('saLoading').innerHTML = `
+                    <h2 style="color:var(--sa-danger);">❌ Error</h2>
+                    <p>${err.message}</p>
+                    <a href="index.html" class="sa-btn sa-btn-primary" style="margin-top:16px;">← Back</a>
+                `;
+                }
+            }
+
+            // ── Resume Session ──
+            async function resumeSession(sid) {
+                try {
+                    const resp = await apiFetch(`/smart-assessments/sessions/${sid}`);
+                    if (!resp || !resp.ok) throw new Error('Session not found');
+                    const data = await resp.json();
+                    const session = data.session;
+
+                    sessionId = sid;
+                    questions = session.questions || [];
+                    answers = session.answers || {};
+                    timeSpent = session.time_spent || {};
+                    sessionData = session;
+                    currentIndex = session.current_question_index || 0;
+
+                    // Restore remaining time — prefer server-persisted remaining_seconds
+                    if (typeof session.remaining_seconds === 'number' && session.remaining_seconds > 0) {
+                        remainingSeconds = session.remaining_seconds;
+                    } else if (session.expires_at) {
+                        const expires = new Date(session.expires_at);
+                        remainingSeconds = Math.max(0, Math.floor((expires - Date.now()) / 1000));
+                    } else {
+                        remainingSeconds = 3600;
+                    }
+                    totalSeconds = remainingSeconds;
+
+                    initUI();
+                } catch (err) {
+                    document.getElementById('saLoading').innerHTML = `
+                    <h2 style="color:var(--sa-danger);">❌ Error</h2>
+                    <p>${err.message}</p>
+                    <a href="index.html" class="sa-btn sa-btn-primary" style="margin-top:16px;">← Back</a>
+                `;
+                }
+            }
+
+            // ── Initialize UI ──
+            function initUI() {
+                document.getElementById('saLoading').classList.add('sa-hidden');
+                document.getElementById('saAssessment').classList.remove('sa-hidden');
+
+                document.getElementById('saTitle').textContent = sessionData.title || 'Smart Assessment';
+                document.getElementById('saSubtitle').textContent =
+                    `${sessionData.config_job_role || ''} • ${questions.length} Questions • ${sessionData.passing_score || 70}% to pass`;
+
+                buildNavGrid();
+                renderQuestion(0);
+                startTimer();
+
+                // ── Start proctoring (Phase 2) ──
+                if (window.ProctoringClient) {
+                    window._proctoring = new ProctoringClient({
+                        sessionId: sessionId,
+                        token: authToken,
+                    });
+                    window._proctoring.start();
+
+                    // Listen for server confirmation of session completion
+                    // so we can flush the final recording chunk cleanly
+                    if (window._proctoring.socket) {
+                        window._proctoring.socket.on('session_complete', async (data) => {
+                            console.log('[Assessment] session_complete received:', data);
+                            if (window._proctoring && window._proctoring._mediaRecorder) {
+                                try {
+                                    if (window._proctoring._mediaRecorder.state !== 'inactive') {
+                                        window._proctoring._mediaRecorder.stop();
+                                    }
+                                    await window._proctoring._flushRecordingChunk(true);
+                                } catch (e) {
+                                    console.warn('[Assessment] Final recording flush on complete:', e.message);
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+
+            // ── Navigation Grid ──
+            function buildNavGrid() {
+                const grid = document.getElementById('saNavGrid');
+                grid.innerHTML = questions.map((q, i) => {
+                    const cls = i === currentIndex ? 'active' : (answers[q.id] ? 'answered' : '');
+                    return `<button class="sa-nav-btn ${cls}" onclick="goToQuestion(${i})" title="Q${i + 1}: ${q.type}">${i + 1}</button>`;
+                }).join('');
+            }
+
+            function updateNavGrid() {
+                const btns = document.querySelectorAll('.sa-nav-btn');
+                btns.forEach((btn, i) => {
+                    btn.className = 'sa-nav-btn';
+                    if (i === currentIndex) btn.classList.add('active');
+                    else if (answers[questions[i]?.id]) btn.classList.add('answered');
                 });
-                if (!resp || !resp.ok) {
-                    const err = await resp.json().catch(() => ({}));
-                    throw new Error(err.error || 'Failed to start assessment');
-                }
-                const data = await resp.json();
-
-                sessionId = data.session_id || (data.session && data.session._id);
-                questions = data.questions || [];
-                sessionData = data.session || {};
-
-                if (questions.length === 0) {
-                    throw new Error('No questions were generated. Check API key configuration.');
-                }
-
-                totalSeconds = (sessionData.duration_minutes || 60) * 60;
-                remainingSeconds = totalSeconds;
-
-                initUI();
-            } catch (err) {
-                document.getElementById('saLoading').innerHTML = `
-                    <h2 style="color:var(--sa-danger);">❌ Error</h2>
-                    <p>${err.message}</p>
-                    <a href="index.html" class="sa-btn sa-btn-primary" style="margin-top:16px;">← Back</a>
-                `;
+                document.getElementById('saQuestionCount').textContent = `${currentIndex + 1} / ${questions.length}`;
+                document.getElementById('saProgressFill').style.width =
+                    `${((Object.keys(answers).length) / questions.length * 100)}%`;
             }
-        }
 
-        // ── Resume Session ──
-        async function resumeSession(sid) {
-            try {
-                const resp = await apiFetch(`/smart-assessments/sessions/${sid}`);
-                if (!resp || !resp.ok) throw new Error('Session not found');
-                const data = await resp.json();
-                const session = data.session;
-
-                sessionId = sid;
-                questions = session.questions || [];
-                answers = session.answers || {};
-                timeSpent = session.time_spent || {};
-                sessionData = session;
-                currentIndex = session.current_question_index || 0;
-
-                // Calculate remaining time
-                if (session.expires_at) {
-                    const expires = new Date(session.expires_at);
-                    remainingSeconds = Math.max(0, Math.floor((expires - Date.now()) / 1000));
-                } else {
-                    remainingSeconds = 3600;
-                }
-                totalSeconds = remainingSeconds;
-
-                initUI();
-            } catch (err) {
-                document.getElementById('saLoading').innerHTML = `
-                    <h2 style="color:var(--sa-danger);">❌ Error</h2>
-                    <p>${err.message}</p>
-                    <a href="index.html" class="sa-btn sa-btn-primary" style="margin-top:16px;">← Back</a>
-                `;
-            }
-        }
-
-        // ── Initialize UI ──
-        function initUI() {
-            document.getElementById('saLoading').classList.add('sa-hidden');
-            document.getElementById('saAssessment').classList.remove('sa-hidden');
-
-            document.getElementById('saTitle').textContent = sessionData.title || 'Smart Assessment';
-            document.getElementById('saSubtitle').textContent =
-                `${sessionData.config_job_role || ''} • ${questions.length} Questions • ${sessionData.passing_score || 70}% to pass`;
-
-            buildNavGrid();
-            renderQuestion(0);
-            startTimer();
-        }
-
-        // ── Navigation Grid ──
-        function buildNavGrid() {
-            const grid = document.getElementById('saNavGrid');
-            grid.innerHTML = questions.map((q, i) => {
-                const cls = i === currentIndex ? 'active' : (answers[q.id] ? 'answered' : '');
-                return `<button class="sa-nav-btn ${cls}" onclick="goToQuestion(${i})" title="Q${i + 1}: ${q.type}">${i + 1}</button>`;
-            }).join('');
-        }
-
-        function updateNavGrid() {
-            const btns = document.querySelectorAll('.sa-nav-btn');
-            btns.forEach((btn, i) => {
-                btn.className = 'sa-nav-btn';
-                if (i === currentIndex) btn.classList.add('active');
-                else if (answers[questions[i]?.id]) btn.classList.add('answered');
-            });
-            document.getElementById('saQuestionCount').textContent = `${currentIndex + 1} / ${questions.length}`;
-            document.getElementById('saProgressFill').style.width =
-                `${((Object.keys(answers).length) / questions.length * 100)}%`;
-        }
-
-        // ── Timer ──
-        function startTimer() {
-            updateTimerDisplay();
-            timerInterval = setInterval(() => {
-                remainingSeconds--;
+            // ── Timer ──
+            function startTimer() {
                 updateTimerDisplay();
-                if (remainingSeconds <= 0) {
+                timerInterval = setInterval(() => {
+                    remainingSeconds--;
+                    updateTimerDisplay();
+                    if (remainingSeconds <= 0) {
+                        clearInterval(timerInterval);
+                        finishAssessment();
+                    }
+                }, 1000);
+
+                // Sync remaining_seconds to server every 30s
+                // (5s rate limit on endpoint is abuse prevention, not our cadence)
+                timerSyncInterval = setInterval(async () => {
+                    if (remainingSeconds > 0 && sessionId) {
+                        try {
+                            await apiFetch(`/smart-assessments/sessions/${sessionId}/timer`, {
+                                method: 'PATCH',
+                                body: JSON.stringify({ remaining_seconds: remainingSeconds }),
+                            });
+                        } catch (e) { /* non-critical — timer will recalculate on reload */ }
+                    }
+                }, 30_000);
+
+                // Expose so proctoring.js _handleTermination can stop sync
+                window._clearTimerSync = () => {
                     clearInterval(timerInterval);
-                    finishAssessment();
+                    if (timerSyncInterval) clearInterval(timerSyncInterval);
+                };
+            }
+
+            function updateTimerDisplay() {
+                const m = Math.floor(remainingSeconds / 60);
+                const s = remainingSeconds % 60;
+                const el = document.getElementById('saTimer');
+                el.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                el.className = 'sa-timer';
+                if (remainingSeconds <= 60) el.classList.add('danger');
+                else if (remainingSeconds <= 300) el.classList.add('warning');
+            }
+
+            // ── Render Question ──
+            function renderQuestion(index) {
+                // Save time for previous question
+                if (questionStartTime > 0 && questions[currentIndex]) {
+                    const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
+                    const qId = questions[currentIndex].id;
+                    timeSpent[qId] = (timeSpent[qId] || 0) + elapsed;
                 }
-            }, 1000);
-        }
 
-        function updateTimerDisplay() {
-            const m = Math.floor(remainingSeconds / 60);
-            const s = remainingSeconds % 60;
-            const el = document.getElementById('saTimer');
-            el.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-            el.className = 'sa-timer';
-            if (remainingSeconds <= 60) el.classList.add('danger');
-            else if (remainingSeconds <= 300) el.classList.add('warning');
-        }
+                currentIndex = index;
+                questionStartTime = Date.now();
+                updateNavGrid();
 
-        // ── Render Question ──
-        function renderQuestion(index) {
-            // Save time for previous question
-            if (questionStartTime > 0 && questions[currentIndex]) {
-                const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
-                const qId = questions[currentIndex].id;
-                timeSpent[qId] = (timeSpent[qId] || 0) + elapsed;
-            }
+                const q = questions[index];
+                if (!q) return;
 
-            currentIndex = index;
-            questionStartTime = Date.now();
-            updateNavGrid();
+                const area = document.getElementById('saQuestionArea');
+                const typeTagClass = {
+                    coding: 'sa-tag-coding', mcq: 'sa-tag-mcq', debugging: 'sa-tag-debugging',
+                    aptitude: 'sa-tag-aptitude', logical_reasoning: 'sa-tag-logical'
+                }[q.type] || 'sa-tag-mcq';
+                const diffTagClass = { easy: 'sa-tag-easy', medium: 'sa-tag-medium', hard: 'sa-tag-hard' }[q.difficulty] || '';
 
-            const q = questions[index];
-            if (!q) return;
+                let bodyHTML = '';
 
-            const area = document.getElementById('saQuestionArea');
-            const typeTagClass = {
-                coding: 'sa-tag-coding', mcq: 'sa-tag-mcq', debugging: 'sa-tag-debugging',
-                aptitude: 'sa-tag-aptitude', logical_reasoning: 'sa-tag-logical'
-            }[q.type] || 'sa-tag-mcq';
-            const diffTagClass = { easy: 'sa-tag-easy', medium: 'sa-tag-medium', hard: 'sa-tag-hard' }[q.difficulty] || '';
+                if (q.type === 'mcq' || q.type === 'aptitude' || q.type === 'logical_reasoning') {
+                    bodyHTML = renderMCQ(q);
+                } else if (q.type === 'coding' || q.type === 'debugging') {
+                    bodyHTML = renderCoding(q);
+                } else {
+                    bodyHTML = renderMCQ(q); // fallback
+                }
 
-            let bodyHTML = '';
-
-            if (q.type === 'mcq' || q.type === 'aptitude' || q.type === 'logical_reasoning') {
-                bodyHTML = renderMCQ(q);
-            } else if (q.type === 'coding' || q.type === 'debugging') {
-                bodyHTML = renderCoding(q);
-            } else {
-                bodyHTML = renderMCQ(q); // fallback
-            }
-
-            area.innerHTML = `
+                area.innerHTML = `
                 <div class="sa-question-card">
                     <div class="sa-question-header">
                         <div class="sa-question-meta">
@@ -480,49 +963,49 @@
                         <button class="sa-btn sa-btn-outline" onclick="goToQuestion(${index - 1})" ${index === 0 ? 'disabled' : ''}>← Previous</button>
                         <div>
                             ${(q.type === 'coding' || q.type === 'debugging') ?
-                                `<button class="sa-btn sa-btn-success" onclick="runCode('${q.id}')" id="runBtn_${q.id}">▶ Run Code</button>` : ''}
+                        `<button class="sa-btn sa-btn-success" onclick="runCode('${q.id}')" id="runBtn_${q.id}">▶ Run Code</button>` : ''}
                             <button class="sa-btn sa-btn-primary" onclick="goToQuestion(${index + 1})" ${index === questions.length - 1 ? 'disabled' : ''}>Next →</button>
                         </div>
                     </div>
                 </div>
             `;
 
-            // Initialize Monaco for coding questions
-            if ((q.type === 'coding' || q.type === 'debugging') && monacoReady) {
-                setTimeout(() => initMonaco(q), 100);
+                // Initialize Monaco for coding questions
+                if ((q.type === 'coding' || q.type === 'debugging') && monacoReady) {
+                    setTimeout(() => initMonaco(q), 100);
+                }
             }
-        }
 
-        // ── Render MCQ ──
-        function renderMCQ(q) {
-            const options = q.options || [];
-            const savedAnswer = answers[q.id] || '';
-            return `
+            // ── Render MCQ ──
+            function renderMCQ(q) {
+                const options = q.options || [];
+                const savedAnswer = answers[q.id] || '';
+                return `
                 <div class="sa-options">
                     ${options.map((opt, i) => {
-                        const label = String.fromCharCode(65 + i);
-                        const optText = opt.startsWith(label + '.') ? opt.substring(2).trim() : opt;
-                        const isSelected = savedAnswer === label || savedAnswer === opt;
-                        return `
+                    const label = String.fromCharCode(65 + i);
+                    const optText = opt.startsWith(label + '.') ? opt.substring(2).trim() : opt;
+                    const isSelected = savedAnswer === label || savedAnswer === opt;
+                    return `
                             <div class="sa-option ${isSelected ? 'selected' : ''}"
                                  onclick="selectOption('${q.id}', '${label}', this)">
                                 <div class="sa-option-label">${label}</div>
                                 <div>${escapeHtml(optText)}</div>
                             </div>
                         `;
-                    }).join('')}
+                }).join('')}
                 </div>
             `;
-        }
+            }
 
-        // ── Render Coding ──
-        function renderCoding(q) {
-            const examples = q.examples || [];
-            const result = codeResults[q.id];
+            // ── Render Coding ──
+            function renderCoding(q) {
+                const examples = q.examples || [];
+                const result = codeResults[q.id];
 
-            let examplesHTML = '';
-            if (examples.length > 0) {
-                examplesHTML = `<div class="sa-examples">
+                let examplesHTML = '';
+                if (examples.length > 0) {
+                    examplesHTML = `<div class="sa-examples">
                     <strong style="font-size:13px;color:var(--sa-text-muted);margin-bottom:8px;display:block;">EXAMPLES</strong>
                     ${examples.map((ex, i) => `
                         <div class="sa-example-box">
@@ -533,30 +1016,29 @@
                         </div>
                     `).join('')}
                 </div>`;
-            }
+                }
 
-            let constraintsHTML = '';
-            if (q.constraints) {
-                constraintsHTML = `<div class="sa-constraints"><strong>⚠️ Constraints:</strong> ${escapeHtml(q.constraints)}</div>`;
-            }
+                let constraintsHTML = '';
+                if (q.constraints) {
+                    constraintsHTML = `<div class="sa-constraints"><strong>⚠️ Constraints:</strong> ${escapeHtml(q.constraints)}</div>`;
+                }
 
-            let formatHTML = '';
-            if (q.input_format || q.output_format) {
-                formatHTML = `<div style="margin-bottom:12px;font-size:13px;">
+                let formatHTML = '';
+                if (q.input_format || q.output_format) {
+                    formatHTML = `<div style="margin-bottom:12px;font-size:13px;">
                     ${q.input_format ? `<div><strong>Input Format:</strong> ${escapeHtml(q.input_format)}</div>` : ''}
                     ${q.output_format ? `<div><strong>Output Format:</strong> ${escapeHtml(q.output_format)}</div>` : ''}
                 </div>`;
-            }
+                }
 
-            let resultsHTML = '';
-            if (result) {
-                const visible = result.visible_test_results || [];
-                resultsHTML = `
+                let resultsHTML = '';
+                if (result) {
+                    const visible = result.visible_test_results || [];
+                    resultsHTML = `
                     <div class="sa-test-results">
                         <strong style="font-size:13px;">Test Results: ${result.passed_tests}/${result.total_tests} passed
-                            <span style="margin-left:8px;padding:2px 8px;border-radius:4px;font-size:12px;background:${
-                                result.overall_status === 'Accepted' ? '#d1fae5' : result.overall_status === 'Partial' ? '#fef3c7' : '#fee2e2'
-                            };">${result.overall_status}</span>
+                            <span style="margin-left:8px;padding:2px 8px;border-radius:4px;font-size:12px;background:${result.overall_status === 'Accepted' ? '#d1fae5' : result.overall_status === 'Partial' ? '#fef3c7' : '#fee2e2'
+                        };">${result.overall_status}</span>
                         </strong>
                         ${visible.map((r, i) => `
                             <div class="sa-test-case ${r.status === 'Accepted' ? 'sa-test-pass' : 'sa-test-fail'}">
@@ -569,9 +1051,9 @@
                         </div>
                     </div>
                 `;
-            }
+                }
 
-            return `
+                return `
                 ${formatHTML}
                 ${constraintsHTML}
                 ${examplesHTML}
@@ -593,190 +1075,200 @@
                 </div>
                 ${resultsHTML}
             `;
-        }
-
-        // ── Monaco Editor ──
-        function initMonaco(q) {
-            const container = document.getElementById('monacoEditor');
-            if (!container) return;
-
-            const langMap = { python: 'python', javascript: 'javascript', java: 'java', cpp: 'cpp', c: 'c', go: 'go', ruby: 'ruby', typescript: 'typescript' };
-            const savedCode = answers[q.id] || q.starter_code || getDefaultStarter(q);
-
-            if (monacoEditor) {
-                monacoEditor.dispose();
             }
 
-            monacoEditor = monaco.editor.create(container, {
-                value: savedCode,
-                language: langMap[document.getElementById('langSelect')?.value || 'python'] || 'python',
-                theme: 'vs-dark',
-                minimap: { enabled: false },
-                fontSize: 14,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 4,
-                wordWrap: 'on',
-                padding: { top: 12 },
-            });
+            // ── Monaco Editor ──
+            function initMonaco(q) {
+                const container = document.getElementById('monacoEditor');
+                if (!container) return;
 
-            // Auto-save on change
-            monacoEditor.onDidChangeModelContent(() => {
-                answers[q.id] = monacoEditor.getValue();
-            });
-        }
+                const langMap = { python: 'python', javascript: 'javascript', java: 'java', cpp: 'cpp', c: 'c', go: 'go', ruby: 'ruby', typescript: 'typescript' };
+                const savedCode = answers[q.id] || q.starter_code || getDefaultStarter(q);
 
-        function getDefaultStarter(q) {
-            const lang = document.getElementById('langSelect')?.value || 'python';
-            const starters = {
-                python: '# Write your solution here\ndef solve():\n    pass\n\nsolve()',
-                javascript: '// Write your solution here\nfunction solve() {\n    \n}\nsolve();',
-                java: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // Write your solution here\n    }\n}',
-                cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your solution here\n    return 0;\n}',
-            };
-            return starters[lang] || starters.python;
-        }
-
-        function changeLang(lang) {
-            if (monacoEditor) {
-                const model = monacoEditor.getModel();
-                if (model) {
-                    monaco.editor.setModelLanguage(model, lang);
-                }
-            }
-        }
-
-        // ── Actions ──
-        window.selectOption = function(qId, label, el) {
-            answers[qId] = label;
-            // Update UI
-            el.parentElement.querySelectorAll('.sa-option').forEach(o => o.classList.remove('selected'));
-            el.classList.add('selected');
-            updateNavGrid();
-
-            // Submit answer to backend
-            submitAnswerAsync(qId, label);
-        };
-
-        async function submitAnswerAsync(qId, answer) {
-            try {
-                const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
-                await apiFetch(`/smart-assessments/sessions/${sessionId}/answer`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        question_id: qId,
-                        answer: answer,
-                        time_spent_seconds: (timeSpent[qId] || 0) + elapsed,
-                    })
-                });
-            } catch (e) {
-                console.error('Failed to submit answer:', e);
-            }
-        }
-
-        window.goToQuestion = function(index) {
-            if (index < 0 || index >= questions.length) return;
-            renderQuestion(index);
-        };
-
-        window.runCode = async function(qId) {
-            const btn = document.getElementById(`runBtn_${qId}`);
-            if (btn) { btn.disabled = true; btn.textContent = '⏳ Running...'; }
-
-            const code = monacoEditor ? monacoEditor.getValue() : (answers[qId] || '');
-            answers[qId] = code;
-            const lang = document.getElementById('langSelect')?.value || 'python';
-
-            try {
-                const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
-                const resp = await apiFetch(`/smart-assessments/sessions/${sessionId}/code`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        question_id: qId,
-                        source_code: code,
-                        language: lang,
-                        time_spent_seconds: (timeSpent[qId] || 0) + elapsed,
-                    })
-                });
-
-                if (!resp || !resp.ok) {
-                    const err = await resp.json().catch(() => ({}));
-                    throw new Error(err.error || 'Execution failed');
+                if (monacoEditor) {
+                    monacoEditor.dispose();
                 }
 
-                const data = await resp.json();
-                codeResults[qId] = data.result;
+                monacoEditor = monaco.editor.create(container, {
+                    value: savedCode,
+                    language: langMap[document.getElementById('langSelect')?.value || 'python'] || 'python',
+                    theme: 'vs-dark',
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: 4,
+                    wordWrap: 'on',
+                    padding: { top: 12 },
+                });
+
+                // Expose to proctoring.js so _handleTermination can set readOnly
+                window._monacoEditor = monacoEditor;
+
+                // Auto-save on change
+                monacoEditor.onDidChangeModelContent(() => {
+                    answers[q.id] = monacoEditor.getValue();
+                });
+            }
+
+            function getDefaultStarter(q) {
+                const lang = document.getElementById('langSelect')?.value || 'python';
+                const starters = {
+                    python: '# Write your solution here\ndef solve():\n    pass\n\nsolve()',
+                    javascript: '// Write your solution here\nfunction solve() {\n    \n}\nsolve();',
+                    java: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // Write your solution here\n    }\n}',
+                    cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your solution here\n    return 0;\n}',
+                };
+                return starters[lang] || starters.python;
+            }
+
+            function changeLang(lang) {
+                if (monacoEditor) {
+                    const model = monacoEditor.getModel();
+                    if (model) {
+                        monaco.editor.setModelLanguage(model, lang);
+                    }
+                }
+            }
+
+            // ── Actions ──
+            window.selectOption = function (qId, label, el) {
+                answers[qId] = label;
+                // Update UI
+                el.parentElement.querySelectorAll('.sa-option').forEach(o => o.classList.remove('selected'));
+                el.classList.add('selected');
                 updateNavGrid();
 
-                // Re-render to show results
-                renderQuestion(currentIndex);
-            } catch (e) {
-                alert('Code execution error: ' + e.message);
-            } finally {
-                const btn2 = document.getElementById(`runBtn_${qId}`);
-                if (btn2) { btn2.disabled = false; btn2.textContent = '▶ Run Code'; }
-            }
-        };
+                // Submit answer to backend
+                submitAnswerAsync(qId, label);
+            };
 
-        window.finishAssessment = async function() {
-            if (!confirm('Are you sure you want to submit? You cannot change your answers after submission.')) return;
-
-            clearInterval(timerInterval);
-
-            // Save time for current question
-            if (questionStartTime > 0 && questions[currentIndex]) {
-                const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
-                const qId = questions[currentIndex].id;
-                timeSpent[qId] = (timeSpent[qId] || 0) + elapsed;
+            async function submitAnswerAsync(qId, answer) {
+                try {
+                    const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
+                    await apiFetch(`/smart-assessments/sessions/${sessionId}/answer`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            question_id: qId,
+                            answer: answer,
+                            time_spent_seconds: (timeSpent[qId] || 0) + elapsed,
+                        })
+                    });
+                } catch (e) {
+                    console.error('Failed to submit answer:', e);
+                }
             }
 
-            document.getElementById('saAssessment').classList.add('sa-hidden');
-            document.getElementById('saLoading').classList.remove('sa-hidden');
-            document.getElementById('saLoading').innerHTML = `
+            window.goToQuestion = function (index) {
+                if (index < 0 || index >= questions.length) return;
+                renderQuestion(index);
+            };
+
+            window.runCode = async function (qId) {
+                const btn = document.getElementById(`runBtn_${qId}`);
+                if (btn) { btn.disabled = true; btn.textContent = '⏳ Running...'; }
+
+                const code = monacoEditor ? monacoEditor.getValue() : (answers[qId] || '');
+                answers[qId] = code;
+                const lang = document.getElementById('langSelect')?.value || 'python';
+
+                try {
+                    const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
+                    const resp = await apiFetch(`/smart-assessments/sessions/${sessionId}/code`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            question_id: qId,
+                            source_code: code,
+                            language: lang,
+                            time_spent_seconds: (timeSpent[qId] || 0) + elapsed,
+                        })
+                    });
+
+                    if (!resp || !resp.ok) {
+                        const err = await resp.json().catch(() => ({}));
+                        throw new Error(err.error || 'Execution failed');
+                    }
+
+                    const data = await resp.json();
+                    codeResults[qId] = data.result;
+                    updateNavGrid();
+
+                    // Re-render to show results
+                    renderQuestion(currentIndex);
+                } catch (e) {
+                    alert('Code execution error: ' + e.message);
+                } finally {
+                    const btn2 = document.getElementById(`runBtn_${qId}`);
+                    if (btn2) { btn2.disabled = false; btn2.textContent = '▶ Run Code'; }
+                }
+            };
+
+            window.finishAssessment = async function () {
+                if (!confirm('Are you sure you want to submit? You cannot change your answers after submission.')) return;
+
+                clearInterval(timerInterval);
+                if (timerSyncInterval) clearInterval(timerSyncInterval);
+
+                // ── Stop proctoring (Phase 2) ──
+                if (window._proctoring) {
+                    window._proctoring.destroy();
+                    window._proctoring = null;
+                }
+
+                // Save time for current question
+                if (questionStartTime > 0 && questions[currentIndex]) {
+                    const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
+                    const qId = questions[currentIndex].id;
+                    timeSpent[qId] = (timeSpent[qId] || 0) + elapsed;
+                }
+
+                document.getElementById('saAssessment').classList.add('sa-hidden');
+                document.getElementById('saLoading').classList.remove('sa-hidden');
+                document.getElementById('saLoading').innerHTML = `
                 <div class="sa-spinner"></div>
                 <h2>Evaluating Your Answers...</h2>
                 <p style="color:var(--sa-text-muted);">This may take a moment for coding questions</p>
             `;
 
-            try {
-                const resp = await apiFetch(`/smart-assessments/sessions/${sessionId}/finish`, {
-                    method: 'POST',
-                    body: JSON.stringify({})
-                });
+                try {
+                    const resp = await apiFetch(`/smart-assessments/sessions/${sessionId}/finish`, {
+                        method: 'POST',
+                        body: JSON.stringify({})
+                    });
 
-                if (!resp || !resp.ok) {
-                    const err = await resp.json().catch(() => ({}));
-                    throw new Error(err.error || 'Failed to submit');
-                }
+                    if (!resp || !resp.ok) {
+                        const err = await resp.json().catch(() => ({}));
+                        throw new Error(err.error || 'Failed to submit');
+                    }
 
-                const data = await resp.json();
-                showResults(data);
-            } catch (e) {
-                document.getElementById('saLoading').innerHTML = `
+                    const data = await resp.json();
+                    showResults(data);
+                } catch (e) {
+                    document.getElementById('saLoading').innerHTML = `
                     <h2 style="color:var(--sa-danger);">❌ Submission Error</h2>
                     <p>${e.message}</p>
                     <a href="index.html" class="sa-btn sa-btn-primary" style="margin-top:16px;">← Back</a>
                 `;
-            }
-        };
+                }
+            };
 
-        // ── Results Screen ──
-        function showResults(data) {
-            document.getElementById('saLoading').classList.add('sa-hidden');
-            const resultsDiv = document.getElementById('saResults');
-            resultsDiv.classList.remove('sa-hidden');
+            // ── Results Screen ──
+            function showResults(data) {
+                document.getElementById('saLoading').classList.add('sa-hidden');
+                const resultsDiv = document.getElementById('saResults');
+                resultsDiv.classList.remove('sa-hidden');
 
-            const r = data.results || {};
-            const questionScores = data.question_scores || {};
-            const verdictClass = r.verdict === 'pass' ? 'pass' : r.verdict === 'review' ? 'review' : 'fail';
-            const verdictEmoji = r.verdict === 'pass' ? '🎉' : r.verdict === 'review' ? '🔍' : '❌';
-            const verdictText = r.verdict === 'pass' ? 'PASSED' : r.verdict === 'review' ? 'UNDER REVIEW' : 'NOT PASSED';
+                const r = data.results || {};
+                const questionScores = data.question_scores || {};
+                const verdictClass = r.verdict === 'pass' ? 'pass' : r.verdict === 'review' ? 'review' : 'fail';
+                const verdictEmoji = r.verdict === 'pass' ? '🎉' : r.verdict === 'review' ? '🔍' : '❌';
+                const verdictText = r.verdict === 'pass' ? 'PASSED' : r.verdict === 'review' ? 'UNDER REVIEW' : 'NOT PASSED';
 
-            let breakdownHTML = '';
-            if (r.type_breakdown) {
-                for (const [type, bd] of Object.entries(r.type_breakdown)) {
-                    breakdownHTML += `
+                let breakdownHTML = '';
+                if (r.type_breakdown) {
+                    for (const [type, bd] of Object.entries(r.type_breakdown)) {
+                        breakdownHTML += `
                         <div class="sa-breakdown-card">
                             <h4>${type.toUpperCase()}</h4>
                             <div class="value">${bd.percentage}%</div>
@@ -785,12 +1277,12 @@
                             </div>
                         </div>
                     `;
+                    }
                 }
-            }
 
-            let timeHTML = '';
-            if (r.time_analysis) {
-                timeHTML = `
+                let timeHTML = '';
+                if (r.time_analysis) {
+                    timeHTML = `
                     <div class="sa-breakdown-card">
                         <h4>TIME</h4>
                         <div class="value">${r.time_analysis.total_minutes} min</div>
@@ -803,17 +1295,17 @@
                         <div class="value" style="color:var(--sa-success);">+${r.efficiency_bonus}%</div>
                     </div>
                 `;
-            }
+                }
 
-            let strengthsHTML = '';
-            if (r.strengths && r.strengths.length > 0) {
-                strengthsHTML = `<div style="margin-top:8px;"><strong style="color:var(--sa-success);">💪 Strengths:</strong> ${r.strengths.join(', ')}</div>`;
-            }
-            if (r.weaknesses && r.weaknesses.length > 0) {
-                strengthsHTML += `<div style="margin-top:4px;"><strong style="color:var(--sa-danger);">📈 Improve:</strong> ${r.weaknesses.join(', ')}</div>`;
-            }
+                let strengthsHTML = '';
+                if (r.strengths && r.strengths.length > 0) {
+                    strengthsHTML = `<div style="margin-top:8px;"><strong style="color:var(--sa-success);">💪 Strengths:</strong> ${r.strengths.join(', ')}</div>`;
+                }
+                if (r.weaknesses && r.weaknesses.length > 0) {
+                    strengthsHTML += `<div style="margin-top:4px;"><strong style="color:var(--sa-danger);">📈 Improve:</strong> ${r.weaknesses.join(', ')}</div>`;
+                }
 
-            resultsDiv.innerHTML = `
+                resultsDiv.innerHTML = `
                 <div class="sa-results">
                     <div style="font-size:48px;margin-bottom:8px;">${verdictEmoji}</div>
                     <h1 style="margin:0 0 8px;">${verdictText}</h1>
@@ -838,25 +1330,26 @@
                     </div>
                 </div>
             `;
-        }
-
-        // ── Utility ──
-        function escapeHtml(str) {
-            if (!str) return '';
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-        }
-
-        // Warn before leaving
-        window.addEventListener('beforeunload', function(e) {
-            if (sessionId && !document.getElementById('saResults').classList.contains('sa-hidden') === false) {
-                e.preventDefault();
-                e.returnValue = 'You have an assessment in progress. Are you sure you want to leave?';
             }
-        });
 
-    })();
+            // ── Utility ──
+            function escapeHtml(str) {
+                if (!str) return '';
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            // Warn before leaving
+            window.addEventListener('beforeunload', function (e) {
+                if (sessionId && !document.getElementById('saResults').classList.contains('sa-hidden') === false) {
+                    e.preventDefault();
+                    e.returnValue = 'You have an assessment in progress. Are you sure you want to leave?';
+                }
+            });
+
+        })();
     </script>
 </body>
+
 </html>

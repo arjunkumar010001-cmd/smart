@@ -1163,3 +1163,90 @@ html {
 [data-theme="dark"] .user-info {
     color: var(--text-secondary);
 }
+
+/* ── Bug #2 remaining: Candidate analytics dark mode overrides ──────── */
+
+/* KPI trend badges */
+[data-theme="dark"] .kpi-trend {
+    color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .kpi-trend.positive {
+    color: #34d399 !important;
+}
+[data-theme="dark"] .kpi-trend.neutral {
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .kpi-icon {
+    color: var(--text-primary) !important;
+}
+
+/* Decision breakdown items */
+[data-theme="dark"] .decision-item {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+[data-theme="dark"] .decision-label {
+    color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .decision-value {
+    color: var(--text-primary) !important;
+}
+
+/* Application funnel */
+[data-theme="dark"] .funnel-label,
+[data-theme="dark"] .funnel-value {
+    color: white !important;
+}
+[data-theme="dark"] .funnel-percent {
+    color: var(--text-secondary) !important;
+}
+
+/* Profile strength circle text */
+[data-theme="dark"] .strength-value {
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] .strength-tips {
+    color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .strength-tips h4 {
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] .strength-tips li {
+    color: var(--text-secondary) !important;
+}
+
+/* Analytics section headers */
+[data-theme="dark"] .section-header h3 {
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] .section-header p {
+    color: var(--text-secondary) !important;
+}
+
+/* Analytics grid containers */
+[data-theme="dark"] .analytics-grid-2 .analytics-section {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Recommendations section */
+[data-theme="dark"] .rec-content h4 {
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] .rec-content p {
+    color: var(--text-secondary) !important;
+}
+
+/* Skills grid */
+[data-theme="dark"] .skill-name {
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] .skill-demand {
+    color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .skill-status.positive {
+    color: #34d399 !important;
+}
+[data-theme="dark"] .skill-status.neutral {
+    color: #94a3b8 !important;
+}

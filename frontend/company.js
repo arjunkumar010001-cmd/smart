@@ -3,8 +3,8 @@
 // getScoreClass, createModal, closeTopModal — all from shared-utils.js
 
 // ─── Global ESC-key & backdrop-click handler for all company modals ───
-(function() {
-    document.addEventListener('keydown', function(e) {
+(function () {
+    document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             const modals = document.querySelectorAll('.modal.show');
             if (modals.length > 0) {
@@ -13,7 +13,7 @@
             }
         }
     });
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         if (e.target.classList && e.target.classList.contains('modal') && e.target.classList.contains('show')) {
             e.target.remove();
         }
@@ -1085,7 +1085,7 @@ async function viewApplicationDetails(appId) {
                 });
                 if (viResp.ok) {
                     const viData = await viResp.json();
-                    const sessions = (viData.sessions || []).filter(s => 
+                    const sessions = (viData.sessions || []).filter(s =>
                         s.job_id === app.job_id || s.application_id === appId
                     );
                     if (sessions.length > 0) {
@@ -1102,9 +1102,9 @@ async function viewApplicationDetails(appId) {
                                     <span class="badge badge-${s.status === 'completed' ? 'success' : s.status === 'in_progress' ? 'warning' : 'info'}">${s.status}</span>
                                 </div>
                                 <div style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px;">
-                                    ${hasRecording ? `<span style="color: #dc2626;">🔴 Recording Available <a href="#" onclick="window.open('${API_URL}/video-interview/download-recording/${s._id || s.session_id}','_blank');return false;" style="color: #4F46E5;">Download</a></span>` : 
+                                    ${hasRecording ? `<span style="color: #dc2626;">🔴 Recording Available <a href="#" onclick="window.open('${API_URL}/video-interview/download-recording/${s._id || s.session_id}','_blank');return false;" style="color: #4F46E5;">Download</a></span>` :
                                     `<span style="color: #94a3b8;">⚫ No Recording</span>`}
-                                    ${malpracticeCount > 0 ? `<span style="color: #dc2626; font-weight: 600;">⚠️ ${malpracticeCount} Proctoring Alert${malpracticeCount > 1 ? 's' : ''}</span>` : 
+                                    ${malpracticeCount > 0 ? `<span style="color: #dc2626; font-weight: 600;">⚠️ ${malpracticeCount} Proctoring Alert${malpracticeCount > 1 ? 's' : ''}</span>` :
                                     `<span style="color: #10b981;">✅ No Proctoring Issues</span>`}
                                     ${evalScore ? `<span style="color: #4F46E5; font-weight: 600;">🎯 Score: ${evalScore}%</span>` : ''}
                                 </div>
@@ -1125,39 +1125,167 @@ async function viewApplicationDetails(appId) {
             console.warn('Could not fetch interview session info:', viErr);
         }
 
-        // Show modal with application details
+        // Fetch smart assessment sessions for this application
+        let smartSessions = [];
+        try {
+            const candidateId = app.candidate_id || '';
+            if (candidateId) {
+                const saResp = await fetch(`${API_URL}/smart-assessments/sessions?candidate_id=${candidateId}&application_id=${appId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (saResp.ok) {
+                    const saData = await saResp.json();
+                    smartSessions = saData.sessions || [];
+                }
+            }
+        } catch (saErr) {
+            console.warn('Could not fetch smart assessment sessions:', saErr);
+        }
+
+        // Build proctoring tab content from smart sessions
+        let proctoringContent = '<p style="color: #94a3b8;">No smart assessment sessions found for this application.</p>';
+        let recordingsContent = '<p style="color: #94a3b8;">No recording available for this application.</p>';
+        let auditContent = '<p style="color: #94a3b8;">No audit report available.</p>';
+
+        if (smartSessions.length > 0) {
+            const latestSession = smartSessions[0];
+            const sid = latestSession.session_id;
+
+            // Proctoring tab
+            const pScore = latestSession.proctoring_score != null ? latestSession.proctoring_score : '—';
+            const pStatus = latestSession.status || 'unknown';
+            const results = latestSession.results || {};
+            proctoringContent = `
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;">
+                        <div style="font-size:12px;color:#64748b;">Assessment Score</div>
+                        <div style="font-size:28px;font-weight:700;color:${(results.percentage || 0) >= 70 ? '#10b981' : (results.percentage || 0) >= 40 ? '#eab308' : '#ef4444'};">${results.percentage || results.final_percentage || '—'}%</div>
+                        <div style="font-size:11px;color:#94a3b8;">${results.verdict || ''}</div>
+                    </div>
+                    <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;">
+                        <div style="font-size:12px;color:#64748b;">Proctoring Score</div>
+                        <div style="font-size:28px;font-weight:700;color:${pScore >= 80 ? '#10b981' : pScore >= 50 ? '#eab308' : '#ef4444'};">${pScore}</div>
+                        <div style="font-size:11px;color:#94a3b8;">/100</div>
+                    </div>
+                    <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;">
+                        <div style="font-size:12px;color:#64748b;">Session Status</div>
+                        <div style="font-size:16px;font-weight:600;margin-top:6px;">
+                            <span class="badge badge-${pStatus === 'completed' ? 'success' : pStatus === 'terminated' ? 'danger' : 'warning'}">${pStatus}</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size:13px;color:#64748b;">
+                    Started: ${latestSession.started_at ? new Date(latestSession.started_at).toLocaleString() : '—'}<br>
+                    ${latestSession.completed_at ? 'Completed: ' + new Date(latestSession.completed_at).toLocaleString() : ''}
+                    ${latestSession.terminated_at ? '<span style="color:#ef4444;">Terminated: ' + new Date(latestSession.terminated_at).toLocaleString() + '</span>' : ''}
+                </div>
+            `;
+
+            // Recordings tab
+            if (latestSession.has_recording) {
+                recordingsContent = `
+                    <div style="margin-bottom:12px;">
+                        <video id="session-recording-player" controls preload="metadata"
+                            style="width:100%;max-height:400px;border-radius:10px;background:#000;"
+                            src="${API_URL}/smart-assessments/sessions/${sid}/recording?token=${authToken}">
+                            Your browser does not support video playback.
+                        </video>
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <a href="${API_URL}/smart-assessments/sessions/${sid}/recording"
+                           onclick="event.preventDefault();downloadRecording('${sid}')"
+                           style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:8px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">
+                           ⬇️ Download Recording
+                        </a>
+                        <span style="font-size:12px;color:#94a3b8;">Session: ${sid.substring(0, 8)}…</span>
+                    </div>
+                `;
+            }
+
+            // Audit report tab
+            auditContent = `
+                <div style="text-align:center;padding:24px;">
+                    <div style="font-size:48px;margin-bottom:12px;">📋</div>
+                    <h4 style="margin:0 0 8px;">Assessment Audit Report</h4>
+                    <p style="color:#64748b;font-size:13px;margin:0 0 20px;">
+                        Comprehensive PDF report with scoring, proctoring events, evidence snapshots, and configuration.
+                    </p>
+                    <div style="display:flex;gap:10px;justify-content:center;">
+                        <button onclick="downloadAuditReport('${sid}', false)"
+                            style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">
+                            📄 Download (Anonymized)
+                        </button>
+                        <button onclick="downloadAuditReport('${sid}', true)"
+                            style="background:#f1f5f9;color:#334155;padding:10px 24px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:13px;">
+                            Download with PII
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show modal with tabbed application details
         const modal = document.createElement('div');
         modal.className = 'modal show';
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
         modal.setAttribute('aria-label', 'Application details');
         modal.innerHTML = `
-            <div class="modal-content">
+            <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h3>Application Details</h3>
                     <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
                 </div>
+                <div style="display:flex;gap:0;border-bottom:2px solid #e2e8f0;padding:0 20px;">
+                    <button class="app-detail-tab active" data-tab="overview" onclick="switchAppDetailTab(this,'overview')"
+                        style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#667eea;border-bottom:2px solid #667eea;margin-bottom:-2px;">
+                        📋 Overview
+                    </button>
+                    <button class="app-detail-tab" data-tab="proctoring" onclick="switchAppDetailTab(this,'proctoring')"
+                        style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-bottom:-2px;">
+                        🔍 Proctoring
+                    </button>
+                    <button class="app-detail-tab" data-tab="recordings" onclick="switchAppDetailTab(this,'recordings')"
+                        style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-bottom:-2px;">
+                        🎥 Recordings
+                    </button>
+                    <button class="app-detail-tab" data-tab="audit" onclick="switchAppDetailTab(this,'audit')"
+                        style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-bottom:-2px;">
+                        📊 Audit Report
+                    </button>
+                </div>
                 <div class="modal-body">
-                    <div class="application-details">
-                        ${interviewInfo ? `
-                        <h4>🎥 Interview Sessions</h4>
-                        ${interviewInfo}
-                        ` : ''}
-                        <h4>Status History</h4>
-                        ${(data.history || data.status_history) && (data.history || data.status_history).length > 0 ? `
-                            <div class="status-timeline">
-                                ${(data.history || data.status_history).map(h => `
-                                    <div class="timeline-item">
-                                        <div class="timeline-icon">${getStatusIcon(h.status)}</div>
-                                        <div class="timeline-content">
-                                            <div class="timeline-status">${esc(h.status)}</div>
-                                            <div class="timeline-date">${new Date(h.changed_at).toLocaleString()}</div>
-                                            ${h.note ? `<div class="timeline-note">${esc(h.note)}</div>` : ''}
+                    <div class="app-tab-content" data-tab="overview">
+                        <div class="application-details">
+                            ${interviewInfo ? `
+                            <h4>🎥 Interview Sessions</h4>
+                            ${interviewInfo}
+                            ` : ''}
+                            <h4>Status History</h4>
+                            ${(data.history || data.status_history) && (data.history || data.status_history).length > 0 ? `
+                                <div class="status-timeline">
+                                    ${(data.history || data.status_history).map(h => `
+                                        <div class="timeline-item">
+                                            <div class="timeline-icon">${getStatusIcon(h.status)}</div>
+                                            <div class="timeline-content">
+                                                <div class="timeline-status">${esc(h.status)}</div>
+                                                <div class="timeline-date">${new Date(h.changed_at).toLocaleString()}</div>
+                                                ${h.note ? `<div class="timeline-note">${esc(h.note)}</div>` : ''}
+                                            </div>
                                         </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : '<p>No status history available</p>'}
+                                    `).join('')}
+                                </div>
+                            ` : '<p>No status history available</p>'}
+                        </div>
+                    </div>
+                    <div class="app-tab-content" data-tab="proctoring" style="display:none;">
+                        ${proctoringContent}
+                    </div>
+                    <div class="app-tab-content" data-tab="recordings" style="display:none;">
+                        ${recordingsContent}
+                    </div>
+                    <div class="app-tab-content" data-tab="audit" style="display:none;">
+                        ${auditContent}
                     </div>
                 </div>
             </div>
@@ -1166,6 +1294,71 @@ async function viewApplicationDetails(appId) {
     } catch (error) {
         console.error('Error loading application details:', error);
         showNotification('Failed to load application details: ' + error.message, 'error');
+    }
+}
+
+// Tab switching for application details modal
+function switchAppDetailTab(btn, tabId) {
+    const modal = btn.closest('.modal-content');
+    // Deactivate all tabs
+    modal.querySelectorAll('.app-detail-tab').forEach(t => {
+        t.style.color = '#64748b';
+        t.style.borderBottom = '2px solid transparent';
+    });
+    // Activate clicked tab
+    btn.style.color = '#667eea';
+    btn.style.borderBottom = '2px solid #667eea';
+    // Toggle content
+    modal.querySelectorAll('.app-tab-content').forEach(c => {
+        c.style.display = c.dataset.tab === tabId ? 'block' : 'none';
+    });
+}
+
+// Download recording helper
+async function downloadRecording(sessionId) {
+    try {
+        const resp = await fetch(`${API_URL}/smart-assessments/sessions/${sessionId}/recording`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (!resp.ok) throw new Error('Download failed');
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `recording_${sessionId.substring(0, 8)}.webm`;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        a.remove();
+        showNotification('✓ Recording downloaded', 'success');
+    } catch (err) {
+        showNotification('Failed to download recording: ' + err.message, 'error');
+    }
+}
+
+// Download audit report helper
+async function downloadAuditReport(sessionId, includePii) {
+    try {
+        showNotification('Generating audit report...', 'info');
+        const resp = await fetch(`${API_URL}/smart-assessments/sessions/${sessionId}/audit-report?include_pii=${includePii}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || 'Report generation failed');
+        }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit_report_${sessionId.substring(0, 8)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        a.remove();
+        showNotification('✓ Audit report downloaded', 'success');
+    } catch (err) {
+        showNotification('Failed to generate report: ' + err.message, 'error');
     }
 }
 
@@ -1187,7 +1380,7 @@ async function downloadResume(appId) {
         if (match) {
             filename = match[1];
         }
-        
+
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

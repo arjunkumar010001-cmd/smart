@@ -33,10 +33,14 @@ RUN pip install --no-cache-dir --user https://github.com/explosion/spacy-models/
 # ============================================================================
 FROM python:3.10-slim
 
-# Install runtime dependencies
+# Install runtime dependencies (ffmpeg for recording merge, WeasyPrint GTK libs for PDF)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libssl-dev \
+    ffmpeg \
+    libpango-1.0-0 \
+    libharfbuzz0b \
+    libpangoft2-1.0-0 \
     && rm -rf /var/lib/apt/lists/* \
     && update-ca-certificates
 
@@ -84,5 +88,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health').read()" || exit 1
 
-# Start Flask app with Gunicorn
-CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120 --access-logfile - --error-logfile -"]
+# Start Flask app with Gunicorn (eventlet for Flask-SocketIO / WebSocket support)
+# Single worker with greenlet concurrency — eventlet does NOT support multiple workers.
+# --max-requests recycles the worker to prevent memory leaks in long-running deployments.
+CMD ["sh", "-c", "gunicorn --worker-class eventlet --workers 1 --worker-connections 1000 --timeout 120 --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile - --bind 0.0.0.0:${PORT:-8000} app:app"]

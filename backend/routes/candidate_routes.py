@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, Response, make_response
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson import ObjectId
 import os
 import io
@@ -177,9 +177,14 @@ def _legacy_upload_resume(user_id: str, file):
 @bp.route('/resume/<application_id>', methods=['GET'])
 @jwt_required()
 def download_resume(application_id):
-    """Download resume for an application - accessible by recruiters and the candidate themselves.
-    
-    For recruiters/company/admin: PII is anonymised (name → Candidate [ID], email → ***@***.com, etc.)
+    """Download resume for an application — accessible by recruiters and the candidate.
+
+    Fallback chain:
+      1. Disk file (original upload) — anonymised PDF for recruiters, raw for candidate
+      2. Text-to-PDF generation from stored resume_text
+      3. Graceful 404
+
+    For recruiters/company/admin: PII is anonymised (name → Candidate [ID], etc.)
     For the candidate themselves: original resume is served as-is.
     """
     try:
@@ -193,102 +198,155 @@ def download_resume(application_id):
         users_collection = db['users']
         user = users_collection.find_one({'_id': ObjectId(user_id)})
         if not user:
-            return jsonify({'error': 'User not found'}), 404
+            return jsonify({'success': False, 'error': 'User not found'}), 404
 
         role = user.get('role', '')
 
         # Look up the application
         application = db['applications'].find_one({'_id': ObjectId(application_id)})
         if not application:
-            return jsonify({'error': 'Application not found'}), 404
+            return jsonify({'success': False, 'error': 'Application not found'}), 404
 
         candidate_id = application.get('candidate_id')
 
         # Authorization: only the candidate themselves, company, recruiter, or admin
         if role == 'candidate' and str(user_id) != str(candidate_id):
-            return jsonify({'error': 'Unauthorized'}), 403
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
 
         # Get candidate's resume data
         candidate = db['candidates'].find_one({'user_id': str(candidate_id)})
         if not candidate:
-            return jsonify({'error': 'Candidate profile not found'}), 404
+            return jsonify({'success': False, 'error': 'Candidate profile not found'}), 404
 
-        resume_text = candidate.get('resume_text', '')
-        resume_file = candidate.get('resume_file', 'resume.txt')
+        # Check ALL possible resume-text field names (Bug #3 / #7 field-name mismatch)
+        resume_text = (
+            candidate.get('resume_text')
+            or candidate.get('resume_content')
+            or ''
+        )
+        resume_file = (
+            candidate.get('resume_file')
+            or candidate.get('resume_path')
+            or ''
+        )
 
-        if not resume_text:
-            return jsonify({'error': 'No resume uploaded for this candidate'}), 404
+        if not resume_text and not resume_file:
+            return jsonify({'success': False, 'error': 'No resume uploaded for this candidate'}), 404
 
         # Determine if this is a recruiter viewing (needs anonymisation)
         is_recruiter_view = role in ('company', 'recruiter', 'admin')
 
-        # Get candidate user info
+        # Get candidate user info for PII anonymisation
         candidate_user = users_collection.find_one({'_id': ObjectId(candidate_id)})
         candidate_name = candidate_user.get('full_name', 'Candidate') if candidate_user else 'Candidate'
         candidate_email = candidate_user.get('email', '') if candidate_user else ''
         candidate_phone = candidate.get('phone', '') or (candidate_user.get('phone', '') if candidate_user else '')
         skills = candidate.get('skills', [])
 
-        # Check if the original uploaded file exists on disk
-        uploads_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads')
+        logger.info(
+            f"Resume download: app={application_id}, candidate={candidate_id[:8]}…, "
+            f"role={role}, recruiter_view={is_recruiter_view}, "
+            f"resume_file={'yes' if resume_file else 'no'}, "
+            f"resume_text={'yes' if resume_text else 'no'}"
+        )
+
+        # ── FALLBACK 1: Serve disk file ─────────────────────────────────────
+        uploads_folder = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads'
+        )
         candidate_upload_dir = os.path.join(uploads_folder, str(candidate_id))
         disk_file_path = os.path.join(candidate_upload_dir, resume_file) if resume_file else None
 
         if disk_file_path and os.path.exists(disk_file_path):
             ext = resume_file.rsplit('.', 1)[-1].lower() if '.' in resume_file else 'txt'
-            
-            if is_recruiter_view and ext == 'pdf':
-                # Anonymise PDF using PyMuPDF (fitz) for recruiter downloads
+            logger.info(f"Resume disk file found: {disk_file_path} (ext={ext})")
+
+            if not is_recruiter_view:
+                # Serve original file to candidate
+                try:
+                    with open(disk_file_path, 'rb') as f:
+                        file_data = f.read()
+                    mime_types = {
+                        'pdf': 'application/pdf',
+                        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'doc': 'application/msword',
+                        'txt': 'text/plain',
+                    }
+                    mime = mime_types.get(ext, 'application/octet-stream')
+                    response = make_response(file_data)
+                    response.headers['Content-Type'] = mime
+                    response.headers['Content-Disposition'] = f'attachment; filename="{resume_file}"'
+                    logger.info(f"Serving original resume from disk ({len(file_data)} bytes)")
+                    return response
+                except Exception as disk_err:
+                    logger.warning(f"Disk read failed, falling through: {disk_err}")
+
+            elif ext == 'pdf':
+                # Anonymise PDF using PyMuPDF for recruiter downloads
                 try:
                     anonymised_data = bytes(_anonymise_pdf_file(
-                        disk_file_path, candidate_name, candidate_email, candidate_phone, candidate_id
+                        disk_file_path, candidate_name, candidate_email,
+                        candidate_phone, candidate_id
                     ))
                     response = make_response(anonymised_data)
                     response.headers['Content-Type'] = 'application/pdf'
-                    response.headers['Content-Disposition'] = f'attachment; filename="resume_candidate_{candidate_id[:8]}.pdf"'
+                    response.headers['Content-Disposition'] = (
+                        f'attachment; filename="resume_candidate_{candidate_id[:8]}.pdf"'
+                    )
+                    logger.info(f"Serving anonymised PDF from disk ({len(anonymised_data)} bytes)")
                     return response
                 except Exception as anon_err:
-                    logger.warning(f"PDF anonymisation failed, falling back to text PDF: {anon_err}")
-                    # Fall through to text-based PDF generation below
-            elif not is_recruiter_view:
-                # Serve original file to candidate
-                with open(disk_file_path, 'rb') as f:
-                    file_data = f.read()
-                mime_types = {
-                    'pdf': 'application/pdf',
-                    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'doc': 'application/msword',
-                    'txt': 'text/plain'
-                }
-                mime = mime_types.get(ext, 'application/octet-stream')
-                response = make_response(file_data)
-                response.headers['Content-Type'] = mime
-                response.headers['Content-Disposition'] = f'attachment; filename="{resume_file}"'
+                    logger.warning(f"PDF anonymisation failed, falling through: {anon_err}")
+            else:
+                # Recruiter viewing a non-PDF file — fall through to text-PDF generation
+                logger.info(f"Non-PDF disk file for recruiter view, falling through to text-PDF")
+        else:
+            logger.info(
+                f"Disk file not found (path={disk_file_path}), "
+                f"falling through to text-PDF generation"
+            )
+
+        # ── FALLBACK 2: Generate PDF from stored resume text ────────────────
+        if resume_text:
+            try:
+                display_name = f"Candidate [{candidate_id[:8]}]" if is_recruiter_view else candidate_name
+                display_email = "***@***.com" if is_recruiter_view else candidate_email
+                display_phone = "XXX-XXX-XXXX" if is_recruiter_view else candidate_phone
+
+                # Anonymise resume text content for recruiters
+                display_text = resume_text
+                if is_recruiter_view:
+                    display_text = _anonymise_resume_text(
+                        resume_text, candidate_name, candidate_email, candidate_phone
+                    )
+
+                pdf_bytes = bytes(_generate_resume_pdf(
+                    display_name, display_email, display_phone, skills, display_text
+                ))
+
+                filename = (
+                    f"resume_candidate_{candidate_id[:8]}.pdf"
+                    if is_recruiter_view
+                    else f"resume_{candidate_name.replace(' ', '_')}.pdf"
+                )
+                response = make_response(pdf_bytes)
+                response.headers['Content-Type'] = 'application/pdf'
+                response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+                logger.info(f"Generated text-to-PDF resume ({len(pdf_bytes)} bytes)")
                 return response
+            except Exception as gen_err:
+                logger.error(f"Text-to-PDF generation failed: {gen_err}", exc_info=True)
 
-        # Generate a proper PDF resume from stored text
-        display_name = f"Candidate [{candidate_id[:8]}]" if is_recruiter_view else candidate_name
-        display_email = "***@***.com" if is_recruiter_view else candidate_email
-        display_phone = "XXX-XXX-XXXX" if is_recruiter_view else candidate_phone
-        
-        # Anonymise resume text content for recruiters
-        display_text = resume_text
-        if is_recruiter_view:
-            display_text = _anonymise_resume_text(resume_text, candidate_name, candidate_email, candidate_phone)
-
-        pdf_bytes = bytes(_generate_resume_pdf(display_name, display_email, display_phone, skills, display_text))
-        
-        filename = f"resume_candidate_{candidate_id[:8]}.pdf" if is_recruiter_view else f"resume_{candidate_name.replace(' ', '_')}.pdf"
-        response = make_response(pdf_bytes)
-        response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
+        # ── FALLBACK 3: Graceful failure ────────────────────────────────────
+        logger.error(f"All resume download fallbacks exhausted for app={application_id}")
+        return jsonify({
+            'success': False,
+            'error': 'Resume could not be downloaded. Please re-upload your resume.'
+        }), 404
 
     except Exception as e:
-        logger.error(f"Resume download error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': 'Failed to download resume'}), 500
+        logger.error(f"Resume download error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Failed to download resume'}), 500
 
 
 def _anonymise_resume_text(text, name, email, phone):
@@ -970,36 +1028,6 @@ def apply_to_job(job_id):
             result = applications_collection.insert_one(app_dict)
             application_id = str(result.inserted_id)
         
-        # ── Bug #1 fix: Auto-assign SmartSessions for matching assessment configs ──
-        try:
-            configs_collection = db['assessment_configs']
-            sessions_collection = db['smart_sessions']
-            matching_configs = list(configs_collection.find({'job_id': job_id}))
-            for cfg in matching_configs:
-                # Only create if no session already exists for this candidate + config
-                existing_session = sessions_collection.find_one({
-                    'candidate_id': user_id,
-                    'config_id': str(cfg['_id'])
-                })
-                if not existing_session:
-                    sessions_collection.insert_one({
-                        'config_id': str(cfg['_id']),
-                        'candidate_id': user_id,
-                        'job_application_id': application_id,
-                        'status': 'assigned',
-                        'assigned_at': datetime.utcnow(),
-                        'started_at': None,
-                        'completed_at': None,
-                        'score': None,
-                        'integrity_score': None,
-                        'remaining_seconds': None,
-                        'proctoring_flags': [],
-                        'snapshots': []
-                    })
-                    logger.info(f"📝 Auto-assigned assessment {cfg['_id']} to candidate {user_id}")
-        except Exception as assess_err:
-            logger.warning(f"⚠️ Assessment auto-assignment failed (non-blocking): {assess_err}")
-        
         # Log audit event for application submission
         log_audit_event(
             event_type='application_resubmitted' if is_reapplication else 'application_submitted',
@@ -1084,8 +1112,78 @@ def apply_to_job(job_id):
                         analysis['overall_score']
                     )
         except Exception as email_error:
-            print(f"⚠️ Application emails failed: {email_error}")
-        
+            logger.warning(f"⚠️ Application emails failed: {email_error}")
+
+        # ── Bug #1: Auto-assign assessment session if job has an assessment config ──
+        try:
+            assessment_config = db['assessment_configs'].find_one({
+                'job_id': job_id,
+                'is_active': True
+            })
+            if assessment_config and not is_reapplication:
+                # Check if candidate already has a session for this config
+                existing_session = db['smart_sessions'].find_one({
+                    'candidate_id': user_id,
+                    'config_id': str(assessment_config['_id'])
+                })
+                if not existing_session:
+                    session_doc = {
+                        'candidate_id': user_id,
+                        'config_id': str(assessment_config['_id']),
+                        'application_id': application_id,
+                        'job_id': job_id,
+                        'status': 'assigned',
+                        'assigned_at': datetime.utcnow(),
+                        'expires_at': datetime.utcnow() + timedelta(days=7),
+                        'attempts_remaining': assessment_config.get('max_attempts', 3),
+                        'questions': [],
+                        'answers': {},
+                        'final_score': 0.0,
+                        'final_percentage': 0.0,
+                        'passed': False,
+                        'verdict': 'pending',
+                        'created_at': datetime.utcnow()
+                    }
+                    session_result = db['smart_sessions'].insert_one(session_doc)
+                    logger.info(
+                        f"Assessment session auto-assigned: session={session_result.inserted_id}, "
+                        f"config={assessment_config['_id']}, candidate={user_id[:8]}, "
+                        f"expires_at={session_doc['expires_at'].isoformat()}"
+                    )
+
+                    # Send assessment notification email
+                    try:
+                        from backend.services.email_templates import EmailTemplates
+                        from backend.services.email_service import EmailNotificationSystem
+
+                        candidate_user = db['users'].find_one({'_id': ObjectId(user_id)})
+                        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5000')
+                        email_html = EmailTemplates.render_template('assessment_invitation', {
+                            'candidate_name': candidate_user.get('full_name', 'Candidate') if candidate_user else 'Candidate',
+                            'job_title': job.get('title', 'the position'),
+                            'assessment_title': assessment_config.get('title', assessment_config.get('job_role', 'Assessment')),
+                            'question_count': assessment_config.get('total_questions', 'N/A'),
+                            'time_limit': assessment_config.get('duration_minutes', 'N/A'),
+                            'deadline': session_doc['expires_at'].strftime('%B %d, %Y'),
+                            'assessment_url': f"{frontend_url}/candidate.html#assessments",
+                        })
+                        email_system = EmailNotificationSystem()
+                        candidate_email = candidate_user.get('email', '') if candidate_user else ''
+                        if candidate_email:
+                            email_system.send_email(
+                                candidate_email,
+                                f"Assessment Ready: {job.get('title', 'Position')}",
+                                email_html
+                            )
+                            logger.info(f"Assessment notification sent to {candidate_email}")
+                    except Exception as email_err:
+                        logger.warning(f"Assessment email notification failed: {email_err}")
+
+                else:
+                    logger.info(f"Assessment session already exists for candidate={user_id[:8]}, config={assessment_config['_id']}")
+        except Exception as assess_err:
+            logger.warning(f"Assessment auto-assignment failed: {assess_err}")
+
         # Return appropriate response
         if is_reapplication:
             return jsonify({
@@ -1143,7 +1241,7 @@ def get_my_applications():
             {'candidate_id': user_id}
         ).sort('applied_date', -1))
         
-        # Enrich with job details (Bug #4 fix: include required_skills in job_details)
+        # Enrich with job details
         for app in applications:
             app['_id'] = str(app['_id'])
             job = jobs_collection.find_one({'_id': ObjectId(app['job_id'])})
@@ -1151,13 +1249,12 @@ def get_my_applications():
                 app['job_title'] = job['title']
                 app['company_name'] = job.get('company_name', 'Company')
                 app['location'] = job.get('location', 'Remote')
-                # Bug #4: Provide job_details with required_skills for Skills Match Insights
+                # Bug #4 fix: include job_details for skills match insights
                 app['job_details'] = {
-                    'title': job['title'],
-                    'company_name': job.get('company_name', 'Company'),
-                    'location': job.get('location', 'Remote'),
                     'required_skills': job.get('required_skills', []),
-                    'description': job.get('description', '')[:200]  # truncated
+                    'job_type': job.get('job_type', ''),
+                    'department': job.get('department', ''),
+                    'title': job['title']
                 }
             
             # Convert applied_date to applied_at for frontend compatibility
@@ -1227,28 +1324,32 @@ def get_candidate_profile():
             del candidate['resume_text']
         if 'anonymized_resume' in candidate:
             del candidate['anonymized_resume']
-        
-        # Bug #3 fix: compute profile completion score server-side
+
+        # Bug #3 fix: compute profile completion_score server-side
+        user = users_collection.find_one({'_id': ObjectId(user_id)})
         completion_details = {
-            'name': bool(candidate.get('first_name') and candidate.get('last_name')),
+            'name': bool(user and user.get('full_name')),
             'phone': bool(candidate.get('phone')),
             'location': bool(candidate.get('location')),
-            'bio': bool(candidate.get('bio') and len(candidate.get('bio', '')) > 50),
-            'skills': bool(candidate.get('skills') and len(candidate.get('skills', [])) >= 3),
-            'experience': bool(candidate.get('experience_years') or candidate.get('experience')),
+            'about_me': len(candidate.get('bio', '') or '') > 50,
+            'skills': len(candidate.get('skills', [])) >= 3,
+            'experience': (candidate.get('experience_years', 0) or 0) > 0,
             'education': bool(candidate.get('education')),
-            'resume': bool(candidate.get('resume_file') or candidate.get('resume_uploaded'))
+            'resume': bool(
+                candidate.get('resume_uploaded')
+                or candidate.get('resume_file')
+                or candidate.get('resume_path')
+            ),
         }
         weights = {
-            'name': 10, 'phone': 10, 'location': 10, 'bio': 15,
+            'name': 10, 'phone': 10, 'location': 10, 'about_me': 15,
             'skills': 15, 'experience': 15, 'education': 15, 'resume': 10
         }
-        completion_score = sum(
+        candidate['completion_score'] = sum(
             weights[k] for k, v in completion_details.items() if v
         )
-        candidate['completion_score'] = completion_score
         candidate['completion_details'] = completion_details
-        
+
         return jsonify(candidate), 200
         
     except Exception as e:

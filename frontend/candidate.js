@@ -706,6 +706,74 @@ async function loadCandidateAssessments() {
             `}
         `;
 
+        // ── Job-Required Assigned Sessions (Bug #1 fix) ──
+        try {
+            const sessionsResp = await fetch(`${API_URL}/smart-assessments/my-sessions`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            if (sessionsResp.ok) {
+                const sessionsData = await sessionsResp.json();
+                const sessions = (sessionsData.sessions || []).filter(s => s.application_id);
+                if (sessions.length > 0) {
+                    container.innerHTML += `
+                        <div class="card" style="margin-top:24px;border:2px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fff);">
+                            <h3>📋 Job-Required Assessments</h3>
+                            <p style="color:#64748b;margin-bottom:16px;">Complete these assessments to advance your job applications.</p>
+                            <div class="jobs-grid">
+                                ${sessions.map(session => {
+                        const expiryDate = session.expires_at ? new Date(session.expires_at) : null;
+                        const daysLeft = expiryDate ? Math.ceil((expiryDate - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+                        const isExpired = daysLeft !== null && daysLeft < 0;
+                        const isCompleted = session.status === 'completed';
+                        const statusBadge = isCompleted
+                            ? '<span class="tag" style="background:#10b981;color:white;">Completed</span>'
+                            : isExpired
+                                ? '<span class="tag" style="background:#ef4444;color:white;">Expired</span>'
+                                : '<span class="tag" style="background:#f59e0b;color:white;">Required</span>';
+
+                        return `
+                                        <div class="job-card" style="border-left:4px solid ${isExpired ? '#ef4444' : isCompleted ? '#10b981' : '#f59e0b'};">
+                                            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+                                                <h3 style="margin:0;">${escapeHtml ? escapeHtml(session.config_title || 'Assessment') : (session.config_title || 'Assessment')}</h3>
+                                                ${statusBadge}
+                                            </div>
+                                            <p style="color:#64748b;font-size:13px;margin-bottom:8px;">
+                                                For: <strong>${escapeHtml ? escapeHtml(session.job_title || 'Job Application') : (session.job_title || 'Job Application')}</strong>
+                                            </p>
+                                            <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px;margin-bottom:12px;">
+                                                <span>🔄 ${session.attempts_remaining || 0} attempts left</span>
+                                                ${session.duration_minutes ? '<span>⏱️ ' + session.duration_minutes + ' min</span>' : ''}
+                                                ${session.question_count ? '<span>📝 ' + session.question_count + ' questions</span>' : ''}
+                                            </div>
+                                            ${expiryDate ? `
+                                                <div style="font-size:12px;padding:6px 10px;border-radius:6px;margin-bottom:12px;${isExpired ? 'background:#fef2f2;color:#dc2626;' : 'background:#fffbeb;color:#d97706;'}">
+                                                    ${isExpired
+                                    ? 'Expired on ' + expiryDate.toLocaleDateString()
+                                    : daysLeft + ' day' + (daysLeft !== 1 ? 's' : '') + ' left (expires ' + expiryDate.toLocaleDateString() + ')'
+                                }
+                                                </div>
+                                            ` : ''}
+                                            ${isCompleted ? `
+                                                <div class="alert alert-success" style="margin-bottom:12px;">
+                                                    Score: ${session.final_percentage || 0}% ${session.passed ? '(Passed)' : '(Did not pass)'}
+                                                </div>
+                                            ` : ''}
+                                            <button class="btn btn-primary" onclick="window.location.href='smart-assessment.html?session=${session._id}'"
+                                                ${isExpired || isCompleted ? 'disabled' : ''}>
+                                                ${isCompleted ? 'View Results' : isExpired ? 'Expired' : 'Start Assessment'}
+                                            </button>
+                                        </div>
+                                    `;
+                    }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        } catch (sessErr) {
+            console.warn('Job-required sessions not available:', sessErr);
+        }
+
         // ── AI-Powered Smart Assessments Section ──
         try {
             const smartResp = await fetch(`${API_URL}/smart-assessments/available`, {

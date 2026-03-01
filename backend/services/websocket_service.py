@@ -28,7 +28,7 @@ import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from flask import request
-from flask_socketio import SocketIO, emit, join_room, leave_room, rooms
+from flask_socketio import emit, join_room, leave_room, rooms
 import jwt
 import os
 
@@ -57,19 +57,21 @@ class WebSocketManager:
             self.init_app(app)
     
     def init_app(self, app):
-        """Initialize Socket.IO with Flask app"""
-        self.socketio = SocketIO(
-            app,
-            cors_allowed_origins="*",
-            async_mode='threading',
-            logger=True,
-            engineio_logger=True,
-            ping_timeout=60,
-            ping_interval=25
+        """
+        Attach to the SocketIO instance already created on the Flask app.
+
+        IMPORTANT: SocketIO must be initialized on ``app`` (as ``app.socketio``)
+        **before** this method is called.  This class never creates its own
+        SocketIO instance — there must be exactly one per process.
+        """
+        assert hasattr(app, 'socketio') and app.socketio is not None, (
+            'SocketIO must be initialized on app before '
+            'WebSocketManager.init_app() is called'
         )
-        
+        self.socketio = app.socketio
+
         self._register_event_handlers()
-        logger.info("✅ WebSocket service initialized")
+        logger.info("✅ WebSocket service initialized (reusing app.socketio)")
     
     def _register_event_handlers(self):
         """Register Socket.IO event handlers"""

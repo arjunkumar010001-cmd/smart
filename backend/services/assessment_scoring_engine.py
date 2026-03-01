@@ -201,6 +201,8 @@ def calculate_session_score(
     answers: Dict[str, Dict],
     time_spent: Dict[str, int],
     passing_score: float = 70.0,
+    negative_marking: bool = False,
+    negative_marking_penalty: float = 0.5,
 ) -> Dict:
     """
     Calculate overall session score from individual question scores.
@@ -210,6 +212,15 @@ def calculate_session_score(
         answers: Dict mapping question_id -> scoring result from score_*_question
         time_spent: Dict mapping question_id -> seconds spent
         passing_score: Minimum percentage to pass
+        negative_marking: If True, apply penalty for wrong answers
+        negative_marking_penalty: Fraction of points deducted for wrong answers
+            (e.g. 0.5 = deduct half the question's points)
+
+    Negative-marking rules:
+        - MCQ/aptitude/logical_reasoning: -penalty if is_correct == False AND
+          the candidate actually submitted an answer (unanswered → 0, no penalty)
+        - Coding/debugging: penalty ONLY when score == 0 (complete failure).
+          Partial scores (e.g. 1/20 test cases pass) get partial credit, no deduction.
 
     Returns:
         {
@@ -219,6 +230,7 @@ def calculate_session_score(
             "passed": bool,
             "efficiency_bonus": float,
             "final_percentage": float,
+            "penalty_applied": float,   # total points deducted (0.0 if disabled)
             "time_analysis": {...},
             "type_breakdown": {...},
             "strengths": [...],
@@ -229,7 +241,11 @@ def calculate_session_score(
     total_score = 0.0
     max_score = 0.0
     total_time = 0
+    total_penalty = 0.0
     type_scores = {}
+
+    MCQ_TYPES = {"mcq", "aptitude", "logical_reasoning"}
+    CODE_TYPES = {"coding", "debugging"}
 
     for q in questions:
         q_id = q.get("id", "")
@@ -243,19 +259,42 @@ def calculate_session_score(
         result = answers.get(q_id, {})
         raw_score = result.get("score", 0.0)
         weighted_score = raw_score * weight
-        total_score += weighted_score
+        penalty = 0.0
+
+        # ── Negative marking ────────────────────────────────────────
+        if negative_marking and result:
+            # Only penalize if the candidate actually submitted an answer.
+            # An empty result dict means unanswered → no penalty.
+            is_wrong = not result.get("is_correct", False)
+
+            if q_type in MCQ_TYPES and is_wrong:
+                # MCQ: penalize wrong answers (not unanswered)
+                penalty = q_points * negative_marking_penalty * weight
+                total_penalty += penalty
+
+            elif q_type in CODE_TYPES and raw_score == 0.0 and is_wrong:
+                # Coding/debugging: penalize ONLY on complete failure (score == 0).
+                # Partial credit (score > 0) is NOT penalized.
+                penalty = q_points * negative_marking_penalty * weight
+                total_penalty += penalty
+
+        total_score += weighted_score - penalty
 
         t = time_spent.get(q_id, 0)
         total_time += t
 
         # Track per-type performance
         if q_type not in type_scores:
-            type_scores[q_type] = {"earned": 0.0, "max": 0.0, "count": 0, "correct": 0}
-        type_scores[q_type]["earned"] += weighted_score
+            type_scores[q_type] = {"earned": 0.0, "max": 0.0, "count": 0, "correct": 0, "penalties": 0.0}
+        type_scores[q_type]["earned"] += weighted_score - penalty
         type_scores[q_type]["max"] += weighted_max
         type_scores[q_type]["count"] += 1
+        type_scores[q_type]["penalties"] += penalty
         if result.get("is_correct"):
             type_scores[q_type]["correct"] += 1
+
+    # Clamp total_score to 0 (can't go negative)
+    total_score = max(0.0, total_score)
 
     # Base percentage
     percentage = round((total_score / max_score * 100) if max_score > 0 else 0, 2)
@@ -280,6 +319,7 @@ def calculate_session_score(
             "percentage": pct,
             "questions": data["count"],
             "correct": data["correct"],
+            "penalties": round(data["penalties"], 2),
         }
         if pct >= 80:
             strengths.append(q_type)
@@ -303,6 +343,8 @@ def calculate_session_score(
         "passed": passed,
         "efficiency_bonus": eff_bonus,
         "final_percentage": final_percentage,
+        "penalty_applied": round(total_penalty, 2),
+        "negative_marking_enabled": negative_marking,
         "time_analysis": {
             "total_seconds": total_time,
             "total_minutes": round(total_time / 60, 1),

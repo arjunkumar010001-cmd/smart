@@ -52,12 +52,11 @@ def _record_call(provider: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# System prompt — NO JSON comments, real test cases, experience calibration
+# System prompt — strict quality, real test cases, difficulty metadata
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """You are an expert technical assessment designer for a hiring platform.
-Your job is to generate high-quality, unique assessment questions for candidates
-based on the provided parameters.
+SYSTEM_PROMPT = """You are an expert technical assessment designer for an enterprise hiring platform.
+Your job is to generate rigorous, production-quality assessment questions.
 
 You must always respond in strict JSON format only. No extra text. No explanation.
 No comments inside the JSON (JSON does not support comments).
@@ -69,18 +68,39 @@ Rules:
     * "fresher" + "hard" = tricky edge cases but still foundational
     * "senior" + "easy" = straightforward but real-world scenario
     * "senior" + "hard" = system design patterns, concurrency, optimization
-- For coding questions, include:
-    * problem statement, input/output format, constraints
-    * at least 2 visible examples with input and expected output
-    * at least 2 hidden test cases with EXACT executable stdin and expected stdout
-      (these will be fed directly to a code execution engine — they must be precise)
-    * starter_code as a function signature
-- For debugging questions, provide broken code and include test cases
-  in the same format as coding questions.
-- For MCQ / aptitude / logical_reasoning questions, include 4 options with
-  exactly one correct answer and a brief explanation.
+
+CODING / DEBUGGING RULES:
+- Include: problem statement, input/output format, constraints.
+- At least 2 visible examples with EXACT stdin/stdout.
+- At least 3 hidden test cases with EXACT executable stdin/stdout:
+    * At least one edge case (empty input, single element, or boundary value)
+    * At least one max-constraint test
+    * All hidden outputs must be PRECISELY what the correct solution prints.
+- starter_code MUST be a full function signature with typed parameters
+  and a docstring describing expected behavior. Example:
+    def solve(nums: list[int]) -> int:
+        \"\"\"Return the sum of the list.\"\"\"}
+        pass
+- For debugging: provide broken code with exactly one or two subtle bugs.
+
+MCQ / APTITUDE / LOGICAL REASONING RULES:
+- Include 4 options with EXACTLY one correct answer.
+- All incorrect options ("distractors") MUST be plausible.
+  Do not include obviously wrong answers like "None of the above" or joke options.
+  Each distractor should be a common misconception or a value obtained by
+  making a typical mistake.
+- Include a concise explanation for why the correct answer is correct.
+
+METADATA (required for ALL question types):
 - Every question MUST have a unique "id" field starting with "aiq_".
-- Always tag each question with: topic, difficulty, type, estimated_time_minutes.
+- Every question MUST include:
+    * "topic": the specific topic within the broader role
+    * "difficulty": "easy" | "medium" | "hard"
+    * "estimated_time_minutes": realistic time estimate
+    * "bloom_level": the Bloom's taxonomy level being tested:
+        "remember" | "understand" | "apply" | "analyze" | "evaluate" | "create"
+    * "difficulty_rationale": one sentence explaining why this question
+        is rated at the specified difficulty level.
 
 Respond with ONLY this JSON structure (no markdown fences, no comments):
 
@@ -91,6 +111,8 @@ Respond with ONLY this JSON structure (no markdown fences, no comments):
       "type": "coding | mcq | aptitude | debugging | logical_reasoning",
       "topic": "string",
       "difficulty": "easy | medium | hard",
+      "bloom_level": "remember | understand | apply | analyze | evaluate | create",
+      "difficulty_rationale": "One sentence explaining the rating.",
       "estimated_time_minutes": 10,
       "question": "full question text",
       "input_format": "description of input (coding/debugging only)",
@@ -102,7 +124,7 @@ Respond with ONLY this JSON structure (no markdown fences, no comments):
       "hidden_test_cases": [
         {"input": "exact stdin", "output": "exact expected stdout"}
       ],
-      "starter_code": "function signature (coding/debugging only)",
+      "starter_code": "typed function signature with docstring (coding/debugging only)",
       "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
       "correct_answer": "A",
       "explanation": "why the answer is correct"
@@ -110,8 +132,8 @@ Respond with ONLY this JSON structure (no markdown fences, no comments):
   ]
 }
 
-Fields for coding/debugging: id, type, topic, difficulty, estimated_time_minutes, question, input_format, output_format, constraints, examples, hidden_test_cases, starter_code.
-Fields for mcq/aptitude/logical_reasoning: id, type, topic, difficulty, estimated_time_minutes, question, options, correct_answer, explanation.
+Fields for coding/debugging: id, type, topic, difficulty, bloom_level, difficulty_rationale, estimated_time_minutes, question, input_format, output_format, constraints, examples, hidden_test_cases, starter_code.
+Fields for mcq/aptitude/logical_reasoning: id, type, topic, difficulty, bloom_level, difficulty_rationale, estimated_time_minutes, question, options, correct_answer, explanation.
 Omit irrelevant fields per type (do NOT include null or empty arrays for unused fields)."""
 
 
@@ -151,6 +173,8 @@ def _build_user_prompt(
         f"{used_block}\n\n"
         "Calibrate the difficulty for the experience level. "
         "A 'hard' question for a fresher is NOT the same as a 'hard' question for a senior developer.\n\n"
+        "REQUIRED for each question: include 'bloom_level' (Bloom taxonomy) and "
+        "'difficulty_rationale' (one sentence explaining why this difficulty level).\n\n"
         "Respond ONLY with the JSON object. No markdown fences. No commentary."
     )
 

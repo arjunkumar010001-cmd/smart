@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_socketio import SocketIO
 from config.config import config
 from backend.models.database import Database
 from backend.routes import auth_routes, job_routes, candidate_routes, company_routes, email_preferences_routes, assessment_routes, audit_routes, dsr_routes, dashboard_routes, ai_interview_routes, admin_routes, google_oauth_routes, interview_routes, analytics_routes, llm_routes
@@ -74,6 +75,38 @@ def create_app(config_name=None):
              "max_age": 3600
          }})
 
+    # ── SocketIO — single instance, initialized BEFORE blueprints ─────────
+    # CORS scoped to the same origins as Flask-CORS (never use '*' in prod).
+    # async_mode='eventlet' matches the Gunicorn --worker-class eventlet.
+    socketio = SocketIO(
+        flask_app,
+        cors_allowed_origins=allowed_origins,
+        async_mode='eventlet',
+        logger=True,
+        engineio_logger=False,       # too noisy for production; flip True to debug
+        ping_timeout=60,
+        ping_interval=25,
+    )
+    flask_app.socketio = socketio    # accessible via current_app.socketio
+    logger.info("🔌 SocketIO initialized (async_mode=eventlet, origins=%s)", allowed_origins)
+
+    # ── WebSocketManager — reuses flask_app.socketio ──────────────────────
+    from backend.services.websocket_service import init_websocket_manager
+    init_websocket_manager(flask_app)
+
+    # ── Proctoring Service — reuses flask_app.socketio ──────────────────
+    from backend.services.proctoring_service import init_proctoring_service
+    init_proctoring_service(flask_app)
+
+    # ── WeasyPrint startup health check ───────────────────────────────
+    try:
+        from weasyprint import HTML as _WP_HTML
+        _WP_HTML(string='<p>health check</p>').write_pdf()
+        logger.info("✅ WeasyPrint health check passed")
+    except ImportError:
+        logger.critical("❌ WeasyPrint NOT INSTALLED — /audit-report endpoint will fail")
+    except Exception as wp_err:
+        logger.critical("❌ WeasyPrint health check FAILED (missing GTK libs?): %s", wp_err)
     # Initialize JWT Manager  
     jwt = JWTManager(flask_app)
 
@@ -167,6 +200,22 @@ def create_app(config_name=None):
                 logger.info(f"⏰ Startup: auto-completed {completed} stale interview(s)")
         except Exception as e:
             logger.warning(f"⚠️ Interview auto-complete skipped: {e}")
+
+    # Paused-session recovery: sessions left in 'paused' state after a server
+    # restart will never receive the resume_session event.  Reset any that have
+    # been paused for more than 10 minutes back to in_progress.
+    if config_name != 'testing':
+        try:
+            from datetime import datetime, timedelta
+            cutoff = datetime.utcnow() - timedelta(minutes=10)
+            result = db['smart_sessions'].update_many(
+                {'status': 'paused', 'paused_at': {'$lt': cutoff}},
+                {'$set': {'status': 'in_progress'}, '$unset': {'paused_at': ''}},
+            )
+            if result.modified_count:
+                logger.info(f"⏰ Startup: recovered {result.modified_count} stuck paused session(s)")
+        except Exception as e:
+            logger.warning(f"⚠️ Paused-session recovery skipped: {e}")
 
     # Start background workers if enabled (skip in testing mode)
     if config_name != 'testing' and env_config.enable_background_workers and env_config.enable_redis:
