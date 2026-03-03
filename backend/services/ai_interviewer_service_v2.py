@@ -3,17 +3,34 @@ Enhanced AI Interviewer Service - Dynamic Role-Specific Questioning
 Generates personalized interview questions based on job roles, skills, and experience levels.
 
 v2.1 — Expanded question banks (35+ per role) to support 25-30 questions per interview.
+v2.2 — Flan-T5 integration for dynamic gap-based question generation.
+       probe_zone = job_required_skills - candidate_skills → Flan-T5 prompt → question + answer.
+       Falls back to static question bank if Flan-T5 unavailable.
 """
 
 import random
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 import re
+import logging
 
 from backend.services.question_banks import (
     ROLE_QUESTION_BANKS,
     UNIVERSAL_BEHAVIORAL_QUESTIONS,
 )
+
+# ── Flan-T5 integration (graceful — does not break if unavailable) ────────────
+try:
+    from backend.services.flan_t5_service import (
+        FlanT5QuestionGenerator,
+        run_gap_analysis,
+        get_generator,
+    )
+    FLAN_T5_INTEGRATION = True
+except ImportError:
+    FLAN_T5_INTEGRATION = False
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -118,15 +135,83 @@ def generate_dynamic_interview_questions(
     # Calculate question counts
     behavioral_count = min(3, num_questions // 3) if include_behavioral else 0
     technical_count = num_questions - behavioral_count
-    
-    # Generate technical questions
+
+    # ── Flan-T5 Gap-Based Question Generation ─────────────────────────────────
+    # If Flan-T5 is available AND candidate skills info exists, run gap analysis
+    # and generate dynamic questions for missing skills.  Static bank fills the rest.
+    flan_t5_questions: List[Dict] = []
+    flan_t5_count = 0
+
+    if FLAN_T5_INTEGRATION and candidate:
+        try:
+            job_skills = [s.strip() for s in job.get('required_skills', []) if s]
+            candidate_skills_list = [s.strip() for s in candidate.get('skills', []) if s]
+
+            if job_skills and candidate_skills_list:
+                gap = run_gap_analysis(job_skills, candidate_skills_list)
+                missing_skills = gap.get('missing_skills', [])
+
+                if missing_skills:
+                    # Allocate up to 40% of technical slots to Flan-T5 gap questions
+                    max_flan = max(1, int(technical_count * 0.4))
+                    skills_to_probe = missing_skills[:max_flan]
+
+                    # Map experience level to difficulty
+                    difficulty_map = {
+                        'entry': 'easy',
+                        'mid': 'medium',
+                        'senior': 'hard',
+                    }
+                    diff = difficulty_map.get(experience_level, 'medium')
+
+                    generator = get_generator()
+                    for skill in skills_to_probe:
+                        result = generator.generate(
+                            skill_name=skill,
+                            job_role=job.get('title', 'Software Developer'),
+                            difficulty_level=diff,
+                        )
+                        # Convert Flan-T5 output to question bank format
+                        flan_q = {
+                            'id': f'FLAN_{skill.upper().replace(" ", "_")}',
+                            'question': result['generated_question'],
+                            'difficulty': result.get('difficulty', diff),
+                            'expected_keywords': [skill],
+                            'time_limit_minutes': {'easy': 5, 'medium': 8, 'hard': 12}.get(diff, 8),
+                            'points': {'easy': 5, 'medium': 10, 'hard': 15}.get(diff, 10),
+                            'follow_up': f'Can you go deeper on your experience with {skill}?',
+                            'category': 'gap_analysis',
+                            'type': 'flan_t5_generated',
+                            'source': result.get('source', 'flan-t5'),
+                            'model_answer': result.get('model_answer', ''),
+                            'skill': skill,
+                        }
+                        flan_t5_questions.append(flan_q)
+
+                    flan_t5_count = len(flan_t5_questions)
+                    logger.info(
+                        f"🧠 Flan-T5 generated {flan_t5_count} gap-based questions "
+                        f"for missing skills: {skills_to_probe}"
+                    )
+        except Exception as e:
+            logger.warning(f"⚠️ Flan-T5 gap generation failed (using bank only): {e}")
+            flan_t5_questions = []
+            flan_t5_count = 0
+
+    # Remaining technical slots filled from static question bank
+    bank_count = technical_count - flan_t5_count
+
+    # Generate technical questions from bank
     technical_questions = _generate_technical_questions(
         role_questions,
-        technical_count,
+        bank_count,
         difficulty_distribution,
         job,
         candidate
     )
+
+    # Merge: Flan-T5 gap questions first, then bank questions
+    technical_questions = flan_t5_questions + technical_questions
     
     # Generate behavioral questions
     behavioral_questions = []
@@ -146,7 +231,9 @@ def generate_dynamic_interview_questions(
         q['generated_at'] = datetime.utcnow().isoformat()
         q['candidate_level'] = experience_level
     
-    print(f"✅ Generated {len(all_questions)} questions ({len(technical_questions)} technical, {len(behavioral_questions)} behavioral)")
+    print(f"✅ Generated {len(all_questions)} questions "
+          f"({len(technical_questions)} technical [{flan_t5_count} Flan-T5 + {len(technical_questions) - flan_t5_count} bank], "
+          f"{len(behavioral_questions)} behavioral)")
     
     return all_questions
 

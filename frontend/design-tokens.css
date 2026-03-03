@@ -1,0 +1,233 @@
+/* =============================================================
+   DESIGN TOKENS — Smart Hiring System
+   =============================================================
+   Single source of truth for ALL colors, spacing, radii,
+   shadows, gradients, and transitions.
+
+   Every component MUST use var(--...) — zero hardcoded colors.
+
+   Load order: design-tokens.css → styles.css → enterprise-ui.css
+   ============================================================= */
+
+:root {
+    /* ── Typography ───────────────────────────────────── */
+    --font-heading:   'Clash Display', 'Plus Jakarta Sans', sans-serif;
+    --font-body:      'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono:      'Fira Code', 'Consolas', monospace;
+
+    /* ── Brand Colors ─────────────────────────────────── */
+    --color-primary:         #4F46E5;
+    --color-primary-hover:   #4338CA;
+    --color-primary-light:   #818cf8;
+    --color-primary-bg:      #eef2ff;
+
+    --color-secondary:       #7c3aed;
+    --color-secondary-hover: #6d28d9;
+
+    /* ── Semantic Colors ──────────────────────────────── */
+    --color-success:         #10b981;
+    --color-success-hover:   #059669;
+    --color-success-dark:    #047857;
+    --color-success-bg:      #d1fae5;
+    --color-success-text:    #065f46;
+
+    --color-danger:          #ef4444;
+    --color-danger-hover:    #dc2626;
+    --color-danger-dark:     #c53030;
+    --color-danger-bg:       #fee2e2;
+    --color-danger-text:     #991b1b;
+
+    --color-warning:         #f59e0b;
+    --color-warning-hover:   #d97706;
+    --color-warning-bg:      #fef3c7;
+    --color-warning-text:    #92400e;
+
+    --color-info:            #3b82f6;
+    --color-info-hover:      #2563eb;
+    --color-info-bg:         #dbeafe;
+    --color-info-text:       #1e40af;
+
+    /* ── Neutral Palette ──────────────────────────────── */
+    --color-gray-50:   #f9fafb;
+    --color-gray-100:  #f3f4f6;
+    --color-gray-200:  #e5e7eb;
+    --color-gray-300:  #d1d5db;
+    --color-gray-400:  #9ca3af;
+    --color-gray-500:  #6b7280;
+    --color-gray-600:  #4b5563;
+    --color-gray-700:  #374151;
+    --color-gray-800:  #1f2937;
+    --color-gray-900:  #111827;
+
+    /* ── Surface Colors ───────────────────────────────── */
+    --color-surface:         #ffffff;
+    --color-surface-alt:     #f8fafc;
+    --color-surface-raised:  #ffffff;
+    --color-backdrop:        rgba(0, 0, 0, 0.5);
+
+    /* ── Text Colors ──────────────────────────────────── */
+    --color-text:            #1e293b;
+    --color-text-secondary:  #64748b;
+    --color-text-muted:      #94a3b8;
+    --color-text-inverse:    #ffffff;
+    --color-text-link:       var(--color-primary);
+
+    /* ── Border Colors ────────────────────────────────── */
+    --color-border:          #e2e8f0;
+    --color-border-hover:    #cbd5e0;
+    --color-border-focus:    var(--color-primary);
+
+    /* ── Gradients ────────────────────────────────────── */
+    --gradient-primary:   linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-success:   linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --gradient-warning:   linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    --gradient-danger:    linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    --gradient-info:      linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    --gradient-hero:      linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+
+    /* ── Rank Badge Gradients ─────────────────────────── */
+    --gradient-rank-gold:    linear-gradient(135deg, #fbbf24, #f59e0b);
+    --gradient-rank-silver:  linear-gradient(135deg, #9ca3af, #6b7280);
+    --gradient-rank-bronze:  linear-gradient(135deg, #fb923c, #ea580c);
+
+    /* ── Status Badge Colors ──────────────────────────── */
+    --status-pending-bg:       var(--color-warning-bg);
+    --status-pending-text:     var(--color-warning-text);
+    --status-pending-border:   var(--color-warning);
+
+    --status-shortlisted-bg:   var(--color-info-bg);
+    --status-shortlisted-text: var(--color-info-text);
+    --status-shortlisted-border: var(--color-info);
+
+    --status-interviewed-bg:   #ede9fe;
+    --status-interviewed-text: #5b21b6;
+    --status-interviewed-border: #8b5cf6;
+
+    --status-hired-bg:         var(--color-success-bg);
+    --status-hired-text:       var(--color-success-text);
+    --status-hired-border:     var(--color-success);
+
+    --status-rejected-bg:      var(--color-danger-bg);
+    --status-rejected-text:    var(--color-danger-text);
+    --status-rejected-border:  var(--color-danger);
+
+    /* ── Shadows ──────────────────────────────────────── */
+    --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-sm:   0 2px 8px rgba(0, 0, 0, 0.06);
+    --shadow-md:   0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-lg:   0 8px 32px rgba(0, 0, 0, 0.12);
+    --shadow-xl:   0 12px 48px rgba(0, 0, 0, 0.15);
+    --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+
+    /* ── Border Radii ─────────────────────────────────── */
+    --radius-xs:   4px;
+    --radius-sm:   6px;
+    --radius-md:   8px;
+    --radius-lg:   12px;
+    --radius-xl:   16px;
+    --radius-2xl:  20px;
+    --radius-full: 9999px;
+
+    /* ── Spacing Scale (4px base) ─────────────────────── */
+    --space-1:  4px;
+    --space-2:  8px;
+    --space-3:  12px;
+    --space-4:  16px;
+    --space-5:  20px;
+    --space-6:  24px;
+    --space-8:  32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* ── Transitions ──────────────────────────────────── */
+    --transition-fast:  all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base:  all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow:  all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* ── Z-Index Scale ────────────────────────────────── */
+    --z-dropdown:    100;
+    --z-sticky:      200;
+    --z-overlay:     300;
+    --z-modal:       400;
+    --z-toast:       500;
+}
+
+/* ─── Dark Mode ───────────────────────────────────────── */
+[data-theme="dark"] {
+    --color-primary:         #818cf8;
+    --color-primary-hover:   #a5b4fc;
+    --color-primary-light:   #6366f1;
+    --color-primary-bg:      #1e1b4b;
+
+    --color-surface:         #111827;
+    --color-surface-alt:     #1f2937;
+    --color-surface-raised:  #1f2937;
+    --color-backdrop:        rgba(0, 0, 0, 0.7);
+
+    --color-text:            #e2e8f0;
+    --color-text-secondary:  #94a3b8;
+    --color-text-muted:      #64748b;
+    --color-text-inverse:    #111827;
+
+    --color-border:          #374151;
+    --color-border-hover:    #4b5563;
+
+    --color-gray-50:   #1f2937;
+    --color-gray-100:  #374151;
+    --color-gray-200:  #4b5563;
+    --color-gray-800:  #e5e7eb;
+    --color-gray-900:  #f9fafb;
+
+    /* Dark mode alert backgrounds stay visible but muted */
+    --color-success-bg:      #064e3b;
+    --color-success-text:    #6ee7b7;
+    --color-danger-bg:       #7f1d1d;
+    --color-danger-text:     #fca5a5;
+    --color-warning-bg:      #78350f;
+    --color-warning-text:    #fcd34d;
+    --color-info-bg:         #1e3a5f;
+    --color-info-text:       #93c5fd;
+
+    --status-interviewed-bg:   #2e1065;
+    --status-interviewed-text: #c4b5fd;
+    --status-interviewed-border: #7c3aed;
+
+    --gradient-primary:  linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+
+    --shadow-sm:   0 2px 8px rgba(0, 0, 0, 0.4);
+    --shadow-md:   0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-lg:   0 8px 32px rgba(0, 0, 0, 0.6);
+    --shadow-xl:   0 12px 48px rgba(0, 0, 0, 0.7);
+}
+
+/* ─── Utility Classes (token-based) ───────────────────── */
+
+/* Badges */
+.badge-pending      { background: var(--status-pending-bg);      color: var(--status-pending-text);      border: 1px solid var(--status-pending-border); }
+.badge-shortlisted  { background: var(--status-shortlisted-bg);  color: var(--status-shortlisted-text);  border: 1px solid var(--status-shortlisted-border); }
+.badge-interviewed  { background: var(--status-interviewed-bg);  color: var(--status-interviewed-text);  border: 1px solid var(--status-interviewed-border); }
+.badge-hired        { background: var(--status-hired-bg);        color: var(--status-hired-text);        border: 1px solid var(--status-hired-border); }
+.badge-rejected     { background: var(--status-rejected-bg);     color: var(--status-rejected-text);     border: 1px solid var(--status-rejected-border); }
+
+/* Score indicator classes */
+.score-high   { color: var(--color-success); }
+.score-medium { color: var(--color-warning); }
+.score-low    { color: var(--color-text-muted); }
+
+/* Alert token overrides */
+.alert-success { background: var(--color-success-bg); color: var(--color-success-text); border-left: 4px solid var(--color-success); }
+.alert-error,
+.alert-danger  { background: var(--color-danger-bg);  color: var(--color-danger-text);  border-left: 4px solid var(--color-danger); }
+.alert-warning { background: var(--color-warning-bg); color: var(--color-warning-text); border-left: 4px solid var(--color-warning); }
+.alert-info    { background: var(--color-info-bg);    color: var(--color-info-text);    border-left: 4px solid var(--color-info); }
+
+/* Modal close animation */
+.modal.closing {
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+}
+.modal.closing .modal-content {
+    transform: scale(0.95);
+    transition: transform 0.2s ease-out;
+}

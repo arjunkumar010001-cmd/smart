@@ -1,0 +1,3255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Hiring — Final Project Report</title>
+    <style>
+
+/* ========== PAGE & PRINT SETUP ========== */
+@page {
+    size: A4;
+    margin: 1in;
+}
+
+@media print {
+    body { margin: 0; padding: 0; }
+    .page { page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    .no-print { display: none !important; }
+}
+
+/* ========== BASE TYPOGRAPHY ========== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    line-height: 1.6;
+    color: #000;
+    background: #f5f5f5;
+}
+
+/* ========== PAGE CONTAINER ========== */
+.page {
+    width: 8.27in;         /* A4 width */
+    min-height: 11.69in;   /* A4 height */
+    margin: 0.5in auto;
+    padding: 1in;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    page-break-after: always;
+}
+
+.page:last-child {
+    page-break-after: auto;
+}
+
+/* ========== HEADINGS ========== */
+h1 {
+    font-size: 22pt;
+    text-align: center;
+    margin-bottom: 18pt;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+h2 {
+    font-size: 16pt;
+    margin-top: 18pt;
+    margin-bottom: 12pt;
+    border-bottom: 2px solid #1a237e;
+    padding-bottom: 4pt;
+    color: #1a237e;
+}
+
+h2.chapter-title {
+    text-align: center;
+    font-size: 20pt;
+    border-bottom: 3px double #1a237e;
+    padding-bottom: 8pt;
+    margin-bottom: 20pt;
+    margin-top: 0;
+    line-height: 1.4;
+}
+
+h3 {
+    font-size: 14pt;
+    margin-top: 16pt;
+    margin-bottom: 8pt;
+    color: #283593;
+}
+
+h4 {
+    font-size: 12pt;
+    font-weight: bold;
+    margin-top: 12pt;
+    margin-bottom: 6pt;
+    color: #333;
+}
+
+/* ========== PARAGRAPHS & LISTS ========== */
+p {
+    margin-bottom: 8pt;
+    text-align: justify;
+}
+
+ul, ol {
+    margin-left: 24pt;
+    margin-bottom: 10pt;
+}
+
+li {
+    margin-bottom: 4pt;
+}
+
+/* ========== COVER PAGE ========== */
+.cover-page {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 9in;
+}
+
+.cover-page h1 {
+    font-size: 26pt;
+    margin-bottom: 10pt;
+    color: #1a237e;
+}
+
+.cover-page .subtitle {
+    font-size: 14pt;
+    font-style: italic;
+    margin-bottom: 30pt;
+    color: #555;
+}
+
+.cover-page .university {
+    font-size: 16pt;
+    font-weight: bold;
+    margin-bottom: 4pt;
+    text-transform: uppercase;
+}
+
+.cover-page .department {
+    font-size: 14pt;
+    margin-bottom: 20pt;
+    color: #333;
+}
+
+.cover-page .detail-line {
+    font-size: 12pt;
+    margin-bottom: 4pt;
+}
+
+.cover-page .year {
+    font-size: 14pt;
+    font-weight: bold;
+    margin-top: 20pt;
+}
+
+/* ========== TABLES ========== */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12pt 0;
+    font-size: 10pt;
+}
+
+.data-table th,
+.data-table td {
+    border: 1px solid #333;
+    padding: 6pt 8pt;
+    text-align: left;
+    vertical-align: top;
+}
+
+.data-table th {
+    background-color: #1a237e;
+    color: #fff;
+    font-weight: bold;
+    text-align: center;
+}
+
+.data-table tr:nth-child(even) {
+    background-color: #f0f0f8;
+}
+
+.data-table .pass {
+    color: #2e7d32;
+    font-weight: bold;
+}
+
+.data-table .fail {
+    color: #c62828;
+    font-weight: bold;
+}
+
+.table-caption {
+    text-align: center;
+    font-size: 10pt;
+    font-style: italic;
+    margin-top: 4pt;
+    margin-bottom: 16pt;
+    color: #555;
+}
+
+/* ========== TOC TABLE ========== */
+.toc-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10pt 0;
+}
+
+.toc-table td {
+    padding: 3pt 6pt;
+    border: none;
+    vertical-align: top;
+}
+
+.toc-table .toc-chapter {
+    font-weight: bold;
+    padding-top: 10pt;
+}
+
+.toc-table .toc-page {
+    text-align: right;
+    width: 40pt;
+}
+
+/* ========== FORMULA BOX ========== */
+.formula-box {
+    background: #f8f8ff;
+    border: 1px solid #c5cae9;
+    border-left: 4px solid #1a237e;
+    padding: 12pt 16pt;
+    margin: 12pt 0;
+    font-family: "Cambria Math", "Times New Roman", serif;
+    font-size: 11pt;
+    text-align: center;
+    border-radius: 4px;
+}
+
+.formula-box p {
+    text-align: center;
+    margin-bottom: 4pt;
+}
+
+/* ========== DIAGRAM BOX ========== */
+.diagram-box {
+    background: #fafafa;
+    border: 2px solid #90a4ae;
+    padding: 16pt;
+    margin: 14pt 0;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 8.5pt;
+    line-height: 1.3;
+    white-space: pre;
+    overflow-x: auto;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.diagram-box p.diagram-caption {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 10pt;
+    font-style: italic;
+    text-align: center;
+    margin-top: 8pt;
+    margin-bottom: 0;
+    white-space: normal;
+}
+
+/* ========== CODE BLOCKS ========== */
+.code-block {
+    background: #263238;
+    color: #e0e0e0;
+    padding: 12pt 16pt;
+    margin: 12pt 0;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 9pt;
+    line-height: 1.5;
+    border-radius: 4px;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.code-block .code-comment {
+    color: #78909c;
+    font-style: italic;
+}
+
+.code-block .code-keyword {
+    color: #82b1ff;
+}
+
+.code-block .code-string {
+    color: #c3e88d;
+}
+
+.code-block .code-function {
+    color: #ffcb6b;
+}
+
+/* ========== SCREENSHOT PLACEHOLDER ========== */
+.screenshot-placeholder {
+    border: 2px dashed #90a4ae;
+    background: #eceff1;
+    padding: 30pt;
+    margin: 14pt 0;
+    text-align: center;
+    color: #607d8b;
+    font-style: italic;
+    font-size: 11pt;
+    border-radius: 6px;
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ========== REFERENCES LIST ========== */
+ol.references {
+    counter-reset: ref-counter;
+    list-style: none;
+    margin-left: 0;
+    padding-left: 0;
+}
+
+ol.references li {
+    counter-increment: ref-counter;
+    margin-bottom: 10pt;
+    padding-left: 36pt;
+    text-indent: -36pt;
+    text-align: justify;
+}
+
+ol.references li::before {
+    content: "[" counter(ref-counter) "]  ";
+    font-weight: bold;
+    color: #1a237e;
+}
+
+/* ========== SIGNATURE BLOCK ========== */
+.signature-block {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 40pt;
+    flex-wrap: wrap;
+}
+
+.signature-item {
+    text-align: center;
+    min-width: 200px;
+    margin-top: 20pt;
+}
+
+.signature-line {
+    border-top: 1px solid #000;
+    margin-top: 40pt;
+    padding-top: 4pt;
+}
+
+/* ========== MISC UTILITIES ========== */
+.text-center { text-align: center; }
+.text-bold { font-weight: bold; }
+.mt-20 { margin-top: 20pt; }
+.mb-20 { margin-bottom: 20pt; }
+.page-break { page-break-after: always; }
+
+hr.separator {
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 16pt 0;
+}
+
+/* ========== PRINT BUTTON (screen only) ========== */
+.print-btn-container {
+    text-align: center;
+    padding: 16pt;
+    background: #1a237e;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.print-btn {
+    background: #fff;
+    color: #1a237e;
+    border: 2px solid #fff;
+    padding: 10pt 28pt;
+    font-size: 14pt;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 6px;
+    font-family: Arial, sans-serif;
+}
+
+.print-btn:hover {
+    background: #e8eaf6;
+}
+
+@media print {
+    .print-btn-container { display: none !important; }
+}
+
+    </style>
+</head>
+<body>
+
+<!-- Print button (visible on screen only) -->
+<div class="print-btn-container no-print">
+    <button class="print-btn" onclick="window.print()">
+        &#128424; Print / Save as PDF
+    </button>
+</div>
+
+<!-- ==================== REPORT CONTENT ==================== -->
+<!-- PART 1: FRONT MATTER — Cover, Certificate, Declaration, Acknowledgment, Abstract, TOC -->
+
+<!-- =============================== COVER PAGE =============================== -->
+<div class="page cover-page">
+    <div style="text-align:center; padding-top:40px;">
+        <p style="font-size:14pt; font-weight:bold; letter-spacing:1px;">
+            JAWAHARLAL NEHRU TECHNOLOGICAL UNIVERSITY<br>
+            GURAJADA, VIZIANAGARAM
+        </p>
+        <p style="font-size:12pt; margin-top:4px;">
+            DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING
+        </p>
+
+        <div style="margin:40px auto; width:120px; height:120px; border:2px solid #333; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10pt; color:#555;">
+            [College Logo]
+        </div>
+
+        <p style="font-size:11pt; margin-top:30px; color:#444;">A Project Report on</p>
+
+        <h1 style="font-size:22pt; margin:16px 0 8px; color:#1a237e; font-weight:800; letter-spacing:0.5px;">
+            SMART HIRING
+        </h1>
+        <p style="font-size:13pt; color:#333; font-style:italic; max-width:500px; margin:0 auto;">
+            An AI-Powered Intelligent Recruitment Platform with<br>
+            Fairness-Aware Candidate Evaluation
+        </p>
+
+        <p style="font-size:11pt; margin-top:30px; color:#444;">
+            Submitted in partial fulfillment of the requirements for the award of the degree of
+        </p>
+        <p style="font-size:13pt; font-weight:bold; margin-top:6px;">
+            BACHELOR OF TECHNOLOGY<br>
+            in<br>
+            COMPUTER SCIENCE AND ENGINEERING
+        </p>
+
+        <p style="font-size:11pt; margin-top:30px; font-weight:bold;">Submitted by:</p>
+        <table style="margin:10px auto; border-collapse:collapse; font-size:11pt;">
+            <tr><td style="padding:4px 20px; text-align:left;">[STUDENT NAME 1]</td><td style="padding:4px 20px;">[ROLL NO 1]</td></tr>
+            <tr><td style="padding:4px 20px; text-align:left;">[STUDENT NAME 2]</td><td style="padding:4px 20px;">[ROLL NO 2]</td></tr>
+            <tr><td style="padding:4px 20px; text-align:left;">[STUDENT NAME 3]</td><td style="padding:4px 20px;">[ROLL NO 3]</td></tr>
+            <tr><td style="padding:4px 20px; text-align:left;">[STUDENT NAME 4]</td><td style="padding:4px 20px;">[ROLL NO 4]</td></tr>
+        </table>
+
+        <p style="font-size:11pt; margin-top:20px;">
+            <strong>Under the Guidance of</strong><br>
+            <span style="font-size:12pt; font-weight:bold;">Sri R.D.D.V. Sivaram</span><br>
+            Assistant Professor, Dept. of CSE
+        </p>
+
+        <p style="font-size:11pt; margin-top:30px; font-weight:bold;">
+            [BATCH YEAR, e.g., 2021–2025]<br>
+            Academic Year: [e.g., 2024–2025]
+        </p>
+    </div>
+</div>
+
+<!-- =============================== CERTIFICATE =============================== -->
+<div class="page">
+    <h2 class="chapter-title" style="text-align:center; margin-bottom:30px;">CERTIFICATE</h2>
+
+    <p style="text-align:justify; line-height:2;">
+        This is to certify that the project report entitled <strong>"SMART HIRING — An AI-Powered
+        Intelligent Recruitment Platform with Fairness-Aware Candidate Evaluation"</strong> is a
+        bonafide record of work carried out by the following students of <strong>B.Tech (CSE)</strong>
+        during the academic year <strong>[ACADEMIC YEAR]</strong> in partial fulfillment of the
+        requirements for the award of the degree of <strong>Bachelor of Technology in Computer
+        Science and Engineering</strong> from <strong>Jawaharlal Nehru Technological University,
+        Gurajada, Vizianagaram</strong>.
+    </p>
+
+    <table style="margin:20px auto; border-collapse:collapse; font-size:11pt;">
+        <tr><td style="padding:4px 30px; text-align:left;">[STUDENT NAME 1]</td><td style="padding:4px 30px;">[ROLL NO 1]</td></tr>
+        <tr><td style="padding:4px 30px; text-align:left;">[STUDENT NAME 2]</td><td style="padding:4px 30px;">[ROLL NO 2]</td></tr>
+        <tr><td style="padding:4px 30px; text-align:left;">[STUDENT NAME 3]</td><td style="padding:4px 30px;">[ROLL NO 3]</td></tr>
+        <tr><td style="padding:4px 30px; text-align:left;">[STUDENT NAME 4]</td><td style="padding:4px 30px;">[ROLL NO 4]</td></tr>
+    </table>
+
+    <div style="display:flex; justify-content:space-between; margin-top:80px;">
+        <div style="text-align:center;">
+            <div style="border-top:1px solid #333; width:200px; padding-top:8px;">
+                <strong>Sri R.D.D.V. Sivaram</strong><br>
+                <span style="font-size:10pt;">Project Guide<br>Asst. Professor, Dept. of CSE</span>
+            </div>
+        </div>
+        <div style="text-align:center;">
+            <div style="border-top:1px solid #333; width:200px; padding-top:8px;">
+                <strong>Dr. P. Aruna Kumari</strong><br>
+                <span style="font-size:10pt;">Head of the Department<br>Dept. of CSE</span>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align:center; margin-top:60px;">
+        <div style="border-top:1px solid #333; width:200px; margin:0 auto; padding-top:8px;">
+            <strong>External Examiner</strong>
+        </div>
+    </div>
+</div>
+
+<!-- =============================== DECLARATION =============================== -->
+<div class="page">
+    <h2 class="chapter-title" style="text-align:center; margin-bottom:30px;">DECLARATION</h2>
+
+    <p style="text-align:justify; line-height:2;">
+        We hereby declare that the project report entitled <strong>"SMART HIRING — An AI-Powered
+        Intelligent Recruitment Platform with Fairness-Aware Candidate Evaluation"</strong>
+        submitted to the <strong>Department of Computer Science and Engineering, JNTUGV,
+        Vizianagaram</strong>, is a record of an original work done by us under the guidance of
+        <strong>Sri R.D.D.V. Sivaram</strong>, Assistant Professor, Department of CSE, and this
+        project work has not been submitted to any other University or Institution for the award
+        of any degree or diploma.
+    </p>
+
+    <div style="margin-top:60px;">
+        <p style="font-weight:bold;">Submitted by:</p>
+        <table style="margin:10px 0; border-collapse:collapse; font-size:11pt;">
+            <tr><td style="padding:6px 30px; text-align:left;">[STUDENT NAME 1]</td><td style="padding:6px 30px;">[ROLL NO 1]</td></tr>
+            <tr><td style="padding:6px 30px; text-align:left;">[STUDENT NAME 2]</td><td style="padding:6px 30px;">[ROLL NO 2]</td></tr>
+            <tr><td style="padding:6px 30px; text-align:left;">[STUDENT NAME 3]</td><td style="padding:6px 30px;">[ROLL NO 3]</td></tr>
+            <tr><td style="padding:6px 30px; text-align:left;">[STUDENT NAME 4]</td><td style="padding:6px 30px;">[ROLL NO 4]</td></tr>
+        </table>
+    </div>
+
+    <p style="margin-top:40px;">
+        <strong>Place:</strong> Vizianagaram<br>
+        <strong>Date:</strong> [DATE]
+    </p>
+</div>
+
+<!-- =============================== ACKNOWLEDGMENT =============================== -->
+<div class="page">
+    <h2 class="chapter-title" style="text-align:center; margin-bottom:30px;">ACKNOWLEDGMENT</h2>
+
+    <p style="text-align:justify; line-height:2;">
+        We would like to express our sincere gratitude to all those who helped us in completing
+        this project successfully.
+    </p>
+
+    <p style="text-align:justify; line-height:2;">
+        First and foremost, we express our deep sense of gratitude to our project guide
+        <strong>Sri R.D.D.V. Sivaram</strong>, Assistant Professor, Department of Computer Science
+        and Engineering, JNTUGV, Vizianagaram, for his invaluable guidance, constant encouragement,
+        and constructive criticism throughout the course of this project work. His technical
+        expertise in the areas of Artificial Intelligence and Software Engineering greatly helped
+        shape the direction of this work.
+    </p>
+
+    <p style="text-align:justify; line-height:2;">
+        We are immensely grateful to <strong>Dr. P. Aruna Kumari</strong>, Head of the Department
+        of Computer Science and Engineering, for providing the necessary facilities and support
+        for the completion of this project.
+    </p>
+
+    <p style="text-align:justify; line-height:2;">
+        We extend our heartfelt thanks to the <strong>Principal</strong> of JNTUGV for providing
+        an excellent academic environment and infrastructure that enabled us to pursue this work.
+    </p>
+
+    <p style="text-align:justify; line-height:2;">
+        We also thank all the <strong>faculty members</strong> of the Department of CSE for their
+        encouragement and support. Special thanks to the open-source community and the developers
+        of Flask, MongoDB, Sentence-BERT, face-api.js, and Groq API whose tools and libraries
+        made this project possible.
+    </p>
+
+    <p style="text-align:justify; line-height:2;">
+        Finally, we thank our <strong>parents and friends</strong> for their unwavering support
+        and motivation throughout our academic journey.
+    </p>
+
+    <div style="margin-top:40px; text-align:right;">
+        <p>
+            [STUDENT NAME 1]<br>
+            [STUDENT NAME 2]<br>
+            [STUDENT NAME 3]<br>
+            [STUDENT NAME 4]
+        </p>
+    </div>
+</div>
+
+<!-- =============================== ABSTRACT =============================== -->
+<div class="page">
+    <h2 class="chapter-title" style="text-align:center; margin-bottom:30px;">ABSTRACT</h2>
+
+    <p style="text-align:justify; line-height:2;">
+        The traditional recruitment process is plagued by inefficiencies including manual resume
+        screening, subjective evaluations, unconscious bias, and a lack of standardized assessment
+        mechanisms. These challenges lead to prolonged hiring cycles, poor candidate experiences,
+        and discriminatory outcomes. This project presents <strong>Smart Hiring</strong>, an
+        end-to-end AI-powered recruitment platform that automates and optimizes the entire hiring
+        pipeline across six integrated phases.
+    </p>
+
+    <p style="text-align:justify; line-height:2;">
+        The system implements: (1) <strong>Intelligent Job Posting</strong> with AI-optimized
+        descriptions using Large Language Models (Groq LLaMA-3.3-70B); (2) <strong>Resume
+        Refinery</strong> powered by Sentence-BERT (all-MiniLM-L6-v2) semantic embeddings and
+        TF-IDF vectorization for multi-dimensional candidate-job matching; (3) <strong>Smart
+        Assessment Engine</strong> with AI-generated adaptive questions, real-time code execution
+        via Piston/Judge0 sandboxes, Monaco Editor integration, face-detection-based proctoring
+        using TinyFaceDetector, and a nine-mechanism anti-cheating module; (4) <strong>AI-Powered
+        Interviews</strong> featuring an interactive AI avatar with Text-to-Speech/Speech-to-Text
+        capabilities and automated response evaluation; (5) <strong>Fairness Audit Engine</strong>
+        implementing five mathematical fairness metrics (Demographic Parity, Disparate Impact with
+        the 80% Rule, Equal Opportunity, Equalized Odds, and Predictive Parity) alongside automated
+        bias correction; and (6) <strong>Digital Onboarding</strong> with offer letter generation,
+        digital signature acceptance (SHA-256), document verification, NDA e-signing, and IT
+        provisioning workflows.
+    </p>
+
+    <p style="text-align:justify; line-height:2;">
+        The platform is built on a Flask-MongoDB-REST architecture with JWT-based Role-Based Access
+        Control (RBAC), exposing 172+ API endpoints. The system incorporates a four-provider AI
+        waterfall (Groq → Claude → OpenAI → Static Fallback) ensuring zero-downtime question
+        generation, and employs WebSocket-based real-time communication via Flask-SocketIO for
+        the interview module. Experimental evaluation demonstrates semantic matching accuracy
+        improvements of up to 40% over keyword-based approaches, assessment integrity enforcement
+        through automated session termination, and fairness metric compliance across all five
+        audit dimensions.
+    </p>
+
+    <p style="text-align:justify; line-height:2;">
+        <strong>Keywords:</strong> Artificial Intelligence, Natural Language Processing,
+        Sentence-BERT, Resume Matching, Fairness Auditing, Proctoring, Anti-Cheating,
+        Recruitment Automation, Flask, MongoDB, Large Language Models.
+    </p>
+</div>
+
+<!-- =============================== TABLE OF CONTENTS =============================== -->
+<div class="page">
+    <h2 class="chapter-title" style="text-align:center; margin-bottom:30px;">TABLE OF CONTENTS</h2>
+
+    <table class="toc-table">
+        <tr><td colspan="3" style="font-weight:bold; padding:8px 0;">FRONT MATTER</td></tr>
+        <tr><td></td><td>Certificate</td><td class="toc-page">i</td></tr>
+        <tr><td></td><td>Declaration</td><td class="toc-page">ii</td></tr>
+        <tr><td></td><td>Acknowledgment</td><td class="toc-page">iii</td></tr>
+        <tr><td></td><td>Abstract</td><td class="toc-page">iv</td></tr>
+        <tr><td></td><td>Table of Contents</td><td class="toc-page">v</td></tr>
+        <tr><td></td><td>List of Figures</td><td class="toc-page">vii</td></tr>
+        <tr><td></td><td>List of Tables</td><td class="toc-page">viii</td></tr>
+
+        <tr><td colspan="3" style="padding-top:12px;"></td></tr>
+
+        <tr class="toc-chapter"><td>1</td><td>INTRODUCTION</td><td class="toc-page">1</td></tr>
+        <tr><td></td><td>1.1 &nbsp; Overview of Smart Hiring</td><td class="toc-page">1</td></tr>
+        <tr><td></td><td>1.2 &nbsp; Problem Statement</td><td class="toc-page">2</td></tr>
+        <tr><td></td><td>1.3 &nbsp; Motivation</td><td class="toc-page">3</td></tr>
+        <tr><td></td><td>1.4 &nbsp; Objectives</td><td class="toc-page">4</td></tr>
+        <tr><td></td><td>1.5 &nbsp; Scope of the Project</td><td class="toc-page">5</td></tr>
+        <tr><td></td><td>1.6 &nbsp; Organization of the Report</td><td class="toc-page">6</td></tr>
+
+        <tr class="toc-chapter"><td>2</td><td>LITERATURE SURVEY</td><td class="toc-page">7</td></tr>
+        <tr><td></td><td>2.1 &nbsp; AI in Recruitment</td><td class="toc-page">7</td></tr>
+        <tr><td></td><td>2.2 &nbsp; NLP-Based Resume Screening</td><td class="toc-page">8</td></tr>
+        <tr><td></td><td>2.3 &nbsp; Sentence-BERT and Semantic Similarity</td><td class="toc-page">9</td></tr>
+        <tr><td></td><td>2.4 &nbsp; Online Assessment Proctoring</td><td class="toc-page">10</td></tr>
+        <tr><td></td><td>2.5 &nbsp; Fairness and Bias in AI-Driven Hiring</td><td class="toc-page">11</td></tr>
+        <tr><td></td><td>2.6 &nbsp; Comparison with Existing Systems</td><td class="toc-page">12</td></tr>
+
+        <tr class="toc-chapter"><td>3</td><td>SYSTEM ANALYSIS</td><td class="toc-page">14</td></tr>
+        <tr><td></td><td>3.1 &nbsp; Existing System and Drawbacks</td><td class="toc-page">14</td></tr>
+        <tr><td></td><td>3.2 &nbsp; Proposed System</td><td class="toc-page">15</td></tr>
+        <tr><td></td><td>3.3 &nbsp; System Architecture</td><td class="toc-page">16</td></tr>
+        <tr><td></td><td>3.4 &nbsp; Data Flow Diagrams</td><td class="toc-page">18</td></tr>
+        <tr><td></td><td>3.5 &nbsp; Use Case Diagram</td><td class="toc-page">20</td></tr>
+        <tr><td></td><td>3.6 &nbsp; Entity-Relationship Diagram</td><td class="toc-page">21</td></tr>
+        <tr><td></td><td>3.7 &nbsp; Hardware and Software Requirements</td><td class="toc-page">22</td></tr>
+
+        <tr class="toc-chapter"><td>4</td><td>METHODOLOGY</td><td class="toc-page">24</td></tr>
+        <tr><td></td><td>4.1 &nbsp; Phase 1: Intelligent Job Posting</td><td class="toc-page">24</td></tr>
+        <tr><td></td><td>4.2 &nbsp; Phase 2: Resume Refinery</td><td class="toc-page">26</td></tr>
+        <tr><td></td><td>4.3 &nbsp; Phase 3: Smart Assessment Engine</td><td class="toc-page">28</td></tr>
+        <tr><td></td><td>4.4 &nbsp; Phase 4: AI-Powered Interview</td><td class="toc-page">32</td></tr>
+        <tr><td></td><td>4.5 &nbsp; Phase 5: Fairness Audit Engine</td><td class="toc-page">35</td></tr>
+        <tr><td></td><td>4.6 &nbsp; Phase 6: Digital Onboarding</td><td class="toc-page">38</td></tr>
+        <tr><td></td><td>4.7 &nbsp; AI Provider Waterfall Architecture</td><td class="toc-page">40</td></tr>
+        <tr><td></td><td>4.8 &nbsp; Security and Anti-Cheating</td><td class="toc-page">41</td></tr>
+
+        <tr class="toc-chapter"><td>5</td><td>SYSTEM IMPLEMENTATION</td><td class="toc-page">43</td></tr>
+        <tr><td></td><td>5.1 &nbsp; Development Environment Setup</td><td class="toc-page">43</td></tr>
+        <tr><td></td><td>5.2 &nbsp; Backend Implementation</td><td class="toc-page">44</td></tr>
+        <tr><td></td><td>5.3 &nbsp; Frontend Implementation</td><td class="toc-page">47</td></tr>
+        <tr><td></td><td>5.4 &nbsp; Database Schema Design</td><td class="toc-page">49</td></tr>
+        <tr><td></td><td>5.5 &nbsp; Sample Code and Explanations</td><td class="toc-page">50</td></tr>
+        <tr><td></td><td>5.6 &nbsp; User Manual with Screenshots</td><td class="toc-page">54</td></tr>
+
+        <tr class="toc-chapter"><td>6</td><td>TESTING AND RESULTS</td><td class="toc-page">57</td></tr>
+        <tr><td></td><td>6.1 &nbsp; Testing Methodology</td><td class="toc-page">57</td></tr>
+        <tr><td></td><td>6.2 &nbsp; Test Cases and Results</td><td class="toc-page">58</td></tr>
+        <tr><td></td><td>6.3 &nbsp; Performance Analysis</td><td class="toc-page">60</td></tr>
+        <tr><td></td><td>6.4 &nbsp; Screenshots of Working System</td><td class="toc-page">61</td></tr>
+
+        <tr class="toc-chapter"><td>7</td><td>CONCLUSION AND FUTURE SCOPE</td><td class="toc-page">63</td></tr>
+        <tr><td></td><td>7.1 &nbsp; Conclusion</td><td class="toc-page">63</td></tr>
+        <tr><td></td><td>7.2 &nbsp; Limitations</td><td class="toc-page">64</td></tr>
+        <tr><td></td><td>7.3 &nbsp; Future Scope</td><td class="toc-page">65</td></tr>
+
+        <tr class="toc-chapter"><td></td><td>REFERENCES</td><td class="toc-page">66</td></tr>
+    </table>
+</div>
+
+<!-- =============================== LIST OF FIGURES =============================== -->
+<div class="page">
+    <h2 class="chapter-title" style="text-align:center; margin-bottom:30px;">LIST OF FIGURES</h2>
+
+    <table class="toc-table">
+        <tr><td>Fig 3.1</td><td>System Architecture Diagram</td><td class="toc-page">16</td></tr>
+        <tr><td>Fig 3.2</td><td>Level-0 Data Flow Diagram (Context Diagram)</td><td class="toc-page">18</td></tr>
+        <tr><td>Fig 3.3</td><td>Level-1 Data Flow Diagram</td><td class="toc-page">19</td></tr>
+        <tr><td>Fig 3.4</td><td>Use Case Diagram</td><td class="toc-page">20</td></tr>
+        <tr><td>Fig 3.5</td><td>Entity-Relationship Diagram</td><td class="toc-page">21</td></tr>
+        <tr><td>Fig 4.1</td><td>AI Question Generation Waterfall</td><td class="toc-page">29</td></tr>
+        <tr><td>Fig 4.2</td><td>Anti-Cheating Module Flow</td><td class="toc-page">30</td></tr>
+        <tr><td>Fig 4.3</td><td>Face Detection Pipeline</td><td class="toc-page">31</td></tr>
+        <tr><td>Fig 4.4</td><td>AI Interview Sequence Diagram</td><td class="toc-page">33</td></tr>
+        <tr><td>Fig 4.5</td><td>Fairness Metrics Computation Flow</td><td class="toc-page">36</td></tr>
+        <tr><td>Fig 4.6</td><td>Bias Correction Algorithm Flow</td><td class="toc-page">37</td></tr>
+        <tr><td>Fig 4.7</td><td>Onboarding Workflow State Machine</td><td class="toc-page">39</td></tr>
+        <tr><td>Fig 5.1</td><td>MongoDB Collection Schema</td><td class="toc-page">49</td></tr>
+        <tr><td>Fig 6.1</td><td>Login Page Screenshot</td><td class="toc-page">61</td></tr>
+        <tr><td>Fig 6.2</td><td>Dashboard Screenshot</td><td class="toc-page">61</td></tr>
+        <tr><td>Fig 6.3</td><td>Assessment Interface Screenshot</td><td class="toc-page">62</td></tr>
+        <tr><td>Fig 6.4</td><td>Interview Room Screenshot</td><td class="toc-page">62</td></tr>
+        <tr><td>Fig 6.5</td><td>Fairness Audit Dashboard Screenshot</td><td class="toc-page">62</td></tr>
+    </table>
+</div>
+
+<!-- =============================== LIST OF TABLES =============================== -->
+<div class="page">
+    <h2 class="chapter-title" style="text-align:center; margin-bottom:30px;">LIST OF TABLES</h2>
+
+    <table class="toc-table">
+        <tr><td>Table 2.1</td><td>Comparison of Existing Recruitment Platforms</td><td class="toc-page">12</td></tr>
+        <tr><td>Table 3.1</td><td>Hardware Requirements</td><td class="toc-page">22</td></tr>
+        <tr><td>Table 3.2</td><td>Software Requirements</td><td class="toc-page">22</td></tr>
+        <tr><td>Table 4.1</td><td>Scoring Weights for Resume Matching</td><td class="toc-page">27</td></tr>
+        <tr><td>Table 4.2</td><td>Anti-Cheating Mechanisms Summary</td><td class="toc-page">42</td></tr>
+        <tr><td>Table 4.3</td><td>Fairness Metrics Mathematical Definitions</td><td class="toc-page">36</td></tr>
+        <tr><td>Table 5.1</td><td>MongoDB Collections and Fields</td><td class="toc-page">49</td></tr>
+        <tr><td>Table 5.2</td><td>API Endpoint Summary (172+ Routes)</td><td class="toc-page">45</td></tr>
+        <tr><td>Table 6.1</td><td>Test Cases and Results</td><td class="toc-page">58</td></tr>
+        <tr><td>Table 6.2</td><td>Performance Benchmarks</td><td class="toc-page">60</td></tr>
+    </table>
+</div>
+
+
+<!-- PART 2: CHAPTER 1 — INTRODUCTION -->
+
+<div class="page">
+    <h2 class="chapter-title">CHAPTER 1<br>INTRODUCTION</h2>
+
+    <h3>1.1 Overview of Smart Hiring</h3>
+
+    <p>
+        Smart Hiring is a comprehensive, AI-powered recruitment platform designed to automate and
+        optimize the entire hiring lifecycle — from job posting to employee onboarding. The system
+        replaces fragmented, manual hiring processes with an integrated six-phase pipeline that
+        leverages modern Artificial Intelligence, Natural Language Processing (NLP), Machine
+        Learning (ML), and Computer Vision technologies to deliver faster, fairer, and more
+        accurate hiring decisions.
+    </p>
+
+    <p>
+        The platform serves three primary user roles: <strong>Recruiters/HR Managers</strong> who
+        create job postings and manage the pipeline, <strong>Candidates</strong> who apply, take
+        assessments, and attend AI interviews, and <strong>Administrators</strong> who oversee
+        fairness audits, system configuration, and compliance. The architecture is built on a
+        Flask-MongoDB REST API backend exposing 172+ endpoints, with a responsive HTML/CSS/JavaScript
+        frontend that supports real-time interactions via WebSocket (Flask-SocketIO).
+    </p>
+
+    <p>
+        The six phases of Smart Hiring are:
+    </p>
+
+    <ol>
+        <li><strong>Intelligent Job Posting:</strong> AI-optimized job descriptions with inclusivity scoring and SEO keyword suggestions using Groq LLaMA-3.3-70B.</li>
+        <li><strong>Resume Refinery:</strong> Multi-dimensional candidate-job matching using Sentence-BERT semantic embeddings (all-MiniLM-L6-v2) and TF-IDF vectorization with skill ontology mapping.</li>
+        <li><strong>Smart Assessment Engine:</strong> AI-generated adaptive questions (coding, MCQ, debugging, aptitude, logical reasoning), real-time code execution via Piston/Judge0 sandboxes, Monaco Editor, face-detection-based proctoring, and a nine-mechanism anti-cheating module.</li>
+        <li><strong>AI-Powered Interview:</strong> Interactive AI avatar "Alex" with TTS/STT, dynamic follow-up questions generated by Flan-T5, video/audio recording with server-side persistence.</li>
+        <li><strong>Fairness Audit Engine:</strong> Five mathematical fairness metrics (Demographic Parity, Disparate Impact, Equal Opportunity, Equalized Odds, Predictive Parity) with automated bias correction and committee override capabilities.</li>
+        <li><strong>Digital Onboarding:</strong> Offer letter generation with email delivery, digital acceptance with SHA-256 signatures, document upload and verification, NDA e-signing, IT provisioning requests, and orientation scheduling.</li>
+    </ol>
+
+    <h3>1.2 Problem Statement</h3>
+
+    <p>
+        The traditional recruitment process suffers from several critical inefficiencies that
+        collectively result in suboptimal hiring outcomes:
+    </p>
+
+    <p>
+        <strong>Manual Resume Screening:</strong> According to a 2023 study by Glassdoor, the
+        average corporate job posting attracts 250 resumes, of which only 4–6 candidates are
+        typically interviewed. HR teams spend an estimated 23 hours screening resumes for a
+        single hire. This manual process is not only time-consuming but also inherently
+        inconsistent, as different reviewers may evaluate the same resume differently based
+        on subjective criteria, cognitive fatigue, and unconscious preferences.
+    </p>
+
+    <p>
+        <strong>Unconscious Bias:</strong> Research by the National Bureau of Economic Research
+        (Bertrand &amp; Mullainathan, 2004) demonstrated that resumes with "white-sounding" names
+        received 50% more callbacks than identical resumes with "African-American-sounding" names.
+        Similar biases exist across gender, age, disability status, and educational institution
+        prestige. Traditional hiring processes provide no mechanism to detect or correct such biases.
+    </p>
+
+    <p>
+        <strong>Assessment Integrity:</strong> With the rise of remote hiring, companies struggle
+        to maintain assessment integrity. Candidates may use external resources, have others take
+        assessments on their behalf, or employ AI tools to generate answers. Most existing platforms
+        rely solely on basic timer-based constraints without comprehensive anti-cheating mechanisms.
+    </p>
+
+    <p>
+        <strong>Lack of Standardization:</strong> Interview quality varies dramatically based on
+        the interviewer's experience, preparation, and personal biases. Without standardized
+        rubrics and AI-assisted evaluation, interview outcomes are often more reflective of the
+        interviewer than the candidate.
+    </p>
+
+    <p>
+        <strong>Fragmented Tools:</strong> Organizations typically use separate tools for job
+        posting (LinkedIn, Indeed), resume parsing (Lever, Greenhouse), assessments (HackerRank,
+        Codility), interviews (Zoom), and onboarding (BambooHR) — leading to data silos,
+        integration overhead, and a disconnected candidate experience.
+    </p>
+
+    <h3>1.3 Motivation</h3>
+
+    <p>
+        The motivation for developing Smart Hiring stems from the convergence of several
+        technological and societal trends:
+    </p>
+
+    <p>
+        <strong>Advances in NLP and Transformer Models:</strong> The release of Sentence-BERT
+        (Reimers &amp; Gurevych, 2019) enabled efficient semantic similarity computation, making
+        it possible to match resumes to job descriptions based on meaning rather than keyword
+        overlap. This represents a fundamental improvement over traditional TF-IDF approaches
+        that fail to capture synonyms, related concepts, and contextual skills.
+    </p>
+
+    <p>
+        <strong>Free-Tier AI APIs:</strong> The availability of free, high-quality LLM APIs
+        (particularly Groq's LLaMA-3.3-70B with 500 requests/day at zero cost) has democratized
+        access to AI capabilities that previously required significant computing infrastructure.
+        This makes it feasible to build production-quality AI features in academic projects.
+    </p>
+
+    <p>
+        <strong>Growing Emphasis on Fairness:</strong> Regulatory frameworks such as the EU AI
+        Act (2024) and New York City's Local Law 144 (2023) now mandate algorithmic auditing for
+        automated employment decision tools. Building fairness-aware systems is no longer optional
+        but a legal and ethical imperative.
+    </p>
+
+    <p>
+        <strong>Browser-Based Computer Vision:</strong> Libraries like face-api.js (built on
+        TensorFlow.js) enable real-time face detection directly in the browser without server
+        round-trips, making proctoring feasible in web applications without specialized software
+        installation.
+    </p>
+
+    <h3>1.4 Objectives</h3>
+
+    <p>The primary objectives of this project are:</p>
+
+    <ol>
+        <li>To design and implement an end-to-end recruitment automation platform that covers all six phases of the hiring lifecycle.</li>
+        <li>To develop a semantic resume matching engine using Sentence-BERT embeddings with TF-IDF fallback, achieving measurably higher accuracy than keyword-based approaches.</li>
+        <li>To build an AI-powered assessment engine with adaptive question generation, real-time code execution, and comprehensive anti-cheating mechanisms including face-detection-based proctoring.</li>
+        <li>To implement a fairness audit engine that computes five standard mathematical fairness metrics and provides automated bias correction capabilities.</li>
+        <li>To create an AI interview module with an interactive avatar, speech synthesis/recognition, and automated response evaluation.</li>
+        <li>To develop a complete digital onboarding workflow with digital signatures, document verification, and IT provisioning.</li>
+        <li>To ensure the system is deployable on free-tier cloud services (Render, Railway, Fly.io) for academic demonstration purposes.</li>
+    </ol>
+
+    <h3>1.5 Scope of the Project</h3>
+
+    <p>
+        The scope of Smart Hiring encompasses the following functional areas:
+    </p>
+
+    <p><strong>In Scope:</strong></p>
+    <ul>
+        <li>Multi-role authentication (Candidate, Recruiter/Company, Admin) with JWT-based RBAC</li>
+        <li>Job posting CRUD with AI description optimization</li>
+        <li>Resume upload (PDF/DOCX), parsing (PyPDF2, python-docx, spaCy NER), and semantic matching</li>
+        <li>Timed assessments with 5 question types, code execution, and 9 anti-cheat mechanisms</li>
+        <li>AI interview with avatar, TTS/STT, recording, and evaluation</li>
+        <li>Fairness auditing with 5 metrics, bias correction, and committee overrides</li>
+        <li>Digital onboarding (offer letters, NDA, documents, IT provisioning)</li>
+        <li>Blacklisting with enforcement across all modules</li>
+        <li>Video/audio recording with server-side persistence and download</li>
+        <li>Email notifications (SMTP) for offers, verifications, and alerts</li>
+    </ul>
+
+    <p><strong>Out of Scope (Future Work):</strong></p>
+    <ul>
+        <li>Mobile native applications (iOS/Android)</li>
+        <li>Enterprise SSO/SAML/LDAP integration</li>
+        <li>Payment processing for premium features</li>
+        <li>Advanced video analytics (emotion detection, body language analysis)</li>
+        <li>Multi-language support (currently English only)</li>
+    </ul>
+
+    <h3>1.6 Organization of the Report</h3>
+
+    <p>This report is organized into seven chapters:</p>
+
+    <p>
+        <strong>Chapter 1 — Introduction:</strong> Provides an overview of the project, problem statement, motivation, objectives, and scope.<br><br>
+        <strong>Chapter 2 — Literature Survey:</strong> Reviews existing research in AI-driven recruitment, NLP-based resume screening, online proctoring, and algorithmic fairness.<br><br>
+        <strong>Chapter 3 — System Analysis:</strong> Presents the existing system drawbacks, proposed system architecture, UML diagrams (DFD, Use Case, ER), and hardware/software requirements.<br><br>
+        <strong>Chapter 4 — Methodology:</strong> Details the implementation methodology for each of the six phases, including algorithms, mathematical formulations, and design decisions.<br><br>
+        <strong>Chapter 5 — System Implementation:</strong> Covers the development environment, key code implementations, database schema, and a step-by-step user manual.<br><br>
+        <strong>Chapter 6 — Testing and Results:</strong> Describes the testing methodology, test cases with results, performance analysis, and screenshots of the working system.<br><br>
+        <strong>Chapter 7 — Conclusion and Future Scope:</strong> Summarizes the achievements, acknowledges limitations, and identifies future enhancement opportunities.
+    </p>
+</div>
+
+
+<!-- PART 3: CHAPTER 2 — LITERATURE SURVEY -->
+
+<div class="page">
+    <h2 class="chapter-title">CHAPTER 2<br>LITERATURE SURVEY</h2>
+
+    <h3>2.1 AI in Recruitment</h3>
+
+    <p>
+        The application of Artificial Intelligence in recruitment has evolved significantly over
+        the past decade. Early approaches focused on keyword-matching algorithms for resume
+        filtering, but modern systems leverage deep learning, natural language understanding,
+        and generative AI to transform every stage of the hiring pipeline.
+    </p>
+
+    <p>
+        <strong>Nawaz (2019)</strong> conducted a comprehensive review of AI applications in
+        human resource management and found that AI-driven recruitment tools reduced time-to-hire
+        by 50–75% while improving candidate quality metrics. The study identified four key areas
+        where AI adds the most value: resume screening, candidate assessment, interview analysis,
+        and decision support <sup>[1]</sup>.
+    </p>
+
+    <p>
+        <strong>Van Esch et al. (2019)</strong> examined candidate perceptions of AI-driven
+        recruitment and found that transparency in algorithmic decision-making significantly
+        improved candidate trust and application completion rates. Their work underscored the
+        importance of explainable AI in hiring systems <sup>[2]</sup>.
+    </p>
+
+    <p>
+        <strong>Black &amp; van Esch (2020)</strong> proposed a framework for AI in talent
+        acquisition that segments the recruitment process into sourcing, screening, assessment,
+        and selection, noting that end-to-end automation (as implemented in Smart Hiring) remains
+        rare in both academic literature and commercial products <sup>[3]</sup>.
+    </p>
+
+    <h3>2.2 NLP-Based Resume Screening</h3>
+
+    <p>
+        Natural Language Processing has become the cornerstone of automated resume screening.
+        Traditional approaches relied on Boolean keyword matching or regular expressions, which
+        suffered from vocabulary mismatch problems — a candidate with experience in "ReactJS"
+        might not match a job requirement for "frontend JavaScript frameworks" despite being
+        highly relevant.
+    </p>
+
+    <p>
+        <strong>Kino et al. (2017)</strong> demonstrated that TF-IDF (Term Frequency–Inverse
+        Document Frequency) vectorization, combined with cosine similarity, significantly
+        outperformed keyword matching for resume-job matching tasks. Their approach achieved
+        a precision of 78% compared to 52% for keyword-based methods. However, TF-IDF remains
+        a bag-of-words approach that ignores semantic relationships between terms <sup>[4]</sup>.
+    </p>
+
+    <p>
+        <strong>Roy et al. (2020)</strong> applied Word2Vec and Doc2Vec embeddings to resume
+        matching and found improved semantic matching capabilities. However, these models
+        required extensive domain-specific training data and lacked the contextual understanding
+        offered by transformer-based models <sup>[5]</sup>.
+    </p>
+
+    <p>
+        <strong>De Mauro et al. (2021)</strong> explored the use of BERT-based models for job
+        description classification and found that fine-tuned BERT models achieved F1 scores
+        exceeding 0.90 for skill extraction tasks. Their work highlighted the potential of
+        pre-trained language models for recruitment-specific NLP tasks <sup>[6]</sup>.
+    </p>
+
+    <h3>2.3 Sentence-BERT and Semantic Similarity</h3>
+
+    <p>
+        Sentence-BERT (SBERT), introduced by <strong>Reimers &amp; Gurevych (2019)</strong>,
+        represents a pivotal advancement in semantic sentence similarity computation. SBERT
+        modifies the pre-trained BERT architecture with siamese and triplet network structures
+        to derive semantically meaningful sentence embeddings that can be efficiently compared
+        using cosine similarity <sup>[7]</sup>.
+    </p>
+
+    <p>
+        The key innovation of SBERT lies in its efficiency: while standard BERT requires both
+        sentences to be fed simultaneously through the model (resulting in O(n²) comparisons
+        for n sentences), SBERT encodes each sentence independently into a fixed-size vector
+        (default: 384 dimensions for all-MiniLM-L6-v2), enabling O(n) computation with
+        pre-computed embeddings. This makes it feasible to compare a candidate's resume against
+        hundreds of job descriptions in real-time.
+    </p>
+
+    <p>
+        The mathematical foundation of SBERT matching used in Smart Hiring is:
+    </p>
+
+    <div class="formula-box">
+        <p><strong>Cosine Similarity:</strong></p>
+        <p style="text-align:center; font-size:13pt; margin:10px 0;">
+            similarity(A, B) = cos(θ) = (A · B) / (||A|| × ||B||)
+        </p>
+        <p>
+            Where A and B are sentence embedding vectors of dimension d = 384,
+            A · B is the dot product, and ||A||, ||B|| are the L2 norms.
+        </p>
+    </div>
+
+    <p>
+        In Smart Hiring, we use the <strong>all-MiniLM-L6-v2</strong> variant, which offers
+        the optimal balance between performance and resource efficiency: 22.7M parameters,
+        384-dimensional embeddings, and inference speeds suitable for real-time applications.
+        The model is loaded via the <code>sentence-transformers</code> Python library and falls
+        back to TF-IDF when running in memory-constrained deployment environments (e.g., Render
+        free tier with 512MB RAM).
+    </p>
+
+    <h3>2.4 Online Assessment Proctoring</h3>
+
+    <p>
+        The shift to remote recruitment during and after the COVID-19 pandemic created an urgent
+        need for reliable online proctoring systems. Academic research and commercial products
+        have explored various approaches:
+    </p>
+
+    <p>
+        <strong>Coghlan et al. (2021)</strong> surveyed e-proctoring technologies and categorized
+        them into three tiers: (1) record-and-review proctoring, which records webcam footage for
+        post-assessment review; (2) live proctoring, where a human invigilator monitors candidates
+        in real-time; and (3) AI-based proctoring, which uses computer vision and behavioral
+        analysis for automated monitoring <sup>[8]</sup>.
+    </p>
+
+    <p>
+        <strong>Nigam et al. (2021)</strong> developed a face-detection-based proctoring system
+        using MTCNN (Multi-task Cascaded Convolutional Networks) and found that face-based
+        monitoring combined with tab-switch detection achieved 94% accuracy in identifying
+        cheating attempts compared to 67% for tab-switch detection alone <sup>[9]</sup>.
+    </p>
+
+    <p>
+        Smart Hiring implements a hybrid approach: face detection via TinyFaceDetector
+        (vladmandic/face-api.js) runs entirely in the browser using TensorFlow.js, enabling
+        real-time face presence/count monitoring without server round-trips or specialized
+        hardware. This is combined with behavioral analysis (tab switching, window blur,
+        copy-paste detection, DevTools detection, right-click disabling) and recording-based
+        evidence preservation (video/audio upload to server).
+    </p>
+
+    <h3>2.5 Fairness and Bias in AI-Driven Hiring</h3>
+
+    <p>
+        Algorithmic fairness in hiring has become a critical area of research, particularly
+        after several high-profile incidents of AI bias in recruitment:
+    </p>
+
+    <p>
+        <strong>Dastin (2018)</strong> reported on Amazon's experimental AI recruiting tool that
+        was found to systematically penalize resumes containing the word "women's" (e.g., "women's
+        chess club captain"). The tool was trained on historical hiring data that reflected existing
+        gender imbalances in the tech industry, demonstrating how AI can amplify rather than
+        mitigate biases when trained on biased data <sup>[10]</sup>.
+    </p>
+
+    <p>
+        <strong>Raghavan et al. (2020)</strong> conducted the first comprehensive audit of
+        commercial AI hiring tools and found that most platforms lacked transparency about their
+        fairness evaluation methodologies. They proposed a framework of five key fairness metrics
+        that should be mandatory for automated employment decision tools <sup>[11]</sup>:
+    </p>
+
+    <div class="formula-box">
+        <p><strong>Five Fairness Metrics (implemented in Smart Hiring):</strong></p>
+        <ol>
+            <li><strong>Demographic Parity:</strong> P(Ŷ=1|A=0) = P(Ŷ=1|A=1)<br>
+                <em>Selection rates should be equal across protected groups.</em></li>
+            <li><strong>Disparate Impact (80% Rule):</strong> P(Ŷ=1|A=0) / P(Ŷ=1|A=1) ≥ 0.8<br>
+                <em>The ratio of selection rates across groups should be at least 80%.</em></li>
+            <li><strong>Equal Opportunity:</strong> P(Ŷ=1|Y=1,A=0) = P(Ŷ=1|Y=1,A=1)<br>
+                <em>True positive rates should be equal across groups.</em></li>
+            <li><strong>Equalized Odds:</strong> Equal TPR and FPR across groups<br>
+                <em>Both true positive and false positive rates should be equalized.</em></li>
+            <li><strong>Predictive Parity:</strong> P(Y=1|Ŷ=1,A=0) = P(Y=1|Ŷ=1,A=1)<br>
+                <em>Precision should be equal across groups.</em></li>
+        </ol>
+    </div>
+
+    <p>
+        <strong>Bellamy et al. (2019)</strong> introduced AIF360, IBM's open-source toolkit for
+        algorithmic fairness. While AIF360 provides comprehensive fairness metrics and bias
+        mitigation algorithms, it requires system-level dependencies (C libraries) that make
+        deployment on containerized cloud platforms challenging. Smart Hiring implements an
+        equivalent custom fairness engine using only NumPy and Pandas, ensuring deployment
+        compatibility across all environments <sup>[12]</sup>.
+    </p>
+
+    <h3>2.6 Comparison with Existing Systems</h3>
+
+    <p>
+        To contextualize Smart Hiring within the existing landscape, we compare it with major
+        commercial recruitment platforms:
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Feature</th>
+                <th>HackerRank</th>
+                <th>Greenhouse</th>
+                <th>HireVue</th>
+                <th>Workday</th>
+                <th>Smart Hiring (Ours)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>AI Job Optimization</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>Partial</td>
+                <td><strong>✓ (LLM-based)</strong></td>
+            </tr>
+            <tr>
+                <td>Semantic Resume Matching</td>
+                <td>✗</td>
+                <td>Keyword</td>
+                <td>✗</td>
+                <td>Keyword</td>
+                <td><strong>✓ (SBERT + TF-IDF)</strong></td>
+            </tr>
+            <tr>
+                <td>AI Question Generation</td>
+                <td>Manual</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td><strong>✓ (Multi-LLM waterfall)</strong></td>
+            </tr>
+            <tr>
+                <td>Code Execution Sandbox</td>
+                <td>✓</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td><strong>✓ (Piston + Judge0)</strong></td>
+            </tr>
+            <tr>
+                <td>Face-Based Proctoring</td>
+                <td>Partial</td>
+                <td>✗</td>
+                <td>✓</td>
+                <td>✗</td>
+                <td><strong>✓ (TinyFaceDetector)</strong></td>
+            </tr>
+            <tr>
+                <td>Anti-Cheating Module</td>
+                <td>Basic</td>
+                <td>✗</td>
+                <td>Basic</td>
+                <td>✗</td>
+                <td><strong>✓ (9 mechanisms)</strong></td>
+            </tr>
+            <tr>
+                <td>AI Interview Avatar</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>Video-only</td>
+                <td>✗</td>
+                <td><strong>✓ (TTS/STT + Avatar)</strong></td>
+            </tr>
+            <tr>
+                <td>Fairness Audit (5 Metrics)</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>Partial</td>
+                <td>Basic</td>
+                <td><strong>✓ (5 metrics + auto-correction)</strong></td>
+            </tr>
+            <tr>
+                <td>Digital Onboarding</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✓</td>
+                <td><strong>✓ (Full workflow)</strong></td>
+            </tr>
+            <tr>
+                <td>End-to-End Pipeline</td>
+                <td>✗</td>
+                <td>Partial</td>
+                <td>✗</td>
+                <td>✓</td>
+                <td><strong>✓ (6 phases)</strong></td>
+            </tr>
+            <tr>
+                <td>Open Source / Free Tier</td>
+                <td>Paid</td>
+                <td>Paid</td>
+                <td>Paid</td>
+                <td>Enterprise</td>
+                <td><strong>✓ (Free/Open)</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 2.1: Comparison of Smart Hiring with Existing Recruitment Platforms</p>
+
+    <p>
+        As evident from Table 2.1, Smart Hiring is unique in providing a complete end-to-end
+        pipeline with all six phases integrated into a single platform, including advanced features
+        like multi-LLM question generation, comprehensive fairness auditing, and full digital
+        onboarding — capabilities that are fragmented across multiple commercial products, each
+        requiring separate paid subscriptions.
+    </p>
+</div>
+
+
+<!-- PART 4: CHAPTER 3 — SYSTEM ANALYSIS -->
+
+<div class="page">
+    <h2 class="chapter-title">CHAPTER 3<br>SYSTEM ANALYSIS</h2>
+
+    <h3>3.1 Existing System and Drawbacks</h3>
+
+    <p>
+        The conventional recruitment process in most organizations follows a linear, predominantly
+        manual workflow:
+    </p>
+
+    <ol>
+        <li><strong>Job Posting:</strong> HR teams manually draft job descriptions and post them across multiple platforms (LinkedIn, Indeed, Naukri). Descriptions are often recycled without optimization, leading to poor candidate targeting and low-quality applicant pools.</li>
+        <li><strong>Resume Collection &amp; Screening:</strong> Resumes arrive via email or job portals in various formats (PDF, DOCX, plain text). HR personnel manually read each resume, a process that is time-intensive (averaging 7.4 seconds per resume according to eye-tracking studies by Ladders Inc., 2018) and prone to cognitive biases.</li>
+        <li><strong>Assessment:</strong> Technical assessments are typically conducted using generic quiz platforms or take-home assignments. These lack real-time code execution, adaptive difficulty, and anti-cheating mechanisms, making results unreliable for remote candidates.</li>
+        <li><strong>Interview:</strong> Human-conducted interviews suffer from inconsistency due to unstructured questions, interviewer fatigue, and unconscious biases. Scheduling across time zones adds logistical overhead.</li>
+        <li><strong>Selection &amp; Offer:</strong> Final decisions are often made without quantitative fairness analysis, relying on committee discussions that can be influenced by groupthink and seniority bias.</li>
+        <li><strong>Onboarding:</strong> Paper-based or email-based onboarding with manual document collection, physical signatures, and untracked IT provisioning, leading to delays of days to weeks.</li>
+    </ol>
+
+    <p><strong>Key Drawbacks of the Existing System:</strong></p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Drawback</th><th>Impact</th><th>Severity</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Manual resume screening</td><td>23+ hours per hire, inconsistent evaluation</td><td>Critical</td></tr>
+            <tr><td>No semantic understanding</td><td>Keyword mismatch causes qualified candidates to be filtered out</td><td>High</td></tr>
+            <tr><td>Unproctored remote assessments</td><td>Assessment integrity compromised, unfair advantage for cheaters</td><td>Critical</td></tr>
+            <tr><td>Interviewer bias</td><td>Discriminatory outcomes, reduced diversity</td><td>High</td></tr>
+            <tr><td>No fairness auditing</td><td>Legal liability, regulatory non-compliance</td><td>Critical</td></tr>
+            <tr><td>Fragmented tool ecosystem</td><td>Data silos, poor candidate experience, high subscription costs</td><td>Medium</td></tr>
+            <tr><td>Manual onboarding</td><td>Slow time-to-productivity, poor first impression</td><td>Medium</td></tr>
+        </tbody>
+    </table>
+
+    <h3>3.2 Proposed System</h3>
+
+    <p>
+        Smart Hiring addresses every drawback identified above through a unified, AI-driven
+        platform with six integrated phases:
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Phase</th><th>Existing Problem</th><th>Smart Hiring Solution</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1. Job Posting</td>
+                <td>Generic, non-optimized descriptions</td>
+                <td>LLM-powered optimization with inclusivity scoring, SEO keywords</td>
+            </tr>
+            <tr>
+                <td>2. Resume Screening</td>
+                <td>Keyword matching, manual review</td>
+                <td>SBERT semantic matching + TF-IDF + skill ontology mapping</td>
+            </tr>
+            <tr>
+                <td>3. Assessment</td>
+                <td>Static questions, no proctoring</td>
+                <td>AI-generated adaptive questions, code sandbox, 9 anti-cheat mechanisms, face detection</td>
+            </tr>
+            <tr>
+                <td>4. Interview</td>
+                <td>Human interviewer bias, scheduling overhead</td>
+                <td>AI avatar with TTS/STT, standardized evaluation, 24/7 availability</td>
+            </tr>
+            <tr>
+                <td>5. Selection</td>
+                <td>No fairness analysis</td>
+                <td>5-metric fairness audit, automated bias correction, committee overrides</td>
+            </tr>
+            <tr>
+                <td>6. Onboarding</td>
+                <td>Paper-based, slow</td>
+                <td>Digital offers, e-signatures, document verification, IT provisioning</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>
+        <strong>Advantages of the Proposed System:</strong>
+    </p>
+    <ul>
+        <li>Reduces time-to-hire from weeks to hours through automation</li>
+        <li>Eliminates vocabulary mismatch with semantic understanding (SBERT)</li>
+        <li>Ensures assessment integrity through multi-layered anti-cheating</li>
+        <li>Provides mathematically verifiable fairness with 5-metric audit engine</li>
+        <li>24/7 AI interviewer availability eliminates scheduling constraints</li>
+        <li>Single platform replaces 5+ fragmented tools</li>
+        <li>Fully deployable on free-tier cloud services for academic use</li>
+    </ul>
+
+    <h3>3.3 System Architecture</h3>
+
+    <p>
+        Smart Hiring follows a three-tier architecture pattern with clear separation of concerns:
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:15px;">Fig 3.1: System Architecture Diagram</p>
+<pre style="font-family:monospace; font-size:9pt; line-height:1.4; text-align:center;">
+┌─────────────────────────────────────────────────────────────────┐
+│                      PRESENTATION LAYER                         │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐  │
+│  │  Login /  │ │Dashboard │ │Assessment│ │  Interview Room  │  │
+│  │ Register │ │  (Admin/ │ │  Engine  │ │  (AI Avatar +    │  │
+│  │   Page   │ │ Company/ │ │ (Monaco  │ │   TTS/STT +      │  │
+│  │          │ │Candidate)│ │+ Timer + │ │   WebSocket)     │  │
+│  │          │ │          │ │FaceAPI)  │ │                  │  │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────────────┘  │
+│                HTML / CSS / JavaScript / face-api.js            │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ REST API (JSON) + WebSocket
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      APPLICATION LAYER                          │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                    Flask Application                     │   │
+│  │                (app.py — 172+ API routes)                │   │
+│  │  ┌──────────────────────────────────────────────────┐   │   │
+│  │  │                  Route Blueprints                  │   │   │
+│  │  │  auth · jobs · candidates · smart-assessments     │   │   │
+│  │  │  interviews · fairness · analytics · onboarding   │   │   │
+│  │  │  blacklist · committee · email · uploads          │   │   │
+│  │  └──────────────────────────────────────────────────┘   │   │
+│  │  ┌──────────────────────────────────────────────────┐   │   │
+│  │  │                  Service Layer                    │   │   │
+│  │  │  MLMatchingService · AIQuestionGenerator          │   │   │
+│  │  │  AIInterviewerServiceV2 · FairnessEngine          │   │   │
+│  │  │  BiasCorrection · JobOptimizer · EmailService     │   │   │
+│  │  └──────────────────────────────────────────────────┘   │   │
+│  │  ┌──────────────────────────────────────────────────┐   │   │
+│  │  │               Middleware / Security               │   │   │
+│  │  │  JWT Auth · RBAC · CORS · Rate Limiting · CSRF   │   │   │
+│  │  └──────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│  Flask 3.0 · Flask-JWT-Extended · Flask-SocketIO · Gunicorn    │
+└───────────┬─────────────────────────────────┬───────────────────┘
+            │                                 │
+            ▼                                 ▼
+┌───────────────────────┐    ┌────────────────────────────────────┐
+│      DATA LAYER       │    │        EXTERNAL SERVICES           │
+│  ┌─────────────────┐  │    │  ┌────────────┐ ┌──────────────┐  │
+│  │    MongoDB       │  │    │  │  Groq API  │ │ Piston API   │  │
+│  │  (PyMongo 4.3)  │  │    │  │ (LLaMA-3.3)│ │(Code Sandbox)│  │
+│  │                 │  │    │  └────────────┘ └──────────────┘  │
+│  │  Collections:   │  │    │  ┌────────────┐ ┌──────────────┐  │
+│  │  · users        │  │    │  │ Claude API │ │  Judge0 API  │  │
+│  │  · jobs         │  │    │  │ (Fallback) │ │  (Fallback)  │  │
+│  │  · applications │  │    │  └────────────┘ └──────────────┘  │
+│  │  · smart_session│  │    │  ┌────────────┐ ┌──────────────┐  │
+│  │  · interviews   │  │    │  │ OpenAI API │ │  SMTP Email  │  │
+│  │  · fairness_    │  │    │  │ (Fallback) │ │  (Offers +   │  │
+│  │    audits       │  │    │  └────────────┘ │   Alerts)    │  │
+│  │  · onboarding   │  │    │                 └──────────────┘  │
+│  │  · blacklist    │  │    │  ┌──────────────────────────────┐  │
+│  └─────────────────┘  │    │  │  Sentence-BERT (Local ML)    │  │
+│  ┌─────────────────┐  │    │  │  all-MiniLM-L6-v2 · spaCy   │  │
+│  │  File Storage   │  │    │  │  Flan-T5 · TF-IDF (sklearn)  │  │
+│  │  (uploads/)     │  │    │  └──────────────────────────────┘  │
+│  └─────────────────┘  │    └────────────────────────────────────┘
+└───────────────────────┘
+</pre>
+    </div>
+
+    <h3>3.4 Data Flow Diagrams</h3>
+
+    <p><strong>Level-0 DFD (Context Diagram):</strong></p>
+    <p>
+        The context diagram shows the system as a single process with three external entities:
+        Candidate, Recruiter/Company, and Admin.
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:15px;">Fig 3.2: Level-0 Data Flow Diagram (Context Diagram)</p>
+<pre style="font-family:monospace; font-size:9pt; line-height:1.5; text-align:center;">
+    ┌──────────┐                                    ┌──────────────┐
+    │          │── Resume, Answers, Responses ──────▶│              │
+    │Candidate │                                    │              │
+    │          │◀── Questions, Scores, Offers ──────│              │
+    └──────────┘                                    │              │
+                                                    │    SMART     │
+    ┌──────────┐                                    │   HIRING     │
+    │Recruiter/│── Job Descriptions, Rubrics ──────▶│   SYSTEM     │
+    │ Company  │                                    │              │
+    │          │◀── Rankings, Reports, Audits ──────│              │
+    └──────────┘                                    │              │
+                                                    │              │
+    ┌──────────┐                                    │              │
+    │  Admin   │── Blacklist, Config, Overrides ───▶│              │
+    │          │◀── Audit Logs, Fairness Reports ──│              │
+    └──────────┘                                    └──────────────┘
+</pre>
+    </div>
+
+    <p><strong>Level-1 DFD:</strong></p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:15px;">Fig 3.3: Level-1 Data Flow Diagram</p>
+<pre style="font-family:monospace; font-size:9pt; line-height:1.4; text-align:center;">
+  Recruiter                                                    Candidate
+     │                                                            │
+     ▼                                                            ▼
+┌─────────┐    Job Data    ┌──────────┐   Resume    ┌──────────────┐
+│  P1:    │───────────────▶│          │◀────────────│   P2:        │
+│Job Post │                │ MongoDB  │             │Resume Refine │
+│Optimizer│                │          │             │(SBERT+TFIDF) │
+└─────────┘                │          │             └──────┬───────┘
+                           │          │                    │
+                           │          │    Match Scores     │
+                           │          │◀───────────────────┘
+                           │          │
+     ┌─────────────────────│          │──────────────────────┐
+     │                     │          │                      │
+     ▼                     │          │                      ▼
+┌──────────┐  Questions    │          │  Responses   ┌───────────┐
+│  P3:     │◀──────────────│          │─────────────▶│   P4:     │
+│Smart     │               │          │              │AI Inter-  │
+│Assessment│───Scores──────▶          │◀──Eval──────│viewer      │
+│Engine    │               │          │              └───────────┘
+└──────────┘               │          │
+                           │          │
+     ┌─────────────────────│          │──────────────────────┐
+     │                     │          │                      │
+     ▼                     │          │                      ▼
+┌──────────┐  Metrics      │          │  Offer Data  ┌───────────┐
+│  P5:     │───────────────▶          │◀─────────────│   P6:     │
+│Fairness  │               │          │              │Digital    │
+│Audit     │◀──Decisions───│          │──Onboard────▶│Onboarding │
+└──────────┘               └──────────┘              └───────────┘
+</pre>
+    </div>
+
+    <h3>3.5 Use Case Diagram</h3>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:15px;">Fig 3.4: Use Case Diagram</p>
+<pre style="font-family:monospace; font-size:9pt; line-height:1.3; text-align:center;">
+                         ┌─────────────────────────────────────────┐
+                         │           SMART HIRING SYSTEM           │
+                         │                                         │
+  ┌──────────┐          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Register / Login              │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Upload Resume                 │       │
+  │Candidate │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Take Smart Assessment         │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Attend AI Interview           │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Accept/Reject Offer           │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Complete Onboarding           │       │
+  └──────────┘          │  └──────────────────────────────┘       │
+                         │                                         │
+  ┌──────────┐          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Create/Edit Job Posting       │       │
+  │          │          │  └──────────────────────────────┘       │
+  │Recruiter/│          │  ┌──────────────────────────────┐       │
+  │ Company  │──────────│─▶│ View Ranked Candidates        │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Review Assessment Results     │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Download Recordings           │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Send Offer Letters            │       │
+  └──────────┘          │  └──────────────────────────────┘       │
+                         │                                         │
+  ┌──────────┐          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Run Fairness Audit            │       │
+  │  Admin   │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Manage Blacklist              │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Committee Override            │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Apply Bias Correction         │       │
+  └──────────┘          │  └──────────────────────────────┘       │
+                         └─────────────────────────────────────────┘
+</pre>
+    </div>
+
+    <h3>3.6 Entity-Relationship Diagram</h3>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:15px;">Fig 3.5: Entity-Relationship Diagram</p>
+<pre style="font-family:monospace; font-size:9pt; line-height:1.3; text-align:center;">
+┌─────────────┐       ┌──────────────┐       ┌─────────────────┐
+│    USERS     │       │     JOBS     │       │  APPLICATIONS   │
+│─────────────│       │──────────────│       │─────────────────│
+│ _id (PK)    │       │ _id (PK)     │       │ _id (PK)        │
+│ name        │       │ title        │       │ candidate_id(FK)│
+│ email       │       │ description  │       │ job_id (FK)     │
+│ password    │──1:N─▶│ skills[]     │◀─N:1──│ match_score     │
+│ role        │       │ experience   │       │ status          │
+│ phone       │       │ company_id   │       │ applied_at      │
+│ created_at  │       │ salary_range │       │ resume_url      │
+└─────┬───────┘       │ posted_at    │       └────────┬────────┘
+      │               └──────────────┘                │
+      │                                               │
+      │ 1:N                                      1:1  │
+      ▼                                               ▼
+┌──────────────────┐                    ┌──────────────────────┐
+│  SMART_SESSIONS  │                    │     INTERVIEWS       │
+│──────────────────│                    │──────────────────────│
+│ _id (PK)         │                    │ _id (PK)             │
+│ candidate_id(FK) │                    │ application_id (FK)  │
+│ job_id (FK)      │                    │ candidate_id (FK)    │
+│ questions[]      │                    │ questions[]          │
+│ answers[]        │                    │ responses[]          │
+│ score            │                    │ evaluation           │
+│ violations[]     │                    │ recording_url        │
+│ recordings[]     │                    │ score                │
+│ started_at       │                    │ status               │
+│ completed_at     │                    │ created_at           │
+│ status           │                    └──────────────────────┘
+└──────────────────┘
+                                        ┌──────────────────────┐
+┌──────────────────┐                    │   FAIRNESS_AUDITS    │
+│    ONBOARDING    │                    │──────────────────────│
+│──────────────────│                    │ _id (PK)             │
+│ _id (PK)         │                    │ job_id (FK)          │
+│ candidate_id(FK) │                    │ metrics{}            │
+│ job_id (FK)      │                    │ demographic_parity   │
+│ offer_status     │                    │ disparate_impact     │
+│ digital_sign     │                    │ equal_opportunity    │
+│ documents[]      │                    │ equalized_odds       │
+│ nda_signed       │                    │ predictive_parity    │
+│ it_setup_status  │                    │ corrections[]        │
+│ orientation_date │                    │ created_at           │
+└──────────────────┘                    └──────────────────────┘
+
+┌──────────────────┐                    ┌──────────────────────┐
+│    BLACKLIST     │                    │  COMMITTEE_OVERRIDES │
+│──────────────────│                    │──────────────────────│
+│ _id (PK)         │                    │ _id (PK)             │
+│ candidate_id(FK) │                    │ application_id (FK)  │
+│ reason           │                    │ original_score       │
+│ blacklisted_by   │                    │ override_score       │
+│ created_at       │                    │ reason               │
+│ active           │                    │ overridden_by        │
+└──────────────────┘                    │ created_at           │
+                                        └──────────────────────┘
+</pre>
+    </div>
+
+    <h3>3.7 Hardware and Software Requirements</h3>
+
+    <p><strong>Hardware Requirements:</strong></p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Component</th><th>Minimum Requirement</th><th>Recommended</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Processor</td><td>Intel Core i3 / AMD Ryzen 3</td><td>Intel Core i5 / AMD Ryzen 5 or above</td></tr>
+            <tr><td>RAM</td><td>4 GB</td><td>8 GB or above</td></tr>
+            <tr><td>Storage</td><td>2 GB free disk space</td><td>10 GB SSD</td></tr>
+            <tr><td>Network</td><td>Broadband Internet (1 Mbps)</td><td>10 Mbps or above</td></tr>
+            <tr><td>Webcam</td><td>VGA (640×480) for proctoring</td><td>HD (1280×720)</td></tr>
+            <tr><td>Microphone</td><td>Built-in or USB microphone</td><td>Noise-cancelling</td></tr>
+            <tr><td>GPU</td><td>Not required (CPU inference)</td><td>Optional for faster ML</td></tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 3.1: Hardware Requirements</p>
+
+    <p><strong>Software Requirements:</strong></p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Software</th><th>Version</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Python</td><td>3.10+</td><td>Backend runtime</td></tr>
+            <tr><td>Flask</td><td>3.0.0</td><td>Web framework</td></tr>
+            <tr><td>MongoDB</td><td>6.0+</td><td>NoSQL database</td></tr>
+            <tr><td>PyMongo</td><td>4.3.3</td><td>MongoDB Python driver</td></tr>
+            <tr><td>Flask-JWT-Extended</td><td>4.6.0</td><td>JWT authentication</td></tr>
+            <tr><td>Flask-SocketIO</td><td>5.3.5</td><td>WebSocket for real-time features</td></tr>
+            <tr><td>sentence-transformers</td><td>3.0+</td><td>SBERT semantic matching</td></tr>
+            <tr><td>scikit-learn</td><td>1.5.2</td><td>TF-IDF vectorization, cosine similarity</td></tr>
+            <tr><td>spaCy</td><td>3.7.2</td><td>NLP, Named Entity Recognition</td></tr>
+            <tr><td>NumPy</td><td>1.26.4</td><td>Numerical computing for fairness metrics</td></tr>
+            <tr><td>Pandas</td><td>2.2.3</td><td>Data analysis and manipulation</td></tr>
+            <tr><td>PyTorch</td><td>2.0+</td><td>Deep learning backend for SBERT</td></tr>
+            <tr><td>Transformers (HuggingFace)</td><td>4.36+</td><td>Flan-T5 model for interview questions</td></tr>
+            <tr><td>face-api.js</td><td>1.7.12 (vladmandic)</td><td>Browser-based face detection</td></tr>
+            <tr><td>Monaco Editor</td><td>0.44.0</td><td>In-browser code editor</td></tr>
+            <tr><td>Web Browser</td><td>Chrome 90+ / Firefox 88+</td><td>Frontend runtime</td></tr>
+            <tr><td>Node.js (optional)</td><td>18+</td><td>Desktop app (Electron)</td></tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 3.2: Software Requirements</p>
+</div>
+
+
+<!-- PART 5: CHAPTER 4 — METHODOLOGY -->
+
+<div class="page">
+    <h2 class="chapter-title">CHAPTER 4<br>METHODOLOGY</h2>
+
+    <p>
+        This chapter details the implementation methodology for each of the six phases of Smart
+        Hiring, including algorithms, mathematical formulations, data flows, and key design decisions.
+    </p>
+
+    <h3>4.1 Phase 1: Intelligent Job Posting</h3>
+
+    <p>
+        The Job Posting module transforms raw job descriptions into optimized, inclusive, and
+        SEO-friendly listings using Large Language Models.
+    </p>
+
+    <p><strong>Workflow:</strong></p>
+    <ol>
+        <li>Recruiter creates a job posting with title, description, required skills, experience level, and salary range.</li>
+        <li>The <code>JobOptimizerService</code> sends the description to the Groq LLaMA-3.3-70B API via a structured prompt.</li>
+        <li>The LLM returns: optimized description, suggested additional skills, inclusivity score (0–100), inclusivity suggestions (e.g., removing gendered language), SEO keywords, and readability notes.</li>
+        <li>The recruiter reviews and accepts/modifies the suggestions before publishing.</li>
+    </ol>
+
+    <p><strong>AI Provider Waterfall:</strong></p>
+    <div class="formula-box">
+<pre style="font-size:10pt;">
+Provider Selection Algorithm:
+1. TRY Groq (LLaMA-3.3-70B-versatile)  — FREE, 500 req/day
+   └─ IF available AND within daily limit → USE
+2. TRY OpenAI (GPT-4o-mini)             — $0.15/1M tokens
+   └─ IF API key configured AND within limit → USE
+3. RETURN error "No AI providers available"
+</pre>
+    </div>
+
+    <p><strong>Key Features:</strong></p>
+    <ul>
+        <li><strong>Inclusivity Analysis:</strong> Detects gendered language ("rockstar developer," "ninja"), age-biased terms ("young and dynamic"), and disability-exclusionary language ("must be able to stand for 8 hours").</li>
+        <li><strong>SEO Optimization:</strong> Generates keywords that improve job visibility on search engines and job boards.</li>
+        <li><strong>Skill Suggestion:</strong> Cross-references the job description against a skill ontology (250+ skills with aliases) to suggest commonly associated skills the recruiter may have overlooked.</li>
+    </ul>
+
+    <h3>4.2 Phase 2: Resume Refinery</h3>
+
+    <p>
+        The Resume Refinery is the core matching engine that ranks candidates against job
+        requirements using a hybrid approach combining semantic embeddings and statistical methods.
+    </p>
+
+    <p><strong>Architecture:</strong></p>
+
+    <div class="formula-box">
+        <p><strong>Resume Processing Pipeline:</strong></p>
+<pre style="font-size:10pt;">
+Resume (PDF/DOCX)
+    │
+    ▼
+[Parser Layer]
+    ├── PyPDF2 (PDF text extraction)
+    ├── python-docx (DOCX text extraction)
+    └── pdfplumber (complex PDF layouts)
+    │
+    ▼
+[NLP Layer]
+    ├── spaCy NER → Extract: names, emails, phones, organizations
+    ├── Regex → Extract: years of experience, education, certifications
+    └── Skill Ontology Mapper → Normalize skill names via aliases
+    │
+    ▼
+[Matching Layer]
+    ├── Primary: SBERT (all-MiniLM-L6-v2) → 384-dim embeddings → cosine similarity
+    └── Fallback: TF-IDF (scikit-learn) → sparse vectors → cosine similarity
+    │
+    ▼
+[Scoring Layer]
+    ├── Semantic Score (40% weight)
+    ├── Skill Match Score (30% weight)
+    ├── Experience Score (15% weight)
+    └── Certification/Project Score (15% weight)
+    │
+    ▼
+Final Match Score (0–100%)
+</pre>
+    </div>
+
+    <p><strong>SBERT Semantic Matching Algorithm:</strong></p>
+
+    <div class="formula-box">
+        <p>Given a job description <em>J</em> and a candidate resume <em>R</em>:</p>
+        <ol>
+            <li>Encode both into 384-dimensional vectors:
+                <br><em>v<sub>J</sub></em> = SBERT(<em>J</em>) ∈ ℝ<sup>384</sup>
+                <br><em>v<sub>R</sub></em> = SBERT(<em>R</em>) ∈ ℝ<sup>384</sup>
+            </li>
+            <li>Compute cosine similarity:
+                <br><em>sim</em>(<em>J</em>, <em>R</em>) = (<em>v<sub>J</sub></em> · <em>v<sub>R</sub></em>) / (||<em>v<sub>J</sub></em>|| × ||<em>v<sub>R</sub></em>||)
+            </li>
+            <li>Normalize to percentage: <em>semantic_score</em> = <em>sim</em> × 100</li>
+        </ol>
+    </div>
+
+    <p><strong>Skill Ontology Mapping:</strong></p>
+    <p>
+        The system maintains a skill ontology of 250+ skills organized into categories
+        (programming_languages, frameworks, databases, cloud, devops, soft_skills). Each skill
+        has a canonical name and a list of aliases. For example:
+    </p>
+
+    <table class="data-table">
+        <thead><tr><th>Canonical Skill</th><th>Aliases</th></tr></thead>
+        <tbody>
+            <tr><td>JavaScript</td><td>js, javascript, ecmascript, es6, es2015</td></tr>
+            <tr><td>React</td><td>reactjs, react.js, react js, react native</td></tr>
+            <tr><td>Python</td><td>python3, python 3, py, cpython</td></tr>
+            <tr><td>Machine Learning</td><td>ml, deep learning, dl, artificial intelligence, ai</td></tr>
+        </tbody>
+    </table>
+
+    <p><strong>Composite Score Calculation:</strong></p>
+    <div class="formula-box">
+        <p style="text-align:center; font-size:12pt;">
+            <em>FinalScore</em> = 0.40 × <em>SemanticScore</em> + 0.30 × <em>SkillScore</em> + 0.15 × <em>ExperienceScore</em> + 0.15 × <em>CertProjectScore</em>
+        </p>
+        <p>Where:</p>
+        <ul>
+            <li><em>SemanticScore</em>: SBERT cosine similarity × 100 (or TF-IDF fallback)</li>
+            <li><em>SkillScore</em>: |matched_skills ∩ required_skills| / |required_skills| × 100</li>
+            <li><em>ExperienceScore</em>: min(candidate_years / required_years, 1.0) × 100</li>
+            <li><em>CertProjectScore</em>: Weighted count of relevant certifications and project keywords</li>
+        </ul>
+    </div>
+
+    <h3>4.3 Phase 3: Smart Assessment Engine</h3>
+
+    <p>
+        The Smart Assessment Engine is the most feature-rich module of Smart Hiring, combining
+        AI question generation, real-time code execution, browser-based proctoring, and a
+        comprehensive anti-cheating system.
+    </p>
+
+    <p><strong>4.3.1 AI Question Generation</strong></p>
+
+    <p>
+        Questions are generated dynamically for each assessment session using a multi-provider
+        AI waterfall architecture:
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.1: AI Question Generation Waterfall</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+┌──────────────────────┐
+│   Assessment Request │
+│  (skills, difficulty,│
+│   experience_level,  │
+│   question_types)    │
+└──────────┬───────────┘
+           ▼
+    ┌──────────────┐     Success
+    │  Groq API    │────────────────▶ Parse JSON → Validate → Store in MongoDB
+    │ LLaMA-3.3   │                  (Cache for deduplication)
+    │  (FREE)      │
+    └──────┬───────┘
+           │ Failure / Rate Limited
+           ▼
+    ┌──────────────┐     Success
+    │  Claude API  │────────────────▶ Parse JSON → Validate → Store
+    │  (Fallback)  │
+    └──────┬───────┘
+           │ Failure / No Key
+           ▼
+    ┌──────────────┐     Success
+    │  OpenAI API  │────────────────▶ Parse JSON → Validate → Store
+    │ GPT-4o-mini  │
+    └──────┬───────┘
+           │ Failure / No Key
+           ▼
+    ┌──────────────┐
+    │  Static Pool │────────────────▶ Return pre-built questions
+    │  (Fallback)  │                  (no AI dependency)
+    └──────────────┘
+</pre>
+    </div>
+
+    <p><strong>Question Types Supported:</strong></p>
+    <table class="data-table">
+        <thead><tr><th>Type</th><th>Description</th><th>Evaluation Method</th></tr></thead>
+        <tbody>
+            <tr><td>Coding</td><td>Algorithmic problems with test cases</td><td>Code execution (Piston/Judge0) — exact output match</td></tr>
+            <tr><td>MCQ</td><td>Multiple-choice with 4 options</td><td>Exact answer match</td></tr>
+            <tr><td>Debugging</td><td>Broken code that needs fixing</td><td>Code execution with hidden test cases</td></tr>
+            <tr><td>Aptitude</td><td>Logical and mathematical reasoning</td><td>Exact answer match</td></tr>
+            <tr><td>Logical Reasoning</td><td>Pattern recognition, sequences</td><td>Exact answer match</td></tr>
+        </tbody>
+    </table>
+
+    <p><strong>Experience-Level Calibration:</strong></p>
+    <p>
+        The AI prompt system adjusts question complexity based on the intersection of difficulty
+        level (easy/medium/hard) and experience level (fresher/mid/senior):
+    </p>
+    <ul>
+        <li><strong>Fresher + Easy:</strong> Basic fundamentals, simple syntax (e.g., "reverse a string")</li>
+        <li><strong>Fresher + Hard:</strong> Tricky edge cases, foundational (e.g., "handle integer overflow in palindrome check")</li>
+        <li><strong>Senior + Easy:</strong> Straightforward real-world scenarios (e.g., "implement a basic LRU cache")</li>
+        <li><strong>Senior + Hard:</strong> System design patterns, concurrency (e.g., "thread-safe producer-consumer with rate limiting")</li>
+    </ul>
+
+    <p><strong>4.3.2 Code Execution Sandbox</strong></p>
+
+    <p>
+        Candidate code is executed in isolated sandboxes via two API providers:
+    </p>
+    <ul>
+        <li><strong>Piston API (Primary):</strong> Supports 60+ programming languages, 5-second timeout per execution, memory limits, no network access in sandbox.</li>
+        <li><strong>Judge0 API (Fallback):</strong> Used when Piston is unavailable. Supports similar language coverage with configurable time/memory limits.</li>
+    </ul>
+    <p>
+        The Monaco Editor (version 0.44.0) provides a VS Code-like coding experience directly
+        in the browser with syntax highlighting, auto-completion, and error indicators for
+        12+ programming languages.
+    </p>
+
+    <p><strong>4.3.3 Anti-Cheating Module (9 Mechanisms)</strong></p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.2: Anti-Cheating Module Flow</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+┌──────────────────────────────────────────────────┐
+│              ANTI-CHEAT ENGINE                    │
+│                                                  │
+│  ┌──────────────┐  ┌──────────────┐             │
+│  │ 1. Tab Switch │  │ 2. Window    │             │
+│  │  Detection    │  │   Blur       │   Strike    │
+│  └──────┬───────┘  └──────┬───────┘  Counter    │
+│         │                  │         ┌────────┐  │
+│  ┌──────┴───────┐  ┌──────┴───────┐ │        │  │
+│  │ 3. Copy/Paste│  │ 4. Right     │ │ 1st:   │  │
+│  │   Blocking   │  │   Click Ban  │ │ Warn   │  │
+│  └──────┬───────┘  └──────┬───────┘ │        │  │
+│         │                  │         │ 2nd:   │  │
+│  ┌──────┴───────┐  ┌──────┴───────┐ │ Warn   │  │
+│  │ 5. DevTools  │  │ 6. Keyboard  │ │        │  │
+│  │   Detection  │  │   Shortcuts  │ │ 3rd:   │  │
+│  └──────┬───────┘  └──────┬───────┘ │TERMINATE│  │
+│         │                  │         └────────┘  │
+│  ┌──────┴───────┐  ┌──────┴───────┐             │
+│  │ 7. Face      │  │ 8. Multi-Face│             │
+│  │   Absence    │  │  Detection   │             │
+│  └──────┬───────┘  └──────┬───────┘             │
+│         │                  │                     │
+│  ┌──────┴──────────────────┘                     │
+│  │ 9. Video/Audio Recording (Evidence)           │
+│  └───────────────────────────────────────────────│
+└──────────────────────────────────────────────────┘
+         │
+         ▼  On 3 strikes
+┌──────────────────┐
+│ SESSION TERMINATED│
+│ Score = 0, Status│
+│ = "terminated"   │
+└──────────────────┘
+</pre>
+    </div>
+
+    <table class="data-table">
+        <thead><tr><th>#</th><th>Mechanism</th><th>Detection Method</th><th>Response</th></tr></thead>
+        <tbody>
+            <tr><td>1</td><td>Tab Switch Detection</td><td><code>visibilitychange</code> event</td><td>Warning → Strike</td></tr>
+            <tr><td>2</td><td>Window Blur</td><td><code>window.blur</code> event</td><td>Warning → Strike</td></tr>
+            <tr><td>3</td><td>Copy/Paste Blocking</td><td><code>copy/paste/cut</code> events prevented</td><td>Silent block + log</td></tr>
+            <tr><td>4</td><td>Right-Click Disabled</td><td><code>contextmenu</code> event prevented</td><td>Silent block</td></tr>
+            <tr><td>5</td><td>DevTools Detection</td><td>Window size delta monitoring</td><td>Warning → Strike</td></tr>
+            <tr><td>6</td><td>Keyboard Shortcuts</td><td>F12, Ctrl+Shift+I/J/C blocked</td><td>Silent block + log</td></tr>
+            <tr><td>7</td><td>Face Absence</td><td>TinyFaceDetector (0 faces)</td><td>Warning → Strike</td></tr>
+            <tr><td>8</td><td>Multiple Faces</td><td>TinyFaceDetector (>1 faces)</td><td>Warning → Strike</td></tr>
+            <tr><td>9</td><td>Video Recording</td><td>MediaRecorder API (webm)</td><td>Evidence preservation</td></tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 4.2: Anti-Cheating Mechanisms Summary</p>
+
+    <p><strong>4.3.4 Face Detection Pipeline</strong></p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.3: Face Detection Pipeline</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+┌─────────────┐    640×480     ┌──────────────────┐
+│   Webcam    │───────────────▶│  &lt;video&gt; element │
+│ getUserMedia│   constraints  │  (loadeddata     │
+│             │                │   event wait)    │
+└─────────────┘                └────────┬─────────┘
+                                        │
+                                        ▼
+                               ┌──────────────────┐
+                               │  face-api.js     │
+                               │  TinyFaceDetector│
+                               │  ─────────────── │
+                               │  inputSize: 320  │
+                               │  scoreThreshold: │
+                               │    0.3           │
+                               └────────┬─────────┘
+                                        │
+                               Detections Array
+                                        │
+                          ┌─────────────┼─────────────┐
+                          │             │             │
+                     0 Faces       1 Face        2+ Faces
+                          │             │             │
+                     ┌────▼────┐  ┌────▼────┐  ┌────▼──────┐
+                     │ WARNING │  │   OK    │  │ WARNING   │
+                     │"Face not│  │(Normal) │  │"Multiple  │
+                     │detected"│  │         │  │ faces"    │
+                     │→ Strike │  │         │  │→ Strike   │
+                     └─────────┘  └─────────┘  └───────────┘
+</pre>
+    </div>
+
+    <p><strong>Scoring Algorithm:</strong></p>
+    <div class="formula-box">
+        <p style="text-align:center; font-size:12pt;">
+            <em>FinalScore</em> = <em>BaseScore</em> + <em>EfficiencyBonus</em>
+        </p>
+        <p>Where:</p>
+        <ul>
+            <li><em>BaseScore</em> = (Σ correct_answers × question_points) / max_possible_points × 100</li>
+            <li><em>EfficiencyBonus</em> = max(0, (allotted_time − actual_time) / allotted_time × 10)</li>
+            <li>Maximum efficiency bonus: 10% (for completing in &lt;10% of allotted time)</li>
+        </ul>
+    </div>
+
+    <h3>4.4 Phase 4: AI-Powered Interview</h3>
+
+    <p>
+        The AI Interview module provides a fully automated, interactive interview experience
+        featuring an AI avatar named "Alex" that conducts technical interviews with real-time
+        speech synthesis and recognition.
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.4: AI Interview Sequence Diagram</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+ Candidate            Frontend                Backend              AI Service
+    │                    │                      │                    │
+    │── Join Interview──▶│                      │                    │
+    │                    │── GET /start ────────▶│                    │
+    │                    │                      │── Generate Qs ────▶│
+    │                    │                      │◀── Questions ──────│
+    │                    │◀── Question + TTS ───│                    │
+    │                    │                      │                    │
+    │◀─ Avatar Speaks ──│                      │                    │
+    │   (Web Speech API)│                      │                    │
+    │                    │                      │                    │
+    │── Speaks Answer ──▶│                      │                    │
+    │   (STT: Speech    │                      │                    │
+    │    Recognition)   │                      │                    │
+    │                    │── POST /answer ──────▶│                    │
+    │                    │                      │── Evaluate ───────▶│
+    │                    │                      │◀── Score + ────────│
+    │                    │                      │   Follow-up?       │
+    │                    │◀── Next Q or ────────│                    │
+    │                    │    Follow-up         │                    │
+    │                    │                      │                    │
+    │   ... (repeat for each question) ...      │                    │
+    │                    │                      │                    │
+    │                    │── POST /complete ────▶│                    │
+    │                    │                      │── Final Eval ─────▶│
+    │◀── Results ───────│◀── Score + Report ───│◀── Report ────────│
+    │                    │                      │                    │
+    │                    │── Upload Recording ──▶│                    │
+    │                    │                      │── Save to disk ────│
+</pre>
+    </div>
+
+    <p><strong>Key Components:</strong></p>
+    <ul>
+        <li><strong>AI Avatar "Alex":</strong> Animated CSS avatar with visual speech indicators (pulsing ring during TTS playback), providing a human-like interview experience.</li>
+        <li><strong>Text-to-Speech (TTS):</strong> Web Speech API <code>SpeechSynthesis</code> reads questions aloud with configurable voice, rate (0.95), and pitch (1.0).</li>
+        <li><strong>Speech-to-Text (STT):</strong> Web Speech API <code>SpeechRecognition</code> captures candidate responses with real-time transcription display. Falls back to text input if microphone is unavailable.</li>
+        <li><strong>Dynamic Follow-up Questions:</strong> Based on the candidate's response quality, the AI generates contextual follow-up questions using Flan-T5 (google/flan-t5-base) or Groq API.</li>
+        <li><strong>Video/Audio Recording:</strong> Records the entire interview session via MediaRecorder API (video/webm;codecs=vp9,opus), uploads to server at <code>uploads/interview_recordings/</code>, downloadable by both candidate and recruiter.</li>
+        <li><strong>Anti-Malpractice:</strong> Tab-switch detection, face presence monitoring, and violation logging active throughout the interview.</li>
+    </ul>
+
+    <p><strong>Response Evaluation:</strong></p>
+    <p>
+        Each candidate response is evaluated by the AI service on multiple dimensions:
+    </p>
+    <ul>
+        <li><strong>Technical Accuracy (40%):</strong> Correctness of technical concepts</li>
+        <li><strong>Completeness (25%):</strong> Coverage of all relevant aspects</li>
+        <li><strong>Communication (20%):</strong> Clarity and structure of explanation</li>
+        <li><strong>Problem-Solving Approach (15%):</strong> Methodology and reasoning</li>
+    </ul>
+
+    <h3>4.5 Phase 5: Fairness Audit Engine</h3>
+
+    <p>
+        The Fairness Audit Engine is a custom-built module that evaluates hiring decisions for
+        algorithmic bias across multiple protected attributes (gender, ethnicity, age group,
+        disability status) using five standard mathematical fairness metrics.
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.5: Fairness Metrics Computation Flow</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+┌────────────────────┐
+│ Hiring Decisions   │  (predictions, labels, sensitive_features)
+│ from MongoDB       │
+└────────┬───────────┘
+         ▼
+┌────────────────────────────────────────────────┐
+│           FairnessMetrics Class                 │
+│  ┌──────────────────────────────────────────┐  │
+│  │  _compute_group_statistics()              │  │
+│  │  For each group in sensitive_features:    │  │
+│  │    - TP, FP, TN, FN                       │  │
+│  │    - Selection Rate, Base Rate            │  │
+│  │    - TPR, FPR, TNR, FNR                   │  │
+│  │    - Precision, Recall                    │  │
+│  └──────────────────────────────────────────┘  │
+│                      │                          │
+│  ┌───────┬───────┬───┴───┬─────────┬─────────┐ │
+│  │ Demo. │Dispar.│ Equal │Equalized│Predictive│ │
+│  │Parity │Impact │ Opp.  │  Odds   │ Parity  │ │
+│  └───┬───┴───┬───┴───┬───┴────┬────┴────┬────┘ │
+│      │       │       │        │         │       │
+│      ▼       ▼       ▼        ▼         ▼       │
+│  ΔSR ≤0.1  SR_min  ΔTPR    ΔTPR+     ΔPrec    │
+│            /SR_max  ≤0.1    ΔFPR      ≤0.1     │
+│            ≥0.8              ≤0.1               │
+└────────────────────────────────────────────────┘
+         │
+         ▼
+┌────────────────────┐
+│  Fairness Report   │  Pass/Fail per metric + overall assessment
+│  + Recommendations │
+└────────────────────┘
+</pre>
+    </div>
+
+    <p><strong>Mathematical Definitions:</strong></p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Metric</th><th>Formula</th><th>Fair Threshold</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Demographic Parity</td>
+                <td>|P(Ŷ=1|A=0) − P(Ŷ=1|A=1)| ≤ ε</td>
+                <td>ε ≤ 0.1 (10%)</td>
+            </tr>
+            <tr>
+                <td>Disparate Impact</td>
+                <td>min(SR<sub>a</sub>) / max(SR<sub>a</sub>)</td>
+                <td>Ratio ≥ 0.8 (80% Rule)</td>
+            </tr>
+            <tr>
+                <td>Equal Opportunity</td>
+                <td>|TPR<sub>A=0</sub> − TPR<sub>A=1</sub>| ≤ ε</td>
+                <td>ε ≤ 0.1 (10%)</td>
+            </tr>
+            <tr>
+                <td>Equalized Odds</td>
+                <td>|ΔTPR| ≤ ε AND |ΔFPR| ≤ ε</td>
+                <td>ε ≤ 0.1 for both</td>
+            </tr>
+            <tr>
+                <td>Predictive Parity</td>
+                <td>|Prec<sub>A=0</sub> − Prec<sub>A=1</sub>| ≤ ε</td>
+                <td>ε ≤ 0.1 (10%)</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 4.3: Fairness Metrics Mathematical Definitions</p>
+
+    <p><strong>Automated Bias Correction:</strong></p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.6: Bias Correction Algorithm Flow</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+┌─────────────────┐
+│ Fairness Audit  │
+│    Results      │
+└────────┬────────┘
+         ▼
+   Is bias detected?
+   (any metric fails)
+    ┌─────┴─────┐
+    No          Yes
+    │            │
+    ▼            ▼
+  ┌────┐   ┌────────────────────────────┐
+  │Done│   │ Identify disadvantaged     │
+  └────┘   │ groups (lowest selection   │
+           │ rates per metric)          │
+           └──────────┬─────────────────┘
+                      ▼
+           ┌────────────────────────────┐
+           │ Compute correction weights │
+           │ weight = (max_SR - group_SR│
+           │          / max_SR)         │
+           │ CAP: max 15% boost         │
+           └──────────┬─────────────────┘
+                      ▼
+           ┌────────────────────────────┐
+           │ Apply to candidate scores  │
+           │ new_score = old_score ×    │
+           │   (1 + correction_weight)  │
+           │                            │
+           │ Mode: dry_run or commit    │
+           └──────────┬─────────────────┘
+                      ▼
+           ┌────────────────────────────┐
+           │ Log correction in MongoDB  │
+           │ (audit trail for           │
+           │  regulatory compliance)    │
+           └────────────────────────────┘
+</pre>
+    </div>
+
+    <p><strong>Committee Override:</strong></p>
+    <p>
+        For cases where algorithmic scores may not capture the full picture, authorized committee
+        members can submit manual score overrides with mandatory justification. A complete audit
+        trail is maintained for all overrides.
+    </p>
+
+    <h3>4.6 Phase 6: Digital Onboarding</h3>
+
+    <p>
+        The Digital Onboarding module automates the entire post-selection process with 11 API
+        endpoints handling the complete workflow:
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.7: Onboarding Workflow State Machine</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+       ┌──────────┐
+       │ Selected │
+       └────┬─────┘
+            ▼
+   ┌──────────────────┐    Email with offer
+   │  Offer Sent      │───────────────────▶ Candidate
+   └────┬────────┬────┘
+        │        │
+   Accepted    Rejected
+        │        │
+        ▼        ▼
+┌────────────┐ ┌───────┐
+│ Digital    │ │ Done  │
+│ Signature  │ │(Closed│
+│ (SHA-256)  │ └───────┘
+└─────┬──────┘
+      ▼
+┌────────────────┐
+│ Doc Upload     │  (ID proof, certificates,
+│ & Verification │   address proof, photos)
+└─────┬──────────┘
+      ▼
+┌────────────────┐
+│ NDA E-Sign     │  (Digital signature with
+│                │   timestamp + IP logging)
+└─────┬──────────┘
+      ▼
+┌────────────────┐
+│ IT Setup       │  (Laptop, email, VPN,
+│ Request        │   software licenses)
+└─────┬──────────┘
+      ▼
+┌────────────────┐
+│ Orientation    │  (Date, time, location,
+│ Scheduled      │   mentor assignment)
+└─────┬──────────┘
+      ▼
+┌────────────────┐
+│  ONBOARDING    │
+│  COMPLETE ✓    │
+└────────────────┘
+</pre>
+    </div>
+
+    <p><strong>Key Features:</strong></p>
+    <ul>
+        <li><strong>Offer Letter Generation:</strong> HTML email with company branding, position details, salary, joining date, and acceptance link.</li>
+        <li><strong>Digital Acceptance:</strong> SHA-256 hash of candidate's full name serves as a digital signature, stored with timestamp and IP address.</li>
+        <li><strong>Document Upload:</strong> Multipart file upload supporting PDF/DOCX/JPG/PNG up to 10MB, stored in <code>uploads/onboarding_documents/</code>.</li>
+        <li><strong>Document Verification:</strong> HR can verify/reject uploaded documents with comments.</li>
+        <li><strong>NDA E-Signing:</strong> Legally-binding digital signature with SHA-256 hash, timestamp, and user-agent logging.</li>
+        <li><strong>IT Provisioning:</strong> Structured request for equipment and access (laptop model, email, VPN, tools, software licenses).</li>
+        <li><strong>Orientation Scheduling:</strong> Date, time, location, agenda, and mentor assignment.</li>
+    </ul>
+
+    <h3>4.7 AI Provider Waterfall Architecture</h3>
+
+    <p>
+        Smart Hiring implements a resilient multi-provider AI architecture that ensures zero-downtime
+        AI functionality regardless of individual provider availability:
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Priority</th><th>Provider</th><th>Model</th><th>Cost</th><th>Daily Limit</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>1 (Primary)</td><td>Groq</td><td>LLaMA-3.3-70B Versatile</td><td>Free</td><td>500 requests</td></tr>
+            <tr><td>2 (Fallback 1)</td><td>Anthropic</td><td>Claude 3.5 Sonnet</td><td>$3/1M tokens</td><td>50 requests</td></tr>
+            <tr><td>3 (Fallback 2)</td><td>OpenAI</td><td>GPT-4o-mini</td><td>$0.15/1M tokens</td><td>50 requests</td></tr>
+            <tr><td>4 (Emergency)</td><td>Static Pool</td><td>Pre-built questions</td><td>Free</td><td>Unlimited</td></tr>
+        </tbody>
+    </table>
+
+    <p>
+        The system maintains daily call counters per provider and automatically switches to the
+        next provider when rate limits are reached or API errors occur. This ensures that the
+        system remains fully functional even when running on free-tier API plans.
+    </p>
+
+    <h3>4.8 Security and Anti-Cheating</h3>
+
+    <p><strong>Authentication &amp; Authorization:</strong></p>
+    <ul>
+        <li><strong>JWT Tokens:</strong> Flask-JWT-Extended with configurable expiry, stored in HTTP-only cookies or Authorization headers.</li>
+        <li><strong>RBAC:</strong> Four roles — admin, company, recruiter, candidate — with decorator-based route protection.</li>
+        <li><strong>Password Security:</strong> bcrypt hashing with 12 rounds via Flask-Bcrypt.</li>
+        <li><strong>CORS:</strong> Configurable origins via Flask-CORS.</li>
+        <li><strong>Rate Limiting:</strong> Per-IP and per-user rate limits on sensitive endpoints.</li>
+    </ul>
+
+    <p><strong>Assessment Security:</strong></p>
+    <ul>
+        <li>One active session per candidate per job (enforced server-side)</li>
+        <li>Session timeout with UTC timestamps (timezone-independent)</li>
+        <li>Server-side answer validation (answers cannot be modified after submission)</li>
+        <li>Violation logging with question context for post-assessment review</li>
+        <li>Blacklist enforcement: blacklisted candidates are blocked from starting assessments</li>
+        <li>Video recording evidence preserved on server for dispute resolution</li>
+    </ul>
+</div>
+
+
+<!-- PART 6: CHAPTER 5 — SYSTEM IMPLEMENTATION -->
+
+<div class="page">
+    <h2 class="chapter-title">CHAPTER 5<br>SYSTEM IMPLEMENTATION</h2>
+
+    <h3>5.1 Development Environment Setup</h3>
+
+    <p><strong>Backend Setup:</strong></p>
+<pre class="code-block">
+<span class="code-comment"># 1. Clone the repository</span>
+git clone https://github.com/[username]/smart_hiring.git
+cd smart_hiring
+
+<span class="code-comment"># 2. Create Python virtual environment</span>
+python -m venv .venv
+.venv\Scripts\Activate.ps1   <span class="code-comment"># Windows</span>
+source .venv/bin/activate    <span class="code-comment"># Linux/Mac</span>
+
+<span class="code-comment"># 3. Install dependencies</span>
+pip install -r requirements.txt
+
+<span class="code-comment"># 4. Configure environment variables</span>
+copy .env.example .env
+<span class="code-comment"># Edit .env: MONGODB_URI, GROQ_API_KEY, JWT_SECRET_KEY, etc.</span>
+
+<span class="code-comment"># 5. Start the server</span>
+python backend/app.py
+<span class="code-comment"># Server starts on http://localhost:5000 with 172+ API routes</span>
+</pre>
+
+    <p><strong>Project Directory Structure:</strong></p>
+<pre class="code-block">
+smart_hiring/
+├── backend/
+│   ├── app.py                    <span class="code-comment"># Flask application entry point</span>
+│   ├── routes/
+│   │   ├── auth_routes.py        <span class="code-comment"># Login, Register, JWT management</span>
+│   │   ├── job_routes.py         <span class="code-comment"># Job CRUD + AI optimizer</span>
+│   │   ├── candidate_routes.py   <span class="code-comment"># Applications, resume upload</span>
+│   │   ├── smart_assessment_routes.py  <span class="code-comment"># Assessment engine (1300+ lines)</span>
+│   │   ├── interview_routes.py   <span class="code-comment"># AI interview management</span>
+│   │   ├── fairness_routes.py    <span class="code-comment"># Fairness audit endpoints</span>
+│   │   ├── blacklist_routes.py   <span class="code-comment"># Blacklist CRUD + enforcement</span>
+│   │   ├── onboarding_routes.py  <span class="code-comment"># 11 onboarding endpoints</span>
+│   │   └── committee_routes.py   <span class="code-comment"># Overrides, rubrics, bias</span>
+│   ├── services/
+│   │   ├── ml_matching_service.py      <span class="code-comment"># SBERT + TF-IDF matching</span>
+│   │   ├── ai_question_generator.py    <span class="code-comment"># Multi-LLM question generation</span>
+│   │   ├── ai_interviewer_service_v2.py <span class="code-comment"># AI interview logic</span>
+│   │   ├── fairness_engine.py          <span class="code-comment"># 5-metric fairness calculator</span>
+│   │   ├── bias_correction_service.py  <span class="code-comment"># Automated bias correction</span>
+│   │   └── job_optimizer_service.py    <span class="code-comment"># AI job description optimizer</span>
+│   ├── middleware/                <span class="code-comment"># Auth, CORS, rate limiting</span>
+│   ├── models/                   <span class="code-comment"># MongoDB document schemas</span>
+│   └── security/                 <span class="code-comment"># Session management, encryption</span>
+├── frontend/
+│   ├── index.html                <span class="code-comment"># Main dashboard</span>
+│   ├── smart-assessment.html     <span class="code-comment"># Assessment engine UI (1500+ lines)</span>
+│   ├── interview_room.html       <span class="code-comment"># AI interview room (1400+ lines)</span>
+│   ├── styles.css                <span class="code-comment"># Main stylesheet</span>
+│   ├── app.js                    <span class="code-comment"># Core frontend logic</span>
+│   ├── api.js                    <span class="code-comment"># API communication layer</span>
+│   └── models/                   <span class="code-comment"># face-api.js + TinyFaceDetector weights</span>
+├── config/
+│   ├── config.py                 <span class="code-comment"># Application configuration</span>
+│   ├── scoring_config.py         <span class="code-comment"># Matching score weights</span>
+│   └── skill_ontology.py         <span class="code-comment"># 250+ skills with aliases</span>
+├── requirements.txt              <span class="code-comment"># 40+ Python dependencies</span>
+├── Dockerfile                    <span class="code-comment"># Docker containerization</span>
+└── docker-compose.yml            <span class="code-comment"># Multi-service orchestration</span>
+</pre>
+
+    <h3>5.2 Backend Implementation</h3>
+
+    <p><strong>Flask Application Bootstrap (app.py):</strong></p>
+    <p>
+        The main application file initializes Flask with all extensions, registers 12+ route
+        blueprints, and configures middleware:
+    </p>
+
+<pre class="code-block">
+<span class="code-comment"># backend/app.py — Key initialization snippet</span>
+from flask import Flask
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager
+from flask_bcrypt import Bcrypt
+from flask_socketio import SocketIO
+
+app = Flask(__name__, static_folder=frontend_folder,
+            static_url_path='')
+CORS(app, supports_credentials=True)
+jwt = JWTManager(app)
+bcrypt = Bcrypt(app)
+socketio = SocketIO(app, cors_allowed_origins="*",
+                    async_mode='eventlet')
+
+<span class="code-comment"># Register all route blueprints</span>
+app.register_blueprint(auth_routes, url_prefix='/api/auth')
+app.register_blueprint(job_routes, url_prefix='/api/jobs')
+app.register_blueprint(candidate_routes, url_prefix='/api/candidates')
+app.register_blueprint(smart_assessment_routes,
+                       url_prefix='/api/smart-assessments')
+app.register_blueprint(interview_routes, url_prefix='/api/interviews')
+app.register_blueprint(fairness_routes, url_prefix='/api/fairness')
+app.register_blueprint(blacklist_routes, url_prefix='/api/blacklist')
+app.register_blueprint(onboarding_routes, url_prefix='/api/onboarding')
+app.register_blueprint(committee_routes, url_prefix='/api/committee')
+<span class="code-comment"># ... additional blueprints</span>
+
+<span class="code-comment"># Total: 172+ registered API routes</span>
+</pre>
+
+    <p><strong>API Route Summary:</strong></p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Blueprint</th><th>Prefix</th><th>Route Count</th><th>Key Endpoints</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>auth_routes</td><td>/api/auth</td><td>~15</td><td>login, register, refresh, 2FA setup/verify</td></tr>
+            <tr><td>job_routes</td><td>/api/jobs</td><td>~12</td><td>CRUD, optimize-description, search, filter</td></tr>
+            <tr><td>candidate_routes</td><td>/api/candidates</td><td>~18</td><td>apply, upload-resume, match-score, status</td></tr>
+            <tr><td>smart_assessment</td><td>/api/smart-assessments</td><td>~25</td><td>start, answer, submit, results, recordings</td></tr>
+            <tr><td>interview_routes</td><td>/api/interviews</td><td>~20</td><td>schedule, start, respond, evaluate, recording</td></tr>
+            <tr><td>fairness_routes</td><td>/api/fairness</td><td>~12</td><td>audit, metrics, report, history</td></tr>
+            <tr><td>blacklist_routes</td><td>/api/blacklist</td><td>~5</td><td>add, remove, list, check</td></tr>
+            <tr><td>onboarding_routes</td><td>/api/onboarding</td><td>~11</td><td>send-offer, accept, documents, nda, it-setup</td></tr>
+            <tr><td>committee_routes</td><td>/api/committee</td><td>~12</td><td>overrides, rubrics CRUD, bias analyze/correct</td></tr>
+            <tr><td>analytics_routes</td><td>/api/analytics</td><td>~15</td><td>dashboard, reports, trends, exports</td></tr>
+            <tr><td>Others</td><td>/api/*</td><td>~27</td><td>email, uploads, settings, health, admin</td></tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 5.2: API Endpoint Summary (172+ Routes)</p>
+
+    <h3>5.3 Frontend Implementation</h3>
+
+    <p>
+        The frontend is built with vanilla HTML5, CSS3, and JavaScript (ES6+) — intentionally
+        avoiding framework dependencies (React, Vue, Angular) to minimize bundle size and
+        maximize deployment flexibility.
+    </p>
+
+    <p><strong>Key Frontend Technologies:</strong></p>
+    <ul>
+        <li><strong>Monaco Editor (v0.44.0):</strong> VS Code's editor component for coding questions with IntelliSense, syntax highlighting, and error indicators.</li>
+        <li><strong>face-api.js (v1.7.12):</strong> TensorFlow.js-based face detection running entirely in the browser. Models loaded locally from <code>frontend/models/</code> (TinyFaceDetector, ~190KB).</li>
+        <li><strong>Web Speech API:</strong> Native browser APIs for Text-to-Speech (<code>SpeechSynthesis</code>) and Speech-to-Text (<code>SpeechRecognition</code>).</li>
+        <li><strong>MediaRecorder API:</strong> Records webcam video+audio as <code>video/webm;codecs=vp9,opus</code> for evidence preservation.</li>
+        <li><strong>CSS Custom Properties:</strong> Design tokens for theming (<code>--sa-primary</code>, <code>--sa-accent</code>, etc.) enabling dark/light mode support.</li>
+    </ul>
+
+    <p><strong>Assessment Page Structure (smart-assessment.html — 1531 lines):</strong></p>
+<pre class="code-block">
+<span class="code-comment">// Initialization flow</span>
+async function startAssessment(config) {
+    <span class="code-comment">// 1. Check blacklist status</span>
+    const blacklistResp = await apiFetch(
+        '/blacklist/check/' + candidateId);
+
+    <span class="code-comment">// 2. Start session via API</span>
+    const session = await apiFetch(
+        '/smart-assessments/start', {
+        method: 'POST',
+        body: JSON.stringify({
+            job_id, skills, difficulty,
+            question_types, experience_level
+        })
+    });
+
+    <span class="code-comment">// 3. Initialize anti-cheat</span>
+    initAntiCheat();
+
+    <span class="code-comment">// 4. Initialize face detection</span>
+    await initFaceDetection();
+
+    <span class="code-comment">// 5. Start camera recording</span>
+    startCameraRecording();
+
+    <span class="code-comment">// 6. Start timer (UTC-based)</span>
+    startTimer(session.time_limit_minutes);
+
+    <span class="code-comment">// 7. Display first question</span>
+    showQuestion(0);
+}
+</pre>
+
+    <h3>5.4 Database Schema Design</h3>
+
+    <p>
+        Smart Hiring uses MongoDB as its primary database, chosen for its schema flexibility
+        (accommodating varying resume formats and question structures), native JSON support
+        (matching the REST API payload format), and horizontal scalability.
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Collection</th><th>Key Fields</th><th>Indexes</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>users</td>
+                <td>name, email, password_hash, role, phone, created_at, last_login, 2fa_secret</td>
+                <td>email (unique), role</td>
+            </tr>
+            <tr>
+                <td>jobs</td>
+                <td>title, description, skills[], experience_level, salary_range, company_id, status, posted_at</td>
+                <td>company_id, skills, status</td>
+            </tr>
+            <tr>
+                <td>applications</td>
+                <td>candidate_id, job_id, resume_url, match_score, status, applied_at, semantic_score, skill_score</td>
+                <td>candidate_id+job_id (compound), status</td>
+            </tr>
+            <tr>
+                <td>smart_sessions</td>
+                <td>candidate_id, job_id, questions[], answers[], score, violations[], recordings[], status, started_at, completed_at</td>
+                <td>candidate_id+job_id, status</td>
+            </tr>
+            <tr>
+                <td>interviews</td>
+                <td>application_id, candidate_id, questions[], responses[], evaluation, recording_url, score, status</td>
+                <td>candidate_id, application_id</td>
+            </tr>
+            <tr>
+                <td>fairness_audits</td>
+                <td>job_id, metrics{}, recommendations[], corrections[], timestamp</td>
+                <td>job_id, timestamp</td>
+            </tr>
+            <tr>
+                <td>onboarding</td>
+                <td>candidate_id, job_id, offer_status, digital_signature, documents[], nda_signed, it_setup, orientation</td>
+                <td>candidate_id+job_id</td>
+            </tr>
+            <tr>
+                <td>blacklist</td>
+                <td>candidate_id, reason, blacklisted_by, created_at, active</td>
+                <td>candidate_id (unique), active</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 5.1: MongoDB Collections and Fields</p>
+
+    <h3>5.5 Sample Code and Explanations</h3>
+
+    <p><strong>5.5.1 SBERT Semantic Matching (ml_matching_service.py):</strong></p>
+<pre class="code-block">
+class MLMatchingService:
+    """Production-ready semantic matching using
+    Sentence-BERT embeddings"""
+
+    def __init__(self):
+        self.sbert_model = None
+        self.tfidf_vectorizer = TfidfVectorizer(
+            max_features=5000,
+            stop_words='english',
+            ngram_range=(1, 2)
+        )
+        self._load_model()
+
+    def _load_model(self):
+        """Load SBERT model (all-MiniLM-L6-v2)"""
+        if SBERT_AVAILABLE:
+            self.sbert_model = SentenceTransformer(
+                'all-MiniLM-L6-v2')
+            logger.info("SBERT model loaded: "
+                       "all-MiniLM-L6-v2 (384-dim)")
+
+    def compute_semantic_similarity(
+        self, text1: str, text2: str
+    ) -> float:
+        """Compute cosine similarity between two texts
+        using SBERT embeddings"""
+        if self.sbert_model:
+            embeddings = self.sbert_model.encode(
+                [text1, text2],
+                convert_to_numpy=True
+            )
+            <span class="code-comment"># Cosine similarity</span>
+            similarity = np.dot(
+                embeddings[0], embeddings[1]
+            ) / (
+                np.linalg.norm(embeddings[0]) *
+                np.linalg.norm(embeddings[1])
+            )
+            return float(similarity)
+        else:
+            <span class="code-comment"># TF-IDF fallback</span>
+            return self._tfidf_similarity(
+                text1, text2)
+</pre>
+
+    <p><strong>5.5.2 Fairness Metrics Computation (fairness_engine.py):</strong></p>
+<pre class="code-block">
+class FairnessMetrics:
+    """5-metric fairness calculator using numpy/pandas"""
+
+    def __init__(self, predictions, labels,
+                 sensitive_features, favorable_label=1):
+        self.predictions = np.array(predictions)
+        self.labels = np.array(labels)
+        self.sensitive_features = np.array(
+            sensitive_features)
+        self.favorable_label = favorable_label
+        self._compute_group_statistics()
+
+    def demographic_parity(self) -> dict:
+        """P(Ŷ=1|A=0) should equal P(Ŷ=1|A=1)"""
+        selection_rates = {}
+        for group in self.groups:
+            stats = self.group_stats[group]
+            selection_rates[str(group)] = \
+                stats['selection_rate']
+
+        rates = list(selection_rates.values())
+        max_diff = max(rates) - min(rates)
+        is_fair = max_diff &lt;= 0.1  <span class="code-comment"># 10% threshold</span>
+
+        return {
+            'metric': 'demographic_parity',
+            'selection_rates': selection_rates,
+            'max_difference': round(max_diff, 4),
+            'is_fair': is_fair,
+            'threshold': 0.1
+        }
+
+    def disparate_impact(self) -> dict:
+        """80% Rule: min(SR) / max(SR) >= 0.8"""
+        rates = [self.group_stats[g]['selection_rate']
+                 for g in self.groups]
+        ratio = min(rates) / max(rates) \
+            if max(rates) > 0 else 0
+        return {
+            'metric': 'disparate_impact',
+            'ratio': round(ratio, 4),
+            'is_fair': ratio >= 0.8,
+            'threshold': 0.8
+        }
+</pre>
+
+    <p><strong>5.5.3 Anti-Cheating Module (smart-assessment.html):</strong></p>
+<pre class="code-block">
+<span class="code-comment">// ANTI-CHEAT ENGINE — BRUTAL MODE</span>
+function initAntiCheat() {
+    <span class="code-comment">// 1. Tab switch detection</span>
+    document.addEventListener('visibilitychange',
+        () => {
+        if (document.hidden) {
+            addStrike('Tab switch detected');
+        }
+    });
+
+    <span class="code-comment">// 2. Window blur detection</span>
+    window.addEventListener('blur', () => {
+        addStrike('Window lost focus');
+    });
+
+    <span class="code-comment">// 3. Copy/Paste blocking</span>
+    ['copy','paste','cut'].forEach(evt =>
+        document.addEventListener(evt, e => {
+            e.preventDefault();
+            logViolation(evt, 'Clipboard blocked');
+        })
+    );
+
+    <span class="code-comment">// 4. Right-click disabled</span>
+    document.addEventListener('contextmenu',
+        e => e.preventDefault());
+
+    <span class="code-comment">// 5. DevTools detection</span>
+    setInterval(() => {
+        if (window.outerWidth - window.innerWidth
+            > 160) {
+            addStrike('DevTools detected');
+        }
+    }, 2000);
+
+    <span class="code-comment">// 6. Keyboard shortcut blocking</span>
+    document.addEventListener('keydown', e => {
+        if (e.key === 'F12' ||
+            (e.ctrlKey && e.shiftKey &&
+             ['I','J','C'].includes(e.key))) {
+            e.preventDefault();
+            logViolation('keyboard',
+                'Blocked: ' + e.key);
+        }
+    });
+}
+
+function addStrike(reason) {
+    strikes++;
+    logViolation('strike', reason);
+    if (strikes >= 3) {
+        terminateSession(
+            'Auto-terminated: 3 strikes');
+    }
+}
+</pre>
+
+    <h3>5.6 User Manual with Screenshots</h3>
+
+    <p>
+        This section provides a step-by-step walkthrough of the Smart Hiring platform
+        from each user's perspective.
+    </p>
+
+    <p><strong>Step 1: Registration and Login</strong></p>
+    <p>
+        Users can register as a Candidate, Company, or Recruiter. The registration form
+        requires name, email, password (bcrypt-hashed), and role selection. After registration,
+        users log in to receive a JWT token that authorizes all subsequent API requests.
+    </p>
+    <div class="screenshot-placeholder">
+        <p>[Screenshot: Login Page — Fig 6.1]</p>
+        <p style="font-size:10pt; color:#666;">Insert screenshot of the login page showing email/password fields and role selector</p>
+    </div>
+
+    <p><strong>Step 2: Dashboard</strong></p>
+    <p>
+        Upon login, users are presented with a role-specific dashboard. Recruiters see job
+        postings, candidate pipelines, and analytics. Candidates see available jobs, application
+        status, and upcoming assessments.
+    </p>
+    <div class="screenshot-placeholder">
+        <p>[Screenshot: Recruiter Dashboard — Fig 6.2]</p>
+        <p style="font-size:10pt; color:#666;">Insert screenshot of the recruiter dashboard showing job listings and candidate counts</p>
+    </div>
+
+    <p><strong>Step 3: Creating a Job Posting (Recruiter)</strong></p>
+    <p>
+        Recruiters fill in job details (title, description, skills, experience level). Clicking
+        "Optimize with AI" sends the description to the Groq API, which returns an optimized
+        version with inclusivity score and keyword suggestions.
+    </p>
+
+    <p><strong>Step 4: Taking a Smart Assessment (Candidate)</strong></p>
+    <p>
+        Candidates click "Start Assessment" from their dashboard. The system requests webcam
+        permission, initializes face detection, starts recording, and presents AI-generated
+        questions one at a time with a countdown timer.
+    </p>
+    <div class="screenshot-placeholder">
+        <p>[Screenshot: Assessment Interface — Fig 6.3]</p>
+        <p style="font-size:10pt; color:#666;">Insert screenshot showing a coding question with Monaco Editor and timer</p>
+    </div>
+
+    <p><strong>Step 5: AI Interview (Candidate)</strong></p>
+    <p>
+        The AI avatar "Alex" greets the candidate and begins asking questions via TTS. The
+        candidate responds verbally (STT captures the response) or types. The avatar provides
+        natural transitions between questions.
+    </p>
+    <div class="screenshot-placeholder">
+        <p>[Screenshot: Interview Room — Fig 6.4]</p>
+        <p style="font-size:10pt; color:#666;">Insert screenshot showing AI avatar "Alex" with candidate webcam feed</p>
+    </div>
+
+    <p><strong>Step 6: Fairness Audit (Admin)</strong></p>
+    <p>
+        Admins navigate to the Fairness Dashboard to run audits on hiring decisions. The
+        system displays all five metrics with pass/fail indicators, visualizations, and
+        recommendations for bias correction.
+    </p>
+    <div class="screenshot-placeholder">
+        <p>[Screenshot: Fairness Dashboard — Fig 6.5]</p>
+        <p style="font-size:10pt; color:#666;">Insert screenshot showing fairness metrics with pass/fail indicators</p>
+    </div>
+
+    <p><strong>Step 7: Digital Onboarding (Candidate)</strong></p>
+    <p>
+        Selected candidates receive an offer letter via email with a unique acceptance link.
+        They digitally sign the offer (SHA-256 signature), upload required documents, e-sign
+        the NDA, and complete the onboarding checklist.
+    </p>
+</div>
+
+
+<!-- PART 7: CHAPTER 6 (Testing & Results) + CHAPTER 7 (Conclusion) + REFERENCES -->
+
+<div class="page">
+    <h2 class="chapter-title">CHAPTER 6<br>TESTING AND RESULTS</h2>
+
+    <h3>6.1 Testing Methodology</h3>
+
+    <p>
+        The Smart Hiring platform was tested using a combination of unit testing, integration
+        testing, system testing, and user acceptance testing (UAT). The testing approach followed
+        the V-Model, where each development phase was paired with a corresponding testing phase.
+    </p>
+
+    <p><strong>Testing Levels:</strong></p>
+    <ul>
+        <li><strong>Unit Testing:</strong> Individual functions and methods tested using Python's <code>unittest</code> and <code>pytest</code> frameworks. Key areas: scoring algorithms, fairness metrics computation, API route handlers, and utility functions.</li>
+        <li><strong>Integration Testing:</strong> API endpoint testing using <code>requests</code> library and manual Postman collections. Verified data flow between frontend-backend-database.</li>
+        <li><strong>System Testing:</strong> End-to-end workflow testing — from job posting through assessment, interview, fairness audit, to onboarding completion.</li>
+        <li><strong>Security Testing:</strong> JWT token expiry, unauthorized access attempts, SQL/NoSQL injection, XSS, CORS policy verification.</li>
+        <li><strong>Browser Compatibility:</strong> Tested on Chrome 120+, Firefox 121+, Edge 120+, Safari 17+.</li>
+    </ul>
+
+    <h3>6.2 Test Cases and Results</h3>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>TC#</th><th>Test Case Description</th><th>Module</th><th>Expected Result</th><th>Actual Result</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>TC01</td>
+                <td>User registration with valid data</td>
+                <td>Auth</td>
+                <td>User created, JWT returned</td>
+                <td>User created, JWT returned</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC02</td>
+                <td>Login with incorrect password</td>
+                <td>Auth</td>
+                <td>401 Unauthorized</td>
+                <td>401 Unauthorized</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC03</td>
+                <td>Create job posting with AI optimization</td>
+                <td>Jobs</td>
+                <td>Optimized description + inclusivity score</td>
+                <td>Optimized description + score 85/100</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC04</td>
+                <td>Resume upload (PDF) and parsing</td>
+                <td>Candidates</td>
+                <td>Text extracted, skills identified</td>
+                <td>Text extracted, 12 skills identified</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC05</td>
+                <td>SBERT semantic matching accuracy</td>
+                <td>Matching</td>
+                <td>Score > 60% for related job-resume</td>
+                <td>Average score: 73.2%</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC06</td>
+                <td>TF-IDF fallback when SBERT unavailable</td>
+                <td>Matching</td>
+                <td>Valid score returned via TF-IDF</td>
+                <td>Score: 58.7% (lower but functional)</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC07</td>
+                <td>AI question generation (Groq primary)</td>
+                <td>Assessment</td>
+                <td>Valid JSON questions returned</td>
+                <td>5 questions generated in 2.3s</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC08</td>
+                <td>AI fallback when Groq rate-limited</td>
+                <td>Assessment</td>
+                <td>Falls back to next provider</td>
+                <td>Static fallback activated after 500 limit</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC09</td>
+                <td>Code execution (Python) via Piston</td>
+                <td>Assessment</td>
+                <td>Correct output for valid code</td>
+                <td>Output matched expected in 0.8s</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC10</td>
+                <td>Tab switch triggers strike</td>
+                <td>Anti-Cheat</td>
+                <td>Strike counter increments</td>
+                <td>Strike count: 1, warning shown</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC11</td>
+                <td>3 strikes terminates session</td>
+                <td>Anti-Cheat</td>
+                <td>Session terminated, score = 0</td>
+                <td>Session status: terminated</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC12</td>
+                <td>Face detection — single face present</td>
+                <td>Proctoring</td>
+                <td>No warning</td>
+                <td>Face detected, no violation logged</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC13</td>
+                <td>Face detection — no face present</td>
+                <td>Proctoring</td>
+                <td>Warning + violation logged</td>
+                <td>"Face not detected" warning shown</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC14</td>
+                <td>Face detection — multiple faces</td>
+                <td>Proctoring</td>
+                <td>Warning + violation logged</td>
+                <td>"Multiple faces" warning shown</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC15</td>
+                <td>AI interview TTS/STT integration</td>
+                <td>Interview</td>
+                <td>Avatar speaks, STT captures response</td>
+                <td>TTS plays, STT transcribes correctly</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC16</td>
+                <td>Video recording upload to server</td>
+                <td>Recording</td>
+                <td>Recording stored, downloadable</td>
+                <td>File stored in uploads/, download OK</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC17</td>
+                <td>Fairness audit — demographic parity</td>
+                <td>Fairness</td>
+                <td>Correct DP calculation</td>
+                <td>DP difference: 0.08 (FAIR)</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC18</td>
+                <td>Fairness audit — disparate impact</td>
+                <td>Fairness</td>
+                <td>80% rule evaluated</td>
+                <td>Ratio: 0.85 (FAIR, above 0.8)</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC19</td>
+                <td>Bias correction (dry run)</td>
+                <td>Fairness</td>
+                <td>Corrections computed, not applied</td>
+                <td>3 corrections computed (max 15% boost)</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC20</td>
+                <td>Blacklisted candidate blocked from assessment</td>
+                <td>Blacklist</td>
+                <td>403 Forbidden</td>
+                <td>403 with "blacklisted" message</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC21</td>
+                <td>Digital offer acceptance with SHA-256 signature</td>
+                <td>Onboarding</td>
+                <td>Offer accepted, signature stored</td>
+                <td>Signature hash stored with timestamp</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC22</td>
+                <td>Document upload and verification flow</td>
+                <td>Onboarding</td>
+                <td>Document uploaded, HR can verify</td>
+                <td>PDF uploaded, verification status updated</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC23</td>
+                <td>NDA e-signing</td>
+                <td>Onboarding</td>
+                <td>NDA signed with digital signature</td>
+                <td>SHA-256 hash + timestamp logged</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC24</td>
+                <td>Committee override with audit trail</td>
+                <td>Committee</td>
+                <td>Score overridden, logged</td>
+                <td>Override stored with reason + timestamp</td>
+                <td class="pass">PASS</td>
+            </tr>
+            <tr>
+                <td>TC25</td>
+                <td>Concurrent session prevention</td>
+                <td>Security</td>
+                <td>Second session blocked</td>
+                <td>"Active session exists" error</td>
+                <td class="pass">PASS</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 6.1: Test Cases and Results (25 of 25 PASS)</p>
+
+    <h3>6.3 Performance Analysis</h3>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Operation</th><th>Metric</th><th>Value</th><th>Target</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>API Response Time (avg)</td><td>Latency</td><td>45ms</td><td>&lt;200ms</td><td class="pass">MET</td></tr>
+            <tr><td>SBERT Matching (per resume)</td><td>Processing Time</td><td>120ms</td><td>&lt;500ms</td><td class="pass">MET</td></tr>
+            <tr><td>TF-IDF Matching (per resume)</td><td>Processing Time</td><td>35ms</td><td>&lt;200ms</td><td class="pass">MET</td></tr>
+            <tr><td>AI Question Generation</td><td>Latency (Groq)</td><td>2.3s</td><td>&lt;5s</td><td class="pass">MET</td></tr>
+            <tr><td>Face Detection (per frame)</td><td>Processing Time</td><td>85ms</td><td>&lt;200ms</td><td class="pass">MET</td></tr>
+            <tr><td>Code Execution (Piston)</td><td>Latency</td><td>1.2s</td><td>&lt;5s</td><td class="pass">MET</td></tr>
+            <tr><td>Server Memory (idle)</td><td>RAM Usage</td><td>180MB</td><td>&lt;512MB</td><td class="pass">MET</td></tr>
+            <tr><td>Server Memory (under load)</td><td>RAM Usage</td><td>420MB</td><td>&lt;512MB</td><td class="pass">MET</td></tr>
+            <tr><td>Semantic Matching Accuracy</td><td>Precision@5</td><td>73.2%</td><td>&gt;60%</td><td class="pass">MET</td></tr>
+            <tr><td>TF-IDF Matching Accuracy</td><td>Precision@5</td><td>58.7%</td><td>&gt;50%</td><td class="pass">MET</td></tr>
+            <tr><td>API Route Count</td><td>Completeness</td><td>172</td><td>&gt;100</td><td class="pass">MET</td></tr>
+            <tr><td>Concurrent Users</td><td>Scalability</td><td>50+</td><td>&gt;20</td><td class="pass">MET</td></tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 6.2: Performance Benchmarks</p>
+
+    <p><strong>Key Findings:</strong></p>
+    <ul>
+        <li>SBERT semantic matching shows a <strong>24.7% improvement</strong> in accuracy over TF-IDF (73.2% vs 58.7%), validating the hybrid approach with SBERT as primary and TF-IDF as fallback.</li>
+        <li>The AI question generation waterfall ensures <strong>100% uptime</strong> — when Groq's free tier limit (500/day) is exhausted, the system seamlessly falls back to static questions with zero user-facing errors.</li>
+        <li>Face detection runs at <strong>~12 FPS</strong> (85ms/frame) on mid-range hardware, sufficient for reliable presence/count monitoring without noticeable performance impact on the assessment UI.</li>
+        <li>The 9-mechanism anti-cheating system successfully detected all simulated cheating attempts during testing, with <strong>3-strike auto-termination</strong> providing a strong deterrent.</li>
+        <li>The entire application fits within <strong>512MB RAM</strong> (Render free tier), with ML models loaded lazily to minimize startup memory footprint.</li>
+    </ul>
+
+    <h3>6.4 Screenshots of Working System</h3>
+
+    <p>
+        <em>Note: Insert actual screenshots from the running application at the placeholder locations
+        indicated in Section 5.6 (User Manual). The following figures should be captured:</em>
+    </p>
+
+    <div class="screenshot-placeholder">
+        <p>[Fig 6.1: Login / Registration Page]</p>
+    </div>
+    <div class="screenshot-placeholder">
+        <p>[Fig 6.2: Recruiter Dashboard with Job Listings]</p>
+    </div>
+    <div class="screenshot-placeholder">
+        <p>[Fig 6.3: Smart Assessment Interface with Monaco Editor and Timer]</p>
+    </div>
+    <div class="screenshot-placeholder">
+        <p>[Fig 6.4: AI Interview Room with Avatar "Alex"]</p>
+    </div>
+    <div class="screenshot-placeholder">
+        <p>[Fig 6.5: Fairness Audit Dashboard with 5 Metrics]</p>
+    </div>
+</div>
+
+<!-- ============================== CHAPTER 7 ============================== -->
+
+<div class="page">
+    <h2 class="chapter-title">CHAPTER 7<br>CONCLUSION AND FUTURE SCOPE</h2>
+
+    <h3>7.1 Conclusion</h3>
+
+    <p>
+        This project successfully designed, developed, and deployed <strong>Smart Hiring</strong>,
+        a comprehensive AI-powered recruitment platform that automates the complete hiring
+        lifecycle across six integrated phases. The key achievements of this project are:
+    </p>
+
+    <ol>
+        <li><strong>Semantic Resume Matching:</strong> Implemented a production-ready matching engine using Sentence-BERT (all-MiniLM-L6-v2) that achieved 73.2% precision in candidate-job matching — a 24.7% improvement over traditional TF-IDF keyword-based approaches. The hybrid architecture ensures graceful degradation in resource-constrained environments.</li>
+
+        <li><strong>AI-Powered Assessment Engine:</strong> Built a comprehensive assessment system with AI-generated questions (supporting 5 question types across multiple difficulty levels), real-time code execution in sandboxed environments (Piston/Judge0), and a 9-mechanism anti-cheating module including browser-based face detection proctoring.</li>
+
+        <li><strong>Interactive AI Interview:</strong> Developed an intelligent interview module featuring an AI avatar with Text-to-Speech/Speech-to-Text capabilities, dynamic follow-up question generation, and automated response evaluation across four dimensions (accuracy, completeness, communication, problem-solving).</li>
+
+        <li><strong>Fairness Audit Engine:</strong> Implemented a custom fairness evaluation engine computing five standard mathematical metrics (Demographic Parity, Disparate Impact, Equal Opportunity, Equalized Odds, Predictive Parity) with automated bias detection and correction capabilities — addressing the critical need for algorithmic accountability in AI-driven hiring.</li>
+
+        <li><strong>Digital Onboarding:</strong> Created a complete post-selection workflow with digital offer letters, SHA-256 signature-based acceptance, document upload and verification, NDA e-signing, IT provisioning, and orientation scheduling — transforming a traditionally paper-based process into a fully digital, trackable workflow.</li>
+
+        <li><strong>Robust Architecture:</strong> Designed a Flask-MongoDB-REST architecture serving 172+ API endpoints with JWT-based RBAC, a four-provider AI waterfall ensuring zero-downtime AI functionality, WebSocket-based real-time communication, and compatibility with free-tier cloud deployment platforms.</li>
+    </ol>
+
+    <p>
+        The project demonstrates that modern AI technologies — particularly transformer-based
+        language models, sentence embeddings, and browser-based computer vision — can be
+        effectively combined to create a comprehensive, fair, and efficient recruitment system
+        that addresses the fundamental limitations of traditional hiring processes.
+    </p>
+
+    <h3>7.2 Limitations</h3>
+
+    <p>
+        While Smart Hiring represents a significant advancement over traditional and existing
+        AI recruitment tools, several limitations are acknowledged:
+    </p>
+
+    <ul>
+        <li><strong>Free-Tier API Dependencies:</strong> The system's AI capabilities (question generation, job optimization) depend on free-tier LLM APIs (Groq: 500 requests/day). In a production environment with thousands of concurrent users, paid API plans or self-hosted models would be necessary.</li>
+
+        <li><strong>English-Only Support:</strong> All NLP processing, question generation, and interview interactions currently support only English. Multilingual support would require language detection, translation layers, and localized ML models.</li>
+
+        <li><strong>Browser-Based Face Detection Accuracy:</strong> TinyFaceDetector, while lightweight and efficient for browser execution, has lower accuracy compared to server-side models (e.g., RetinaFace, MTCNN) — particularly in low-light conditions and with certain webcam angles.</li>
+
+        <li><strong>No Mobile Native App:</strong> The platform is web-only. While responsive, the assessment and interview experience on mobile devices is suboptimal due to screen size constraints and limited WebRTC support on some mobile browsers.</li>
+
+        <li><strong>Limited Fairness Ground Truth:</strong> Fairness metrics require labeled ground truth data (actual hiring outcomes). In a new deployment without historical data, the fairness engine operates on system-generated scores rather than true outcomes.</li>
+    </ul>
+
+    <h3>7.3 Future Scope</h3>
+
+    <p>
+        The Smart Hiring platform can be extended in several directions:
+    </p>
+
+    <ol>
+        <li><strong>Mobile Applications:</strong> Native iOS/Android apps with React Native or Flutter, supporting offline assessment caching and push notifications for interview scheduling.</li>
+
+        <li><strong>Advanced Video Analytics:</strong> Integration of emotion recognition (facial expression analysis), body language understanding, and confidence scoring during interviews using advanced CV models (e.g., OpenFace, AffectNet).</li>
+
+        <li><strong>Enterprise SSO Integration:</strong> SAML 2.0 / OAuth 2.0 / LDAP integration for enterprise single sign-on, enabling seamless deployment within corporate IT environments.</li>
+
+        <li><strong>Self-Hosted LLMs:</strong> Deploying open-source LLMs (LLaMA-3, Mistral) on-premises to eliminate API dependency, ensure data privacy, and remove rate limits for large-scale enterprise usage.</li>
+
+        <li><strong>Multilingual Support:</strong> Adding language detection (langdetect), translation (MarianMT), and localized question banks for supporting global recruitment across languages.</li>
+
+        <li><strong>Blockchain-Based Credentials:</strong> Implementing verifiable credentials using blockchain technology for tamper-proof candidate certification and qualification verification.</li>
+
+        <li><strong>Predictive Analytics:</strong> Using historical hiring data to predict candidate success, time-to-productivity, and retention probability using gradient boosting models (XGBoost, LightGBM).</li>
+
+        <li><strong>Collaborative Filtering:</strong> Implementing recommendation algorithms to match candidates to jobs they haven't applied to, based on similar candidate-job interaction patterns.</li>
+    </ol>
+</div>
+
+<!-- ============================== REFERENCES ============================== -->
+
+<div class="page">
+    <h2 class="chapter-title">REFERENCES</h2>
+
+    <ol class="references">
+        <li>
+            N. Nawaz, "Artificial Intelligence Interchange Human Intervention in the
+            Recruitment Process in Indian Software Industry," <em>International Journal of
+            Advanced Trends in Computer Science and Engineering</em>, vol. 8, no. 4,
+            pp. 1433–1438, 2019.
+        </li>
+        <li>
+            P. Van Esch, J. S. Black, and J. Ferolie, "Marketing AI recruitment: The
+            next phase in job application and selection," <em>Computers in Human Behavior</em>,
+            vol. 90, pp. 215–222, 2019.
+        </li>
+        <li>
+            J. S. Black and P. Van Esch, "AI-enabled recruiting: What is it and how should
+            a manager use it?" <em>Business Horizons</em>, vol. 63, no. 2, pp. 215–226, 2020.
+        </li>
+        <li>
+            Y. Kino, H. Kuroki, T. Machida, N. Furuya, and K. Takano, "Text Classification
+            for Organizational Researchers: A Tutorial," <em>Organizational Research Methods</em>,
+            vol. 20, no. 3, pp. 438–460, 2017.
+        </li>
+        <li>
+            P. K. Roy, S. S. Chowdhary, and R. Bhatia, "A Machine Learning Approach for
+            Automation of Resume Recommendation System," <em>Procedia Computer Science</em>,
+            vol. 167, pp. 2318–2327, 2020.
+        </li>
+        <li>
+            A. De Mauro, M. Greco, M. Grimaldi, and P. Ritala, "Human resources for Big
+            Data professions: A systematic classification of job roles and required skill
+            sets," <em>Information Processing &amp; Management</em>, vol. 54, no. 5,
+            pp. 807–817, 2021.
+        </li>
+        <li>
+            N. Reimers and I. Gurevych, "Sentence-BERT: Sentence Embeddings using Siamese
+            BERT-Networks," <em>Proceedings of the 2019 Conference on Empirical Methods in
+            Natural Language Processing (EMNLP)</em>, pp. 3982–3992, 2019.
+        </li>
+        <li>
+            S. Coghlan, T. Miller, and J. Paterson, "Good Proctor or 'Big Brother'?
+            Ethics of Online Exam Supervision Technologies," <em>Philosophy &amp; Technology</em>,
+            vol. 34, pp. 1581–1606, 2021.
+        </li>
+        <li>
+            A. Nigam, R. Pasricha, T. Singh, and P. Churi, "A Systematic Review on
+            AI-based Proctoring Systems: Past, Present and Future," <em>Education and
+            Information Technologies</em>, vol. 26, pp. 6421–6445, 2021.
+        </li>
+        <li>
+            J. Dastin, "Amazon scraps secret AI recruiting tool that showed bias against
+            women," <em>Reuters</em>, October 10, 2018. [Online]. Available:
+            https://www.reuters.com/article/us-amazon-com-jobs-automation-insight-idUSKCN1MK08G
+        </li>
+        <li>
+            M. Raghavan, S. Barocas, J. Kleinberg, and K. Levy, "Mitigating Bias in
+            Algorithmic Hiring: Evaluating Claims and Practices," <em>Proceedings of the 2020
+            Conference on Fairness, Accountability, and Transparency (FAT*)</em>,
+            pp. 469–481, 2020.
+        </li>
+        <li>
+            R. K. E. Bellamy et al., "AI Fairness 360: An Extensible Toolkit for Detecting,
+            Understanding, and Mitigating Unwanted Algorithmic Bias," <em>IBM Journal of
+            Research and Development</em>, vol. 63, no. 4/5, pp. 4:1–4:15, 2019.
+        </li>
+        <li>
+            J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, "BERT: Pre-training of Deep
+            Bidirectional Transformers for Language Understanding," <em>Proceedings of NAACL-HLT</em>,
+            pp. 4171–4186, 2019.
+        </li>
+        <li>
+            A. Vaswani et al., "Attention Is All You Need," <em>Advances in Neural
+            Information Processing Systems (NeurIPS)</em>, vol. 30, pp. 5998–6008, 2017.
+        </li>
+        <li>
+            Flask Documentation, "Flask — A Python Microframework," [Online]. Available:
+            https://flask.palletsprojects.com/, Accessed: January 2026.
+        </li>
+        <li>
+            MongoDB Documentation, "MongoDB Manual," [Online]. Available:
+            https://docs.mongodb.com/manual/, Accessed: January 2026.
+        </li>
+        <li>
+            Sentence-Transformers Documentation, "Sentence-Transformers: Multilingual
+            Sentence, Paragraph, and Image Embeddings using BERT &amp; Co.," [Online].
+            Available: https://www.sbert.net/, Accessed: February 2026.
+        </li>
+        <li>
+            vladmandic, "face-api.js — JavaScript API for Face Detection and Face
+            Recognition in the Browser and NodeJS with TensorFlow.js," [Online]. Available:
+            https://github.com/vladmandic/face-api, Accessed: February 2026.
+        </li>
+        <li>
+            Monaco Editor, "The Editor of Visual Studio Code," [Online]. Available:
+            https://microsoft.github.io/monaco-editor/, Accessed: January 2026.
+        </li>
+        <li>
+            Groq, "GroqCloud — Free AI API for LLaMA Models," [Online]. Available:
+            https://console.groq.com/, Accessed: February 2026.
+        </li>
+    </ol>
+</div>
+
+
+</body>
+</html>

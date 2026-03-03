@@ -57,8 +57,8 @@ else:
         from sentence_transformers import SentenceTransformer
         SBERT_AVAILABLE = True
         logger.info("✅ Sentence-BERT available for semantic matching")
-    except ImportError:
-        logger.warning("⚠️ sentence-transformers not installed - using TF-IDF fallback")
+    except (ImportError, AttributeError, Exception) as _sbert_err:
+        logger.warning(f"⚠️ sentence-transformers not available ({_sbert_err}) - using TF-IDF fallback")
 
 # Try to import scikit-learn for TF-IDF
 SKLEARN_AVAILABLE = False

@@ -445,6 +445,7 @@
 
 const API_BASE = window.location.origin + '/api/video-interview';
 const TOKEN = window.location.pathname.split('/').pop();
+const AUTH_TOKEN = localStorage.getItem('candidate_token') || localStorage.getItem('recruiter_token') || localStorage.getItem('admin_token') || '';
 
 // ── State ───────────────────────────────────────────────────────────────────
 let session = null;
@@ -540,7 +541,9 @@ async function runPreChecks() {
 
     // 2. Load session
     try {
-        const resp = await fetch(`${API_BASE}/session/${TOKEN}`);
+        const resp = await fetch(`${API_BASE}/session/${TOKEN}`, {
+            headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` }
+        });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Failed to load session');
         session = data.session;
@@ -608,7 +611,7 @@ async function beginInterview() {
     try {
         await fetch(`${API_BASE}/start`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AUTH_TOKEN}` },
             body: JSON.stringify({ session_id: session._id }),
         });
     } catch (e) { console.warn('Start signal failed:', e); }
@@ -953,7 +956,7 @@ async function submitAnswer() {
     try {
         await fetch(`${API_BASE}/submit-answer`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AUTH_TOKEN}` },
             body: JSON.stringify({
                 session_id: session._id,
                 question_index: currentIdx,
@@ -1101,7 +1104,7 @@ function onRecordingStop() {
     // Upload recording metadata
     fetch(`${API_BASE}/upload-recording`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AUTH_TOKEN}` },
         body: JSON.stringify({
             session_id: session._id,
             filename: filename,
@@ -1118,6 +1121,7 @@ function onRecordingStop() {
 
     fetch(`${API_BASE}/upload-recording-file`, {
         method: 'POST',
+        headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` },
         body: formData,
     }).then(r => {
         if (r.ok) console.log('✅ Recording file uploaded successfully');
@@ -1142,7 +1146,7 @@ function downloadRecording() {
         }, 100);
     } else if (session) {
         // Try server download with token
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('candidate_token') || localStorage.getItem('recruiter_token') || '';
         const url = `${API_BASE}/download-recording/${session._id}` + (token ? `?token=${token}` : '');
         window.open(url, '_blank');
     } else {
@@ -1193,7 +1197,7 @@ function logMalpracticeEvent(type, desc) {
     if (!session) return;
     fetch(`${API_BASE}/malpractice-event`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AUTH_TOKEN}` },
         body: JSON.stringify({
             session_id: session._id,
             event_type: type,
@@ -1235,7 +1239,7 @@ function showMalpracticeTermination() {
     if (session) {
         fetch(`${API_BASE}/complete`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AUTH_TOKEN}` },
             body: JSON.stringify({
                 session_id: session._id,
                 terminated_reason: 'malpractice_tab_switch',
@@ -1277,7 +1281,7 @@ async function finishInterview() {
     try {
         await fetch(`${API_BASE}/complete`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AUTH_TOKEN}` },
             body: JSON.stringify({ session_id: session._id }),
         });
     } catch (e) { console.warn('Complete signal failed:', e); }

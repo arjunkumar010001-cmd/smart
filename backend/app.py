@@ -13,9 +13,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_socketio import SocketIO
 from config.config import config
 from backend.models.database import Database
-from backend.routes import auth_routes, job_routes, candidate_routes, company_routes, email_preferences_routes, assessment_routes, audit_routes, dsr_routes, dashboard_routes, ai_interview_routes, admin_routes, google_oauth_routes, interview_routes
+from backend.routes import auth_routes, job_routes, candidate_routes, company_routes, email_preferences_routes, assessment_routes, audit_routes, dsr_routes, dashboard_routes, ai_interview_routes, admin_routes, google_oauth_routes, interview_routes, analytics_routes, llm_routes
+from backend.routes import smart_assessment_routes
+from backend.routes import blacklist_routes, onboarding_routes, committee_routes
 # Import enhanced v2 routes
 try:
     from backend.routes import ai_interview_routes_v2
@@ -62,7 +65,7 @@ def create_app(config_name=None):
 
     # Initialize extensions
     # SECURITY: Configure CORS properly for production
-    allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000').split(',')
+    allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000,http://127.0.0.1:5000,http://127.0.0.1:3000').split(',')
     CORS(flask_app, 
          resources={r"/api/*": {
              "origins": allowed_origins,
@@ -73,6 +76,38 @@ def create_app(config_name=None):
              "max_age": 3600
          }})
 
+    # ── SocketIO — single instance, initialized BEFORE blueprints ─────────
+    # CORS scoped to the same origins as Flask-CORS (never use '*' in prod).
+    # async_mode='eventlet' matches the Gunicorn --worker-class eventlet.
+    socketio = SocketIO(
+        flask_app,
+        cors_allowed_origins=allowed_origins,
+        async_mode='eventlet',
+        logger=True,
+        engineio_logger=False,       # too noisy for production; flip True to debug
+        ping_timeout=60,
+        ping_interval=25,
+    )
+    flask_app.socketio = socketio    # accessible via current_app.socketio
+    logger.info("🔌 SocketIO initialized (async_mode=eventlet, origins=%s)", allowed_origins)
+
+    # ── WebSocketManager — reuses flask_app.socketio ──────────────────────
+    from backend.services.websocket_service import init_websocket_manager
+    init_websocket_manager(flask_app)
+
+    # ── Proctoring Service — reuses flask_app.socketio ──────────────────
+    from backend.services.proctoring_service import init_proctoring_service
+    init_proctoring_service(flask_app)
+
+    # ── WeasyPrint startup health check ───────────────────────────────
+    try:
+        from weasyprint import HTML as _WP_HTML
+        _WP_HTML(string='<p>health check</p>').write_pdf()
+        logger.info("✅ WeasyPrint health check passed")
+    except ImportError:
+        logger.critical("❌ WeasyPrint NOT INSTALLED — /audit-report endpoint will fail")
+    except Exception as wp_err:
+        logger.critical("❌ WeasyPrint health check FAILED (missing GTK libs?): %s", wp_err)
     # Initialize JWT Manager  
     jwt = JWTManager(flask_app)
 
@@ -84,7 +119,17 @@ def create_app(config_name=None):
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'"
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.socket.io https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https: blob:; "
+            "font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+            "connect-src 'self' ws: wss: blob: https://accounts.google.com https://oauth2.googleapis.com https://*.googleapis.com https://cdn.jsdelivr.net https://unpkg.com http://localhost:* http://127.0.0.1:*; "
+            "media-src 'self' blob: mediastream:; "
+            "worker-src 'self' blob:; "
+            "frame-src 'self' https://accounts.google.com"
+        )
         return response
 
     # Initialize database connection
@@ -103,12 +148,21 @@ def create_app(config_name=None):
     flask_app.register_blueprint(company_routes.bp, url_prefix='/api/company')
     flask_app.register_blueprint(email_preferences_routes.bp, url_prefix='/api/email')
     flask_app.register_blueprint(assessment_routes.bp, url_prefix='/api/assessments')
+    flask_app.register_blueprint(smart_assessment_routes.bp, url_prefix='/api/smart-assessments')
     flask_app.register_blueprint(audit_routes.bp, url_prefix='/api/audit')
     flask_app.register_blueprint(dsr_routes.bp, url_prefix='/api/dsr')
     flask_app.register_blueprint(dashboard_routes.bp, url_prefix='/api/dashboard')
     flask_app.register_blueprint(ai_interview_routes.bp, url_prefix='/api/ai-interview')
     flask_app.register_blueprint(interview_routes.bp, url_prefix='/api/interviews')
     flask_app.register_blueprint(admin_routes.bp, url_prefix='/api/admin')
+    flask_app.register_blueprint(blacklist_routes.bp, url_prefix='/api/blacklist')
+    flask_app.register_blueprint(onboarding_routes.bp, url_prefix='/api/onboarding')
+    flask_app.register_blueprint(committee_routes.bp, url_prefix='/api/committee')
+    logger.info("\u2705 Blacklist, Onboarding & Committee routes registered")
+
+    # v1 feature routes (analytics & LLM) — url_prefix defined inside the Blueprint
+    flask_app.register_blueprint(analytics_routes.bp)   # /api/analytics
+    flask_app.register_blueprint(llm_routes.bp)          # /api/llm
 
     # Register V2 routes if available
     if V2_ROUTES_AVAILABLE:
@@ -123,8 +177,51 @@ def create_app(config_name=None):
     except ImportError:
         logger.info("ℹ️ Video interview routes not available yet")
 
+    # ── Initialize Flan-T5 Question Generator (load model once at startup) ────
+    if config_name != 'testing':
+        try:
+            from backend.services.flan_t5_service import initialize_flan_t5
+            flan_status = initialize_flan_t5(
+                flan_model=os.getenv('FLAN_T5_MODEL', 'google/flan-t5-base'),
+                sbert_model=os.getenv('SBERT_MODEL', 'all-MiniLM-L6-v2'),
+            )
+            if flan_status.get('flan_t5_loaded'):
+                logger.info("🧠 Flan-T5 interview engine loaded — dynamic question generation enabled")
+            else:
+                logger.warning("⚠️ Flan-T5 not loaded — falling back to static question bank")
+            if flan_status.get('sbert_loaded'):
+                logger.info("🔗 SBERT loaded for Flan-T5 answer evaluation (threshold=0.70)")
+        except Exception as e:
+            logger.warning(f"⚠️ Flan-T5 initialization skipped: {e}")
+
     # Initialize monitoring & observability
     initialize_monitoring(flask_app)
+
+    # Bug #6 fix: Auto-complete stale interviews on startup (fallback for Celery Beat)
+    if config_name != 'testing':
+        try:
+            from backend.utils.interview_cleanup import auto_complete_stale_interviews
+            completed = auto_complete_stale_interviews(stale_hours=24)
+            if completed:
+                logger.info(f"⏰ Startup: auto-completed {completed} stale interview(s)")
+        except Exception as e:
+            logger.warning(f"⚠️ Interview auto-complete skipped: {e}")
+
+    # Paused-session recovery: sessions left in 'paused' state after a server
+    # restart will never receive the resume_session event.  Reset any that have
+    # been paused for more than 10 minutes back to in_progress.
+    if config_name != 'testing':
+        try:
+            from datetime import datetime, timedelta
+            cutoff = datetime.utcnow() - timedelta(minutes=10)
+            result = db['smart_sessions'].update_many(
+                {'status': 'paused', 'paused_at': {'$lt': cutoff}},
+                {'$set': {'status': 'in_progress'}, '$unset': {'paused_at': ''}},
+            )
+            if result.modified_count:
+                logger.info(f"⏰ Startup: recovered {result.modified_count} stuck paused session(s)")
+        except Exception as e:
+            logger.warning(f"⚠️ Paused-session recovery skipped: {e}")
 
     # Start background workers if enabled (skip in testing mode)
     if config_name != 'testing' and env_config.enable_background_workers and env_config.enable_redis:
@@ -196,8 +293,18 @@ def create_app(config_name=None):
                 'jobs': '/api/jobs',
                 'candidates': '/api/candidates',
                 'assessments': '/api/assessments',
+                'smart_assessments': '/api/smart-assessments',
                 'dashboard': '/api/dashboard',
                 'video_interview': '/api/video-interview',
+                'interviews': '/api/interviews',
+                'analytics': '/api/analytics',
+                'llm': '/api/llm',
+                'ai_interview_v2': '/api/ai-interview-v2',
+                'blacklist': '/api/blacklist',
+                'onboarding': '/api/onboarding',
+                'committee': '/api/committee',
+                'audit': '/api/audit',
+                'flan_t5_engine': '/api/ai-interview-v2/flan-t5',
             },
             'documentation': 'See API_DOCUMENTATION.md for details'
         })
@@ -271,7 +378,10 @@ def _create_default_accounts(db):
 
         created_count = 0
         for account in default_accounts:
-            existing = users_collection.find_one({'email': account['email']})
+            import hashlib as _hl
+            _email_hash = _hl.sha256(account['email'].lower().strip().encode()).hexdigest()
+            existing = users_collection.find_one({'email_hash': _email_hash}) or \
+                       users_collection.find_one({'email': account['email']})
             if not existing:
                 users_collection.insert_one(account)
                 print(f"✅ Created default account: {account['email']}")

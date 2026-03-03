@@ -33,7 +33,7 @@ def create_question():
     """Create a new question (recruiter/admin only)"""
     try:
         user_id, role = get_user_info(get_jwt_identity())
-        if role not in ['company', 'admin']:
+        if role not in ['company', 'admin', 'recruiter']:
             return jsonify({'error': 'Unauthorized'}), 403
         
         data = request.get_json()
@@ -67,11 +67,11 @@ def get_questions():
     """Get all questions with filtering"""
     try:
         user_id, role = get_user_info(get_jwt_identity())
-        if role not in ['company', 'admin']:
+        if role not in ['company', 'admin', 'recruiter']:
             return jsonify({'error': 'Unauthorized'}), 403
         
         query = {'is_active': True}
-        if role != 'admin':
+        if role not in ('admin',):
             query['created_by'] = user_id
         
         # Apply filters
@@ -95,7 +95,7 @@ def delete_question(question_id):
     """Soft delete a question"""
     try:
         user_id, role = get_user_info(get_jwt_identity())
-        if role not in ['company', 'admin']:
+        if role not in ['company', 'admin', 'recruiter']:
             return jsonify({'error': 'Unauthorized'}), 403
         
         db = get_db()
@@ -123,7 +123,7 @@ def create_quiz():
     """Create a new quiz"""
     try:
         user_id, role = get_user_info(get_jwt_identity())
-        if role not in ['company', 'admin']:
+        if role not in ['company', 'admin', 'recruiter']:
             return jsonify({'error': 'Unauthorized'}), 403
         
         data = request.get_json()
@@ -411,7 +411,7 @@ def get_quiz_analytics(quiz_id):
     """Get quiz analytics (recruiter/admin only)"""
     try:
         user_id, role = get_user_info(get_jwt_identity())
-        if role not in ['company', 'admin']:
+        if role not in ['company', 'admin', 'recruiter']:
             return jsonify({'error': 'Unauthorized'}), 403
         
         db = get_db()

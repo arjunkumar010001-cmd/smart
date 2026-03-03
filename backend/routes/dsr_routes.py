@@ -5,10 +5,11 @@ Handles GDPR compliance: data export, data deletion, consent management
 
 from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from backend.models.database import Database
+from backend.models.database import get_db
 from backend.security.rbac import require_permission, Permissions
 from backend.security.rate_limiter import rate_limit
 from backend.security.encryption import decrypt_pii_fields
+from bson import ObjectId
 from datetime import datetime
 import json
 import os
@@ -19,7 +20,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 bp = Blueprint('dsr', __name__)
-db = Database()
+
+
+def _get_identity():
+    """Extract user_id from JWT identity (handles both string and dict formats)."""
+    identity = get_jwt_identity()
+    if isinstance(identity, dict):
+        return identity.get('user_id')
+    return identity
 
 
 @bp.route('/export', methods=['POST'])
@@ -36,13 +44,14 @@ def export_user_data():
     - Audit logs
     """
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = _get_identity()
         data = request.get_json()
         target_user_id = data.get('user_id', current_user_id)
         
         # Authorization check
-        users = db.get_database().users
-        current_user = users.find_one({'_id': current_user_id})
+        database = get_db()
+        users = database['users']
+        current_user = users.find_one({'_id': ObjectId(current_user_id)})
         
         if not current_user:
             return jsonify({'error': 'User not found'}), 404
@@ -96,7 +105,7 @@ def delete_user_data():
     - Personal data in audit logs (anonymized)
     """
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = _get_identity()
         data = request.get_json()
         target_user_id = data.get('user_id', current_user_id)
         confirmation = data.get('confirmation', '')
@@ -109,8 +118,8 @@ def delete_user_data():
             }), 400
         
         # Authorization check
-        users = db.get_database().users
-        current_user = users.find_one({'_id': current_user_id})
+        users = get_db()['users']
+        current_user = users.find_one({'_id': ObjectId(current_user_id)})
         
         if not current_user:
             return jsonify({'error': 'User not found'}), 404
@@ -155,7 +164,7 @@ def anonymize_user_data():
             return jsonify({'error': 'user_id required'}), 400
         
         # Log DSR request
-        current_user_id = get_jwt_identity()
+        current_user_id = _get_identity()
         _log_dsr_activity('data_anonymization', current_user_id, target_user_id)
         
         # Perform anonymization
@@ -179,10 +188,10 @@ def anonymize_user_data():
 def get_consent_status():
     """Get user's consent status"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = _get_identity()
         
-        users = db.get_database().users
-        user = users.find_one({'_id': current_user_id})
+        users = get_db()['users']
+        user = users.find_one({'_id': ObjectId(current_user_id)})
         
         if not user:
             return jsonify({'error': 'User not found'}), 404
@@ -211,7 +220,7 @@ def get_consent_status():
 def update_consent():
     """Update user's consent preferences"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = _get_identity()
         data = request.get_json()
         
         # Validate consent data
@@ -238,9 +247,9 @@ def update_consent():
             consent_update['consented_at'] = datetime.utcnow().isoformat()
         
         # Update user's consent
-        users = db.get_database().users
+        users = get_db()['users']
         result = users.update_one(
-            {'_id': current_user_id},
+            {'_id': ObjectId(current_user_id)},
             {'$set': {f'consent.{key}': value for key, value in consent_update.items()}}
         )
         
@@ -284,7 +293,7 @@ def get_dsr_logs():
             query['activity_type'] = activity_type
         
         # Get logs
-        dsr_logs = db.get_database().dsr_logs
+        dsr_logs = get_db()['dsr_logs']
         logs = list(dsr_logs.find(query).sort('timestamp', -1).limit(limit))
         
         # Format response
@@ -305,27 +314,28 @@ def get_dsr_logs():
 
 def _collect_user_data(user_id: str) -> dict:
     """Collect all data for a user"""
-    database = db.get_database()
+    database = get_db()
     
     # Get user profile
-    user = database.users.find_one({'_id': user_id})
+    user = database['users'].find_one({'_id': user_id})
     if user:
         user.pop('password', None)  # Never export password hashes
+        user.pop('password_hash', None)  # Also handle password_hash key
         user = decrypt_pii_fields(user)  # Decrypt PII for export
     
     # Get candidate profile
-    candidate = database.candidates.find_one({'user_id': user_id})
+    candidate = database['candidates'].find_one({'user_id': user_id})
     if candidate:
         candidate = decrypt_pii_fields(candidate)
     
     # Get applications
-    applications = list(database.applications.find({'user_id': user_id}))
+    applications = list(database['applications'].find({'user_id': user_id}))
     
     # Get quiz attempts
-    quiz_attempts = list(database.quiz_attempts.find({'candidate_id': user_id}))
+    quiz_attempts = list(database['quiz_attempts'].find({'candidate_id': user_id}))
     
     # Get audit logs (relevant to this user)
-    audit_logs = list(database.audit_logs.find({
+    audit_logs = list(database['audit_logs'].find({
         '$or': [
             {'user_id': user_id},
             {'candidate_id': user_id}
@@ -346,7 +356,7 @@ def _collect_user_data(user_id: str) -> dict:
 
 def _delete_user_data(user_id: str) -> dict:
     """Delete all data for a user"""
-    database = db.get_database()
+    database = get_db()
     summary = {}
     
     # Delete uploaded files
@@ -355,7 +365,7 @@ def _delete_user_data(user_id: str) -> dict:
     
     try:
         # Get candidate profile to find resume files
-        candidate = database.candidates.find_one({'user_id': user_id})
+        candidate = database['candidates'].find_one({'user_id': user_id})
         if candidate and candidate.get('resume_file'):
             # Delete physical resume file
             resume_path = os.path.join(
@@ -367,7 +377,7 @@ def _delete_user_data(user_id: str) -> dict:
                 summary['files_deleted'] = 1
         
         # Delete any other files associated with applications
-        applications = database.applications.find({'candidate_id': user_id})
+        applications = database['applications'].find({'candidate_id': user_id})
         files_deleted = 0
         for app in applications:
             if app.get('resume_file'):
@@ -387,23 +397,23 @@ def _delete_user_data(user_id: str) -> dict:
         summary['file_deletion_errors'] = str(e)
     
     # Delete user record
-    result = database.users.delete_one({'_id': user_id})
+    result = database['users'].delete_one({'_id': user_id})
     summary['user_deleted'] = result.deleted_count
     
     # Delete candidate profile
-    result = database.candidates.delete_one({'user_id': user_id})
+    result = database['candidates'].delete_one({'user_id': user_id})
     summary['candidate_profile_deleted'] = result.deleted_count
     
     # Delete applications
-    result = database.applications.delete_many({'user_id': user_id})
+    result = database['applications'].delete_many({'user_id': user_id})
     summary['applications_deleted'] = result.deleted_count
     
     # Delete quiz attempts
-    result = database.quiz_attempts.delete_many({'candidate_id': user_id})
+    result = database['quiz_attempts'].delete_many({'candidate_id': user_id})
     summary['quiz_attempts_deleted'] = result.deleted_count
     
     # Anonymize audit logs (keep for compliance, but remove PII)
-    result = database.audit_logs.update_many(
+    result = database['audit_logs'].update_many(
         {'$or': [{'user_id': user_id}, {'candidate_id': user_id}]},
         {'$set': {
             'user_id': f'DELETED_{user_id[:8]}',
@@ -421,14 +431,14 @@ def _delete_user_data(user_id: str) -> dict:
 
 def _anonymize_user_data(user_id: str) -> dict:
     """Anonymize user data while preserving analytics"""
-    database = db.get_database()
+    database = get_db()
     summary = {}
     
     anonymous_id = f"ANON_{user_id[:8]}"
     anonymous_email = f"anonymized_{user_id[:8]}@deleted.local"
     
     # Anonymize user record
-    result = database.users.update_one(
+    result = database['users'].update_one(
         {'_id': user_id},
         {'$set': {
             'email': anonymous_email,
@@ -442,7 +452,7 @@ def _anonymize_user_data(user_id: str) -> dict:
     summary['user_anonymized'] = result.modified_count
     
     # Anonymize candidate profile
-    result = database.candidates.update_one(
+    result = database['candidates'].update_one(
         {'user_id': user_id},
         {'$set': {
             'name': '[Anonymized User]',
@@ -456,7 +466,7 @@ def _anonymize_user_data(user_id: str) -> dict:
     summary['candidate_profile_anonymized'] = result.modified_count
     
     # Keep applications but anonymize
-    result = database.applications.update_many(
+    result = database['applications'].update_many(
         {'user_id': user_id},
         {'$set': {
             'anonymized': True,
@@ -471,8 +481,8 @@ def _anonymize_user_data(user_id: str) -> dict:
 def _log_dsr_activity(activity_type: str, requester_id: str, target_user_id: str, details: dict = None):
     """Log DSR activity for compliance"""
     try:
-        database = db.get_database()
-        dsr_logs = database.dsr_logs
+        database = get_db()
+        dsr_logs = database['dsr_logs']
         
         log_entry = {
             'activity_type': activity_type,

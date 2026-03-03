@@ -81,7 +81,32 @@ def create_indexes():
         dsr_logs.create_index('status')
         dsr_logs.create_index('timestamp')
         logger.info("✅ DSR logs indexes created")
-        
+
+        # Smart assessment sessions indexes
+        smart_sessions = db['smart_sessions']
+        smart_sessions.create_index([('candidate_id', 1), ('status', 1)])
+        smart_sessions.create_index('assessment_config_id')
+        smart_sessions.create_index('job_application_id')
+        logger.info("✅ Smart sessions indexes created")
+
+        # Video interview sessions indexes  (critical for auto-complete query)
+        vis = db['video_interview_sessions']
+        vis.create_index([('status', 1), ('scheduled_at', 1)])
+        vis.create_index('candidate_id')
+        vis.create_index('job_id')
+        logger.info("✅ Video interview sessions indexes created")
+
+        # Blacklist collection indexes
+        blacklist = db['blacklist']
+        blacklist.create_index('candidate_id', unique=True)
+        logger.info("✅ Blacklist indexes created")
+
+        # Resume download audit logs
+        dl_logs = db['resume_download_logs']
+        dl_logs.create_index('timestamp')
+        dl_logs.create_index('recruiter_id')
+        logger.info("✅ Resume download logs indexes created")
+
         logger.info("🎉 All database indexes created successfully")
         
     except Exception as e:
@@ -117,7 +142,8 @@ def get_collection_stats():
     stats = {}
     
     collections = ['users', 'jobs', 'applications', 'questions', 'quizzes', 
-                  'quiz_attempts', 'audit_logs', 'dsr_logs']
+                  'quiz_attempts', 'audit_logs', 'dsr_logs', 'smart_sessions',
+                  'video_interview_sessions', 'blacklist', 'resume_download_logs']
     
     for collection_name in collections:
         try:

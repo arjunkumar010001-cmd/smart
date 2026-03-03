@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assessment Configuration | Smart Hiring</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="design-tokens.css">
+    <link rel="stylesheet" href="enterprise-ui.css">
+    <style>
+        :root { --ac-primary: #3b82f6; --ac-success: #10b981; --ac-warning: #f59e0b; --ac-danger: #ef4444; --ac-bg: #f8fafc; --ac-card: #fff; --ac-border: #e2e8f0; --ac-text: #1e293b; --ac-muted: #64748b; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; background: var(--ac-bg); color: var(--ac-text); }
+
+        .ac-header { background: linear-gradient(135deg, #1e40af, #3b82f6); color: white; padding: 20px 32px; }
+        .ac-header h1 { margin: 0; font-size: 24px; }
+        .ac-header p { margin: 4px 0 0; opacity: 0.8; font-size: 14px; }
+        .ac-header-actions { display: flex; gap: 12px; margin-top: 12px; }
+
+        .ac-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+        /* Dashboard Stats */
+        .ac-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .ac-stat { background: var(--ac-card); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        .ac-stat-label { font-size: 13px; color: var(--ac-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .ac-stat-value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+
+        /* Config Cards */
+        .ac-configs { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+        .ac-config-card { background: var(--ac-card); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--ac-border); transition: box-shadow 0.15s; }
+        .ac-config-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .ac-config-card h3 { margin: 0 0 8px; }
+        .ac-config-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+        .ac-tag { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #f1f5f9; }
+        .ac-config-stats { display: flex; gap: 16px; font-size: 13px; color: var(--ac-muted); margin-top: 12px; }
+        .ac-config-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+        /* Modal */
+        .ac-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; justify-content: center; align-items: start; padding: 40px; overflow-y: auto; }
+        .ac-modal-overlay.active { display: flex; }
+        .ac-modal { background: white; border-radius: 16px; width: 100%; max-width: 720px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); animation: slideUp 0.2s; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } }
+        .ac-modal-header { padding: 20px 24px; border-bottom: 1px solid var(--ac-border); display: flex; justify-content: space-between; align-items: center; }
+        .ac-modal-header h2 { margin: 0; font-size: 18px; }
+        .ac-modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+        .ac-modal-footer { padding: 16px 24px; border-top: 1px solid var(--ac-border); display: flex; justify-content: flex-end; gap: 8px; }
+
+        /* Form */
+        .ac-form-group { margin-bottom: 16px; }
+        .ac-form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--ac-muted); margin-bottom: 6px; }
+        .ac-form-group input, .ac-form-group select, .ac-form-group textarea {
+            width: 100%; padding: 10px 14px; border: 1px solid var(--ac-border); border-radius: 8px; font-size: 14px;
+            background: white; transition: border-color 0.15s;
+        }
+        .ac-form-group input:focus, .ac-form-group select:focus, .ac-form-group textarea:focus {
+            outline: none; border-color: var(--ac-primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+        }
+        .ac-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .ac-form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+        /* Difficulty Sliders */
+        .ac-diff-row { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+        .ac-diff-row label { width: 70px; font-size: 13px; font-weight: 500; }
+        .ac-diff-row input[type=range] { flex: 1; }
+        .ac-diff-row span { width: 40px; text-align: right; font-weight: 600; font-size: 13px; }
+
+        /* Checkbox Group */
+        .ac-checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .ac-checkbox-item { padding: 6px 12px; border: 2px solid var(--ac-border); border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.15s; user-select: none; }
+        .ac-checkbox-item:hover { border-color: var(--ac-primary); }
+        .ac-checkbox-item.selected { background: #dbeafe; border-color: var(--ac-primary); color: var(--ac-primary); font-weight: 600; }
+
+        /* Buttons */
+        .ac-btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.15s; }
+        .ac-btn-primary { background: var(--ac-primary); color: white; }
+        .ac-btn-primary:hover { background: #2563eb; }
+        .ac-btn-success { background: var(--ac-success); color: white; }
+        .ac-btn-outline { background: transparent; border: 2px solid var(--ac-border); }
+        .ac-btn-outline:hover { border-color: var(--ac-primary); color: var(--ac-primary); }
+        .ac-btn-danger { background: transparent; color: var(--ac-danger); border: 1px solid var(--ac-danger); }
+        .ac-btn-danger:hover { background: var(--ac-danger); color: white; }
+        .ac-btn-lg { padding: 10px 20px; font-size: 14px; }
+
+        /* Toast Notifications */
+        .ac-toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 400px; }
+        .ac-toast { padding: 14px 20px; border-radius: 10px; color: white; font-size: 14px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.15); animation: toastIn 0.3s ease-out; display: flex; align-items: center; gap: 10px; }
+        .ac-toast.success { background: var(--ac-success); }
+        .ac-toast.error { background: var(--ac-danger); }
+        .ac-toast.warning { background: var(--ac-warning); color: #1e293b; }
+        .ac-toast.info { background: var(--ac-primary); }
+        .ac-toast-close { background: none; border: none; color: inherit; cursor: pointer; font-size: 18px; padding: 0 0 0 8px; opacity: 0.8; }
+        .ac-toast-close:hover { opacity: 1; }
+        @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+
+        /* Performers Table */
+        .ac-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
+        .ac-table th { text-align: left; padding: 10px 12px; font-size: 12px; color: var(--ac-muted); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid var(--ac-border); }
+        .ac-table td { padding: 10px 12px; border-bottom: 1px solid var(--ac-border); }
+        .ac-verdict-pass { color: var(--ac-success); font-weight: 600; }
+        .ac-verdict-fail { color: var(--ac-danger); font-weight: 600; }
+        .ac-verdict-review { color: var(--ac-warning); font-weight: 600; }
+
+        .ac-empty { text-align: center; padding: 60px 20px; color: var(--ac-muted); }
+        .ac-empty h3 { color: var(--ac-text); }
+
+        .ac-tabs { display: flex; gap: 4px; margin-bottom: 24px; background: #f1f5f9; border-radius: 10px; padding: 4px; }
+        .ac-tab { padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; border: none; background: transparent; }
+        .ac-tab.active { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600; }
+        .ac-tab-content { display: none; }
+        .ac-tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <div id="toastContainer" class="ac-toast-container"></div>
+    <div class="ac-header">
+        <h1>📋 Assessment Configuration</h1>
+        <p>Create and manage AI-powered assessments for job roles</p>
+        <div class="ac-header-actions">
+            <a href="index.html" class="ac-btn ac-btn-outline" style="color:white;border-color:rgba(255,255,255,0.4);">← Back to Dashboard</a>
+            <button class="ac-btn ac-btn-primary ac-btn-lg" onclick="openCreateModal()" style="background:white;color:var(--ac-primary);">+ Create Assessment</button>
+        </div>
+    </div>
+
+    <div class="ac-container">
+        <!-- Tabs -->
+        <div class="ac-tabs">
+            <button class="ac-tab active" onclick="switchTab('configs')">Assessments</button>
+            <button class="ac-tab" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="ac-tab" onclick="switchTab('sessions')">Candidate Sessions</button>
+        </div>
+
+        <!-- Tab: Configs -->
+        <div id="tabConfigs" class="ac-tab-content active">
+            <div class="ac-stats" id="statsContainer"></div>
+            <div class="ac-configs" id="configsContainer">
+                <div class="ac-empty"><div style="font-size:48px;">📋</div><h3>Loading...</h3></div>
+            </div>
+        </div>
+
+        <!-- Tab: Dashboard -->
+        <div id="tabDashboard" class="ac-tab-content">
+            <div id="dashboardContainer">
+                <div class="ac-empty"><div style="font-size:48px;">📊</div><h3>Loading dashboard...</h3></div>
+            </div>
+        </div>
+
+        <!-- Tab: Sessions -->
+        <div id="tabSessions" class="ac-tab-content">
+            <div id="sessionsContainer">
+                <div class="ac-empty"><div style="font-size:48px;">👤</div><h3>Loading sessions...</h3></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div class="ac-modal-overlay" id="configModal">
+        <div class="ac-modal">
+            <div class="ac-modal-header">
+                <h2 id="modalTitle">Create Assessment</h2>
+                <button class="ac-btn ac-btn-outline" onclick="closeModal()" style="border:none;font-size:18px;">✕</button>
+            </div>
+            <div class="ac-modal-body">
+                <form id="configForm">
+                    <div class="ac-form-row">
+                        <div class="ac-form-group">
+                            <label>Assessment Title *</label>
+                            <input type="text" id="cfgTitle" required placeholder="e.g., Backend Developer Assessment">
+                        </div>
+                        <div class="ac-form-group">
+                            <label>Job Role *</label>
+                            <input type="text" id="cfgJobRole" required placeholder="e.g., Backend Developer">
+                        </div>
+                    </div>
+
+                    <div class="ac-form-group">
+                        <label>Description</label>
+                        <textarea id="cfgDescription" rows="2" placeholder="Brief description of the assessment..."></textarea>
+                    </div>
+
+                    <div class="ac-form-group">
+                        <label>Question Types</label>
+                        <div class="ac-checkbox-group" id="cfgQuestionTypes">
+                            <div class="ac-checkbox-item selected" data-value="mcq" onclick="toggleCheckbox(this)">MCQ</div>
+                            <div class="ac-checkbox-item selected" data-value="coding" onclick="toggleCheckbox(this)">Coding</div>
+                            <div class="ac-checkbox-item" data-value="debugging" onclick="toggleCheckbox(this)">Debugging</div>
+                            <div class="ac-checkbox-item" data-value="aptitude" onclick="toggleCheckbox(this)">Aptitude</div>
+                            <div class="ac-checkbox-item" data-value="logical_reasoning" onclick="toggleCheckbox(this)">Logical Reasoning</div>
+                        </div>
+                    </div>
+
+                    <div class="ac-form-group">
+                        <label>Topics</label>
+                        <input type="text" id="cfgTopics" placeholder="Comma-separated: arrays, SQL, recursion, probability">
+                    </div>
+
+                    <div class="ac-form-group">
+                        <label>Difficulty Distribution (%)</label>
+                        <div class="ac-diff-row">
+                            <label style="color:var(--ac-success);">Easy</label>
+                            <input type="range" id="cfgEasy" min="0" max="100" value="30" oninput="updateDiffLabel()">
+                            <span id="cfgEasyVal">30%</span>
+                        </div>
+                        <div class="ac-diff-row">
+                            <label style="color:var(--ac-warning);">Medium</label>
+                            <input type="range" id="cfgMedium" min="0" max="100" value="50" oninput="updateDiffLabel()">
+                            <span id="cfgMediumVal">50%</span>
+                        </div>
+                        <div class="ac-diff-row">
+                            <label style="color:var(--ac-danger);">Hard</label>
+                            <input type="range" id="cfgHard" min="0" max="100" value="20" oninput="updateDiffLabel()">
+                            <span id="cfgHardVal">20%</span>
+                        </div>
+                    </div>
+
+                    <div class="ac-form-row-3">
+                        <div class="ac-form-group">
+                            <label>Total Questions</label>
+                            <input type="number" id="cfgTotalQuestions" value="15" min="1" max="100">
+                        </div>
+                        <div class="ac-form-group">
+                            <label>Duration (minutes)</label>
+                            <input type="number" id="cfgDuration" value="60" min="5" max="300">
+                        </div>
+                        <div class="ac-form-group">
+                            <label>Passing Score (%)</label>
+                            <input type="number" id="cfgPassingScore" value="70" min="1" max="100">
+                        </div>
+                    </div>
+
+                    <div class="ac-form-row-3">
+                        <div class="ac-form-group">
+                            <label>Coding Language</label>
+                            <select id="cfgLanguage">
+                                <option value="python">Python</option>
+                                <option value="javascript">JavaScript</option>
+                                <option value="java">Java</option>
+                                <option value="cpp">C++</option>
+                                <option value="c">C</option>
+                                <option value="go">Go</option>
+                                <option value="typescript">TypeScript</option>
+                            </select>
+                        </div>
+                        <div class="ac-form-group">
+                            <label>Experience Level</label>
+                            <select id="cfgExperienceLevel">
+                                <option value="fresher">Fresher (0-1 yr)</option>
+                                <option value="mid" selected>Mid-level (2-5 yrs)</option>
+                                <option value="senior">Senior (5+ yrs)</option>
+                            </select>
+                        </div>
+                        <div class="ac-form-group">
+                            <label>Max Attempts</label>
+                            <input type="number" id="cfgMaxAttempts" value="1" min="1" max="5">
+                        </div>
+                    </div>
+
+                    <div class="ac-form-row-3">
+                        <div class="ac-form-group">
+                            <label>Time/Question (min, 0=none)</label>
+                            <input type="number" id="cfgTimePerQ" value="0" min="0" max="60">
+                        </div>
+                    </div>
+
+                    <div class="ac-form-row">
+                        <div class="ac-form-group">
+                            <label>
+                                <input type="checkbox" id="cfgAiGen" checked> Use AI Generation (Groq LLaMA 3 — Free)
+                            </label>
+                        </div>
+                        <div class="ac-form-group">
+                            <label>
+                                <input type="checkbox" id="cfgTrivia" checked> Supplement with OpenTriviaDB
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="ac-form-row">
+                        <div class="ac-form-group">
+                            <label>
+                                <input type="checkbox" id="cfgRandomize" checked> Randomize Questions
+                            </label>
+                        </div>
+                        <div class="ac-form-group">
+                            <label>
+                                <input type="checkbox" id="cfgShowResults" checked> Show Results Immediately
+                            </label>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="cfgEditId" value="">
+                </form>
+            </div>
+            <div class="ac-modal-footer">
+                <button class="ac-btn ac-btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="ac-btn ac-btn-primary ac-btn-lg" onclick="saveConfig()">Save Assessment</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        function escH(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        // --- Toast Notification System ---
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `ac-toast ${type}`;
+            const icons = { success: '\u2713', error: '\u2715', warning: '\u26a0', info: '\u2139' };
+            toast.innerHTML = `<span>${icons[type] || '\u2139'}</span><span style="flex:1">${escH(message)}</span><button class="ac-toast-close" onclick="this.parentElement.remove()">\u00d7</button>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'toastOut 0.3s ease-in forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+        window._showToast = showToast;
+
+        const API_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:5000/api'
+            : window.location.origin + '/api';
+
+        // Try all possible token keys used across the app
+        const authToken = localStorage.getItem('recruiter_token')
+            || localStorage.getItem('admin_token')
+            || localStorage.getItem('authToken')
+            || localStorage.getItem('companyToken')
+            || localStorage.getItem('token');
+
+        if (!authToken) {
+            showToast('Session expired. Please log in again.', 'error', 5000);
+            setTimeout(() => { window.location.href = '/'; }, 2000);
+        }
+
+        async function apiFetch(url, options = {}) {
+            const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` };
+            // Merge headers properly — don't let spread overwrite them
+            if (options.headers) {
+                Object.assign(headers, options.headers);
+            }
+            const fetchOptions = { ...options, headers };
+            return fetch(`${API_URL}${url}`, fetchOptions);
+        }
+
+        // ── Tab Switching ──
+        window.switchTab = function(tab) {
+            document.querySelectorAll('.ac-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.ac-tab-content').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (tab === 'configs') { document.getElementById('tabConfigs').classList.add('active'); loadConfigs(); }
+            if (tab === 'dashboard') { document.getElementById('tabDashboard').classList.add('active'); loadDashboard(); }
+            if (tab === 'sessions') { document.getElementById('tabSessions').classList.add('active'); loadSessions(); }
+        };
+
+        // ── Load Configs ──
+        async function loadConfigs() {
+            try {
+                const resp = await apiFetch('/smart-assessments/configs');
+                const data = await resp.json();
+                const configs = data.configs || [];
+
+                document.getElementById('statsContainer').innerHTML = `
+                    <div class="ac-stat"><div class="ac-stat-label">Total Assessments</div><div class="ac-stat-value">${configs.length}</div></div>
+                    <div class="ac-stat"><div class="ac-stat-label">Active</div><div class="ac-stat-value">${configs.filter(c => c.is_active).length}</div></div>
+                    <div class="ac-stat"><div class="ac-stat-label">Total Sessions</div><div class="ac-stat-value">${configs.reduce((s, c) => s + (c.sessions_count || 0), 0)}</div></div>
+                `;
+
+                if (configs.length === 0) {
+                    document.getElementById('configsContainer').innerHTML = `
+                        <div class="ac-empty" style="grid-column:1/-1;">
+                            <div style="font-size:64px;">📋</div>
+                            <h3>No Assessments Yet</h3>
+                            <p>Create your first AI-powered assessment to get started.</p>
+                            <button class="ac-btn ac-btn-primary ac-btn-lg" onclick="openCreateModal()" style="margin-top:16px;">+ Create Assessment</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                document.getElementById('configsContainer').innerHTML = configs.map(c => `
+                    <div class="ac-config-card">
+                        <h3>${escH(c.title)}</h3>
+                        <p style="color:var(--ac-muted);font-size:13px;margin:0 0 8px;">${escH(c.description || '')}</p>
+                        <div class="ac-config-meta">
+                            <span class="ac-tag" style="background:#ede9fe;color:#7c3aed;">${escH(c.job_role)}</span>
+                            ${(c.question_types || []).map(t => `<span class="ac-tag">${t}</span>`).join('')}
+                        </div>
+                        <div style="font-size:13px;">
+                            <span>📝 ${c.total_questions} questions</span> •
+                            <span>⏱ ${c.duration_minutes} min</span> •
+                            <span>🎯 ${c.passing_score}% to pass</span>
+                        </div>
+                        <div style="font-size:12px;margin-top:4px;color:var(--ac-muted);">
+                            Difficulty: Easy ${c.difficulty_mix?.easy || 30}% / Medium ${c.difficulty_mix?.medium || 50}% / Hard ${c.difficulty_mix?.hard || 20}%
+                        </div>
+                        <div class="ac-config-stats">
+                            <span>📊 ${c.sessions_count || 0} sessions</span>
+                            <span>⭐ ${c.average_score ? c.average_score.toFixed(1) + '%' : '-'} avg</span>
+                        </div>
+                        <div class="ac-config-actions">
+                            <button class="ac-btn ac-btn-outline" onclick="editConfig('${c._id}')">✏️ Edit</button>
+                            <button class="ac-btn ac-btn-outline" onclick="viewAnalytics('${c._id}')">📊 Analytics</button>
+                            <button class="ac-btn ac-btn-danger" onclick="deleteConfig('${c._id}')">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('configsContainer').innerHTML = `<div class="ac-empty"><h3>Error loading configs</h3><p>${e.message}</p></div>`;
+            }
+        }
+
+        // ── Load Dashboard ──
+        async function loadDashboard() {
+            try {
+                const resp = await apiFetch('/smart-assessments/dashboard');
+                const d = await resp.json();
+
+                let topHTML = d.top_performers && d.top_performers.length > 0 ? `
+                    <table class="ac-table">
+                        <thead><tr><th>Candidate</th><th>Score</th><th>Verdict</th></tr></thead>
+                        <tbody>
+                            ${d.top_performers.map(p => `
+                                <tr>
+                                    <td><strong>${escH(p.candidate_name)}</strong><br><small style="color:var(--ac-muted);">${escH(p.candidate_email)}</small></td>
+                                    <td><strong>${p.score}%</strong></td>
+                                    <td><span class="ac-verdict-${p.verdict}">${p.verdict.toUpperCase()}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<p style="color:var(--ac-muted);text-align:center;">No data yet</p>';
+
+                let recentHTML = d.recent_sessions && d.recent_sessions.length > 0 ? `
+                    <table class="ac-table">
+                        <thead><tr><th>Candidate</th><th>Assessment</th><th>Score</th><th>Verdict</th><th>Date</th></tr></thead>
+                        <tbody>
+                            ${d.recent_sessions.map(s => `
+                                <tr>
+                                    <td>${escH(s.candidate_name)}</td>
+                                    <td>${escH(s.assessment_title)}</td>
+                                    <td><strong>${s.score}%</strong></td>
+                                    <td><span class="ac-verdict-${s.verdict}">${s.verdict.toUpperCase()}</span></td>
+                                    <td style="font-size:12px;color:var(--ac-muted);">${new Date(s.completed_at).toLocaleDateString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<p style="color:var(--ac-muted);text-align:center;">No sessions yet</p>';
+
+                document.getElementById('dashboardContainer').innerHTML = `
+                    <div class="ac-stats">
+                        <div class="ac-stat"><div class="ac-stat-label">Total Assessments</div><div class="ac-stat-value">${d.total_configs || 0}</div></div>
+                        <div class="ac-stat"><div class="ac-stat-label">Total Sessions</div><div class="ac-stat-value">${d.total_sessions || 0}</div></div>
+                        <div class="ac-stat"><div class="ac-stat-label">Average Score</div><div class="ac-stat-value">${d.average_score || 0}%</div></div>
+                        <div class="ac-stat"><div class="ac-stat-label">Pass Rate</div><div class="ac-stat-value">${d.pass_rate || 0}%</div></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+                        <div style="background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                            <h3 style="margin:0 0 8px;">🏆 Top Performers</h3>
+                            ${topHTML}
+                        </div>
+                        <div style="background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                            <h3 style="margin:0 0 8px;">📅 Recent Sessions</h3>
+                            ${recentHTML}
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('dashboardContainer').innerHTML = `<div class="ac-empty"><h3>Error</h3><p>${e.message}</p></div>`;
+            }
+        }
+
+        // ── Load Sessions (recent for review) ──
+        async function loadSessions() {
+            try {
+                const resp = await apiFetch('/smart-assessments/dashboard');
+                const d = await resp.json();
+                const sessions = d.recent_sessions || [];
+
+                if (sessions.length === 0) {
+                    document.getElementById('sessionsContainer').innerHTML = `<div class="ac-empty"><h3>No sessions yet</h3></div>`;
+                    return;
+                }
+
+                document.getElementById('sessionsContainer').innerHTML = `
+                    <table class="ac-table" style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                        <thead><tr><th>Candidate</th><th>Assessment</th><th>Score</th><th>Verdict</th><th>Date</th><th>Action</th></tr></thead>
+                        <tbody>
+                            ${sessions.map(s => `
+                                <tr>
+                                    <td><strong>${escH(s.candidate_name)}</strong></td>
+                                    <td>${escH(s.assessment_title)}</td>
+                                    <td><strong>${s.score}%</strong></td>
+                                    <td><span class="ac-verdict-${s.verdict}">${s.verdict.toUpperCase()}</span></td>
+                                    <td style="font-size:12px;">${new Date(s.completed_at).toLocaleDateString()}</td>
+                                    <td><button class="ac-btn ac-btn-outline" onclick="reviewSession('${s.session_id}')">👁 Review</button></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (e) {
+                document.getElementById('sessionsContainer').innerHTML = `<div class="ac-empty"><h3>Error</h3><p>${e.message}</p></div>`;
+            }
+        }
+
+        // ── Modal Handling ──
+        window.openCreateModal = function() {
+            document.getElementById('modalTitle').textContent = 'Create Assessment';
+            document.getElementById('cfgEditId').value = '';
+            document.getElementById('configForm').reset();
+            // Reset checkboxes
+            document.querySelectorAll('#cfgQuestionTypes .ac-checkbox-item').forEach(el => {
+                el.classList.toggle('selected', el.dataset.value === 'mcq' || el.dataset.value === 'coding');
+            });
+            document.getElementById('cfgEasy').value = 30;
+            document.getElementById('cfgMedium').value = 50;
+            document.getElementById('cfgHard').value = 20;
+            updateDiffLabel();
+            document.getElementById('cfgAiGen').checked = true;
+            document.getElementById('cfgTrivia').checked = true;
+            document.getElementById('cfgRandomize').checked = true;
+            document.getElementById('cfgShowResults').checked = true;
+            document.getElementById('configModal').classList.add('active');
+        };
+
+        window.closeModal = function() {
+            document.getElementById('configModal').classList.remove('active');
+        };
+
+        window.toggleCheckbox = function(el) {
+            el.classList.toggle('selected');
+        };
+
+        window.updateDiffLabel = function() {
+            document.getElementById('cfgEasyVal').textContent = document.getElementById('cfgEasy').value + '%';
+            document.getElementById('cfgMediumVal').textContent = document.getElementById('cfgMedium').value + '%';
+            document.getElementById('cfgHardVal').textContent = document.getElementById('cfgHard').value + '%';
+        };
+
+        window.saveConfig = async function() {
+            const selectedTypes = Array.from(document.querySelectorAll('#cfgQuestionTypes .ac-checkbox-item.selected')).map(e => e.dataset.value);
+            const topics = document.getElementById('cfgTopics').value.split(',').map(t => t.trim()).filter(Boolean);
+
+            const payload = {
+                title: document.getElementById('cfgTitle').value,
+                job_role: document.getElementById('cfgJobRole').value,
+                description: document.getElementById('cfgDescription').value,
+                question_types: selectedTypes.length > 0 ? selectedTypes : ['mcq'],
+                topics: topics.length > 0 ? topics : ['general'],
+                difficulty_mix: {
+                    easy: parseInt(document.getElementById('cfgEasy').value),
+                    medium: parseInt(document.getElementById('cfgMedium').value),
+                    hard: parseInt(document.getElementById('cfgHard').value),
+                },
+                total_questions: parseInt(document.getElementById('cfgTotalQuestions').value) || 15,
+                duration_minutes: parseInt(document.getElementById('cfgDuration').value) || 60,
+                passing_score: parseInt(document.getElementById('cfgPassingScore').value) || 70,
+                coding_language: document.getElementById('cfgLanguage').value,
+                experience_level: document.getElementById('cfgExperienceLevel').value,
+                max_attempts: parseInt(document.getElementById('cfgMaxAttempts').value) || 1,
+                time_per_question: parseInt(document.getElementById('cfgTimePerQ').value) || 0,
+                use_ai_generation: document.getElementById('cfgAiGen').checked,
+                use_trivia_supplement: document.getElementById('cfgTrivia').checked,
+                randomize: document.getElementById('cfgRandomize').checked,
+                show_results: document.getElementById('cfgShowResults').checked,
+            };
+
+            if (!payload.title || !payload.job_role) { showToast('Title and Job Role are required.', 'warning'); return; }
+
+            const editId = document.getElementById('cfgEditId').value;
+            const url = editId ? `/smart-assessments/configs/${editId}` : '/smart-assessments/configs';
+            const method = editId ? 'PUT' : 'POST';
+
+            try {
+                const resp = await apiFetch(url, { method, body: JSON.stringify(payload) });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || 'Failed to save');
+                closeModal();
+                showToast('Assessment saved successfully!', 'success');
+                loadConfigs();
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            }
+        };
+
+        window.editConfig = async function(id) {
+            try {
+                const resp = await apiFetch(`/smart-assessments/configs/${id}`);
+                const data = await resp.json();
+                const c = data.config;
+
+                document.getElementById('modalTitle').textContent = 'Edit Assessment';
+                document.getElementById('cfgEditId').value = id;
+                document.getElementById('cfgTitle').value = c.title || '';
+                document.getElementById('cfgJobRole').value = c.job_role || '';
+                document.getElementById('cfgDescription').value = c.description || '';
+                document.getElementById('cfgTopics').value = (c.topics || []).join(', ');
+                document.getElementById('cfgTotalQuestions').value = c.total_questions || 15;
+                document.getElementById('cfgDuration').value = c.duration_minutes || 60;
+                document.getElementById('cfgPassingScore').value = c.passing_score || 70;
+                document.getElementById('cfgLanguage').value = c.coding_language || 'python';
+                document.getElementById('cfgExperienceLevel').value = c.experience_level || 'mid';
+                document.getElementById('cfgMaxAttempts').value = c.max_attempts || 1;
+                document.getElementById('cfgTimePerQ').value = c.time_per_question || 0;
+                document.getElementById('cfgAiGen').checked = c.use_ai_generation !== false;
+                document.getElementById('cfgTrivia').checked = c.use_trivia_supplement !== false;
+                document.getElementById('cfgRandomize').checked = c.randomize !== false;
+                document.getElementById('cfgShowResults').checked = c.show_results !== false;
+
+                document.getElementById('cfgEasy').value = c.difficulty_mix?.easy || 30;
+                document.getElementById('cfgMedium').value = c.difficulty_mix?.medium || 50;
+                document.getElementById('cfgHard').value = c.difficulty_mix?.hard || 20;
+                updateDiffLabel();
+
+                document.querySelectorAll('#cfgQuestionTypes .ac-checkbox-item').forEach(el => {
+                    el.classList.toggle('selected', (c.question_types || []).includes(el.dataset.value));
+                });
+
+                document.getElementById('configModal').classList.add('active');
+            } catch (e) {
+                showToast('Error loading config: ' + e.message, 'error');
+            }
+        };
+
+        window.deleteConfig = async function(id) {
+            if (!confirm('Delete this assessment configuration?')) return;
+            try {
+                await apiFetch(`/smart-assessments/configs/${id}`, { method: 'DELETE' });
+                showToast('Assessment deleted.', 'success');
+                loadConfigs();
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            }
+        };
+
+        window.viewAnalytics = async function(id) {
+            try {
+                const resp = await apiFetch(`/smart-assessments/configs/${id}/analytics`);
+                const d = await resp.json();
+                const analyticsHtml = `<strong>Analytics</strong><br>Sessions: ${d.total_sessions} &bull; Avg: ${d.average_score}% &bull; Pass Rate: ${d.pass_rate}% &bull; Avg Time: ${d.average_time_minutes}min`;
+                showToast(analyticsHtml, 'info', 8000);
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            }
+        };
+
+        window.reviewSession = async function(sessionId) {
+            try {
+                const resp = await apiFetch(`/smart-assessments/sessions/${sessionId}/review`);
+                const data = await resp.json();
+                const s = data.session;
+
+                const w = window.open('', '_blank');
+                w.document.write(`<html><head><title>Session Review</title><style>body{font-family:sans-serif;padding:24px;max-width:900px;margin:auto;}pre{background:#f1f5f9;padding:12px;border-radius:8px;overflow-x:auto;}.pass{color:#10b981;}.fail{color:#ef4444;}</style></head><body>`);
+                w.document.write(`<h1>📋 Assessment Review</h1>`);
+                w.document.write(`<p><strong>Candidate:</strong> ${escH(s.candidate_name)} (${escH(s.candidate_email)})</p>`);
+                w.document.write(`<p><strong>Assessment:</strong> ${escH(s.config_title)} — ${escH(s.config_job_role)}</p>`);
+                w.document.write(`<p><strong>Score:</strong> ${s.final_percentage}% — <strong>${s.verdict?.toUpperCase()}</strong></p>`);
+                w.document.write(`<hr>`);
+
+                (s.questions || []).forEach((q, i) => {
+                    const score = s.question_scores?.[q.id];
+                    w.document.write(`<h3>Q${i+1}: ${escH(q.question?.substring(0,100))}...</h3>`);
+                    w.document.write(`<p>Type: ${q.type} | Difficulty: ${q.difficulty} | Score: ${score?.score || 0}/${score?.max_score || 0}</p>`);
+                    if (s.answers?.[q.id]) {
+                        w.document.write(`<p><strong>Answer:</strong></p><pre>${escH(String(s.answers[q.id]).substring(0, 2000))}</pre>`);
+                    }
+                    w.document.write(`<p class="${score?.is_correct ? 'pass' : 'fail'}">${score?.feedback || ''}</p><hr>`);
+                });
+
+                w.document.write(`</body></html>`);
+                w.document.close();
+            } catch (e) {
+                showToast('Error loading session: ' + e.message, 'error');
+            }
+        };
+
+        // Boot
+        loadConfigs();
+    })();
+    </script>
+</body>
+</html>

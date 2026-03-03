@@ -46,7 +46,7 @@ services:
     networks:
       - smart_hiring_network
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -89,14 +89,14 @@ services:
         PYTHON_VERSION: "3.11"
     container_name: smart_hiring_backend
     restart: unless-stopped
-    
+
     # ========================================================================
     # CRITICAL: env_file loads ALL environment variables from .env
     # This is the PRIMARY method for injecting secrets into containers
     # ========================================================================
     env_file:
       - .env
-    
+
     # ========================================================================
     # OVERRIDE specific variables for Docker networking
     # These take precedence over .env file values
@@ -106,42 +106,42 @@ services:
       APP_ENV: production
       APP_NAME: SmartHiringSystem
       PORT: 8000
-      
+
       # Security (these MUST be in .env file)
       SECRET_KEY: ${SECRET_KEY}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      
+
       # Database - Docker service names
       MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-changeme_mongo_password}@mongodb:27017/${DB_NAME:-smart_hiring_db}?authSource=admin
       DB_NAME: ${DB_NAME:-smart_hiring_db}
-      
+
       # Redis - Docker service name
       REDIS_URL: redis://:${REDIS_PASSWORD:-changeme_redis_password}@redis:6379/0
-      
+
       # Logging
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      
+
       # Admin credentials
       ADMIN_USER: ${ADMIN_USER:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme_admin_password}
-      
+
       # CORS
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8000}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      
+
       # Pythonpath to ensure config/ is found
       PYTHONPATH: /app
       PYTHONUNBUFFERED: 1
       PYTHONDONTWRITEBYTECODE: 1
-    
+
     ports:
       - "${BACKEND_PORT:-8000}:8000"
-    
+
     volumes:
       - backend_logs:/app/logs
       - backend_uploads:/app/smart_hiring_resumes
       - backend_models:/app/ml_models
-    
+
     # ========================================================================
     # CRITICAL: Proper dependency chain ensures services start in order
     # ========================================================================
@@ -150,34 +150,25 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    
+
     networks:
       - smart_hiring_network
-    
+
     # ========================================================================
     # WORKING DIRECTORY: Matches WORKDIR in Dockerfile
     # ========================================================================
     working_dir: /app
-    
+
     # ========================================================================
-    # COMMAND: Gunicorn with proper worker configuration
+    # COMMAND: Gunicorn with eventlet for Flask-SocketIO / WebSocket support
+    # Single worker with greenlet concurrency — eventlet does NOT support
+    # multiple workers. --max-requests recycles the worker automatically.
     # ========================================================================
     command: >
-      gunicorn
-      --bind 0.0.0.0:8000
-      --workers 4
-      --worker-class sync
-      --timeout 120
-      --keep-alive 5
-      --max-requests 1000
-      --max-requests-jitter 100
-      --access-logfile -
-      --error-logfile -
-      --log-level info
-      backend.wsgi:app
-    
+      gunicorn --bind 0.0.0.0:8000 --worker-class eventlet --workers 1 --worker-connections 1000 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile - --log-level info backend.wsgi:app
+
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -194,70 +185,65 @@ services:
         PYTHON_VERSION: "3.11"
     container_name: smart_hiring_worker
     restart: unless-stopped
-    
+
     # ========================================================================
     # CRITICAL: Worker MUST have EXACT same env vars as backend
     # ========================================================================
     env_file:
       - .env
-    
+
     environment:
       # Application
       APP_ENV: production
       APP_NAME: SmartHiringSystem
-      
+
       # Security (MUST match backend)
       SECRET_KEY: ${SECRET_KEY}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      
+
       # Database
       MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-changeme_mongo_password}@mongodb:27017/${DB_NAME:-smart_hiring_db}?authSource=admin
       DB_NAME: ${DB_NAME:-smart_hiring_db}
-      
+
       # Redis
       REDIS_URL: redis://:${REDIS_PASSWORD:-changeme_redis_password}@redis:6379/0
-      
+
       # Logging
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      
+
       # Celery specific
       CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-changeme_redis_password}@redis:6379/0
       CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-changeme_redis_password}@redis:6379/0
-      
+
       # Python
       PYTHONPATH: /app
       PYTHONUNBUFFERED: 1
       PYTHONDONTWRITEBYTECODE: 1
-    
+
     volumes:
       - backend_logs:/app/logs
       - backend_uploads:/app/smart_hiring_resumes
       - backend_models:/app/ml_models
-    
+
     depends_on:
       mongodb:
         condition: service_healthy
       redis:
         condition: service_healthy
-    
+
     networks:
       - smart_hiring_network
-    
+
     working_dir: /app
-    
+
     # ========================================================================
     # COMMAND: Celery worker with autoscaling
     # ========================================================================
     command: >
-      celery -A backend.celery_config worker
-      --loglevel=info
-      --concurrency=4
-      --max-tasks-per-child=100
-      --time-limit=300
-      --soft-time-limit=240
-    
+      celery -A backend.celery_config worker --loglevel=info --concurrency=4 --max-tasks-per-child=100 --time-limit=300 --soft-time-limit=240
+
     healthcheck:
-      test: ["CMD-SHELL", "celery -A backend.celery_config inspect ping -d celery@$HOSTNAME"]
+      test: [ "CMD-SHELL", "celery -A backend.celery_config inspect ping -d celery@$HOSTNAME" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -272,22 +258,22 @@ services:
       dockerfile: deploy/Dockerfile.frontend
     container_name: smart_hiring_frontend
     restart: unless-stopped
-    
+
     environment:
       REACT_APP_API_URL: http://backend:8000
       REACT_APP_API_BASE_URL: ${FRONTEND_API_URL:-http://localhost:8000}
-    
+
     ports:
       - "${FRONTEND_PORT:-3000}:80"
-    
+
     depends_on:
       - backend
-    
+
     networks:
       - smart_hiring_network
-    
+
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/" ]
       interval: 30s
       timeout: 5s
       retries: 3

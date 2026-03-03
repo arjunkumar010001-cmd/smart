@@ -1,14 +1,24 @@
 // Company Dashboard Module
+// escapeHtml, esc, normalizeStatus, anonymizeId, getStatusIcon,
+// getScoreClass, createModal, closeTopModal — all from shared-utils.js
 
-// Escape HTML to prevent XSS attacks
-function escapeHtmlCompany(text) {
-    if (text === null || text === undefined) return '';
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
-}
-// Short alias used throughout templates
-const esc = escapeHtmlCompany;
+// ─── Global ESC-key & backdrop-click handler for all company modals ───
+(function () {
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            const modals = document.querySelectorAll('.modal.show');
+            if (modals.length > 0) {
+                modals[modals.length - 1].remove();
+                e.preventDefault();
+            }
+        }
+    });
+    document.addEventListener('click', function (e) {
+        if (e.target.classList && e.target.classList.contains('modal') && e.target.classList.contains('show')) {
+            e.target.remove();
+        }
+    });
+})();
 
 function loadCompanyDashboard() {
     console.log('Loading Company Dashboard...', currentUser);
@@ -39,12 +49,13 @@ function loadCompanyDashboard() {
                 <span>Company Portal</span>
             </div>
             <div class="navbar-menu">
-                <button class="nav-link active" onclick="switchCompanyTab('overview')">📊 Dashboard</button>
-                <button class="nav-link" onclick="switchCompanyTab('jobs')">💼 My Jobs</button>
-                <button class="nav-link" onclick="switchCompanyTab('candidates')">🎯 Candidates</button>
-                <button class="nav-link" onclick="switchCompanyTab('applications')">📋 Applications</button>
-                <button class="nav-link" onclick="switchCompanyTab('analytics')">📈 Analytics</button>
-                <button class="nav-link" onclick="switchCompanyTab('audit')">🛡️ Fairness Audit</button>
+                <button class="nav-link active" onclick="switchCompanyTab('overview', event)">📊 Dashboard</button>
+                <button class="nav-link" onclick="switchCompanyTab('jobs', event)">💼 My Jobs</button>
+                <button class="nav-link" onclick="switchCompanyTab('candidates', event)">🎯 Candidates</button>
+                <button class="nav-link" onclick="switchCompanyTab('applications', event)">📋 Applications</button>
+                <button class="nav-link" onclick="switchCompanyTab('analytics', event)">📈 Analytics</button>
+                <button class="nav-link" onclick="switchCompanyTab('assessments', event)">🧠 Assessments</button>
+                <button class="nav-link" onclick="switchCompanyTab('audit', event)">🛡️ Fairness Audit</button>
             </div>
             <div class="navbar-actions">
                 <button class="theme-toggle-navbar" aria-label="Toggle Dark Mode" onclick="toggleTheme()">
@@ -61,6 +72,7 @@ function loadCompanyDashboard() {
             <div id="companyCandidates" class="tab-content"></div>
             <div id="companyApplications" class="tab-content"></div>
             <div id="companyAnalytics" class="tab-content"></div>
+            <div id="companyAssessments" class="tab-content"></div>
             <div id="companyAudit" class="tab-content"></div>
         </div>
     `;
@@ -70,13 +82,14 @@ function loadCompanyDashboard() {
     loadCompanyOverview();
 }
 
-function switchCompanyTab(tab) {
+function switchCompanyTab(tab, evt) {
     console.log('Switching to company tab:', tab);
     document.querySelectorAll('#companyDashboard .nav-link').forEach(l => l.classList.remove('active'));
     document.querySelectorAll('#companyDashboard .tab-content').forEach(t => t.classList.remove('active'));
 
-    if (event && event.target) {
-        event.target.classList.add('active');
+    const e = evt || window.event;
+    if (e && e.target) {
+        e.target.classList.add('active');
     }
 
     // Show the corresponding tab content
@@ -86,6 +99,7 @@ function switchCompanyTab(tab) {
         'candidates': 'companyCandidates',
         'applications': 'companyApplications',
         'analytics': 'companyAnalytics',
+        'assessments': 'companyAssessments',
         'audit': 'companyAudit'
     };
 
@@ -100,11 +114,12 @@ function switchCompanyTab(tab) {
         case 'candidates': loadCompanyCandidates(); break;
         case 'applications': loadCompanyApplications(); break;
         case 'analytics': loadCompanyAnalytics(); break;
+        case 'assessments': loadCompanyAssessments(); break;
         case 'audit': loadCompanyAudit(); break;
     }
 }
 
-async function loadCompanyOverview() {
+async function loadCompanyOverview(retryCount = 0) {
     console.log('Loading company overview...');
     const container = document.getElementById('companyOverview');
     if (!container) {
@@ -119,9 +134,14 @@ async function loadCompanyOverview() {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
 
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
         const data = await response.json();
 
         container.innerHTML = `
+            <div id="flanT5Notification" class="flan-t5-banner" style="display:none;"></div>
             <div class="content-header">
                 <h2>📊 Company Dashboard</h2>
             </div>
@@ -161,8 +181,26 @@ async function loadCompanyOverview() {
                 <button class="btn btn-primary" onclick="switchCompanyTab('jobs')">Post a Job</button>
             </div>
         `;
+
+        // Load Flan-T5 status notification
+        loadFlanT5Status();
+
     } catch (error) {
-        container.innerHTML = '<div class="empty-state">Failed to load dashboard</div>';
+        console.error('Dashboard load error:', error);
+        // Retry once on failure
+        if (retryCount < 2) {
+            console.log(`Retrying dashboard load (attempt ${retryCount + 2})...`);
+            setTimeout(() => loadCompanyOverview(retryCount + 1), 1000);
+        } else {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                    <h3>Failed to load dashboard</h3>
+                    <p>Please check your connection and try again.</p>
+                    <button class="btn btn-primary" onclick="loadCompanyOverview()">🔄 Retry</button>
+                </div>
+            `;
+        }
     }
 }
 
@@ -222,6 +260,9 @@ async function loadCompanyJobs() {
 function showJobModal() {
     const modal = document.createElement('div');
     modal.className = 'modal show';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Post new job');
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
@@ -326,7 +367,6 @@ async function submitJob(e) {
     } catch (error) {
         console.error('Error posting job:', error);
         alert('Failed to post job: ' + error.message);
-        alert('Failed to post job: ' + error.message);
     }
 }
 
@@ -425,27 +465,7 @@ let selectedApplications = new Set();
 let currentStatusFilter = 'all';
 let blindMode = true; // Default ON for fairness (hide PII)
 
-// Normalize status values (handles 'submitted' -> 'pending', case mismatches)
-function normalizeStatus(status) {
-    const s = (status || 'pending').toLowerCase().trim();
-    const statusMap = {
-        'submitted': 'pending',
-        'applied': 'pending',
-        'review': 'pending',
-        'under_review': 'pending',
-        'pending': 'pending',
-        'shortlisted': 'shortlisted',
-        'interviewed': 'interviewed',
-        'hired': 'hired',
-        'rejected': 'rejected'
-    };
-    return statusMap[s] || 'pending';
-}
-
-// Generate anonymized candidate ID from app _id
-function anonymizeId(id) {
-    return 'SH-' + (id || '000000').slice(-6).toUpperCase();
-}
+// normalizeStatus, anonymizeId — provided by shared-utils.js
 
 async function loadCompanyApplications() {
     const container = document.getElementById('companyApplications');
@@ -568,9 +588,10 @@ async function loadCompanyApplications() {
                         ${filteredApps.map(app => `
                             <tr class="application-row ${selectedApplications.has(app._id) ? 'selected' : ''}">
                                 <td>
-                                    <input type="checkbox" 
+                                    <input type="checkbox"
+                                           data-app-id="${app._id}"
                                            ${selectedApplications.has(app._id) ? 'checked' : ''}
-                                           onchange="toggleApplicationSelection('${app._id}', this.checked)">
+                                           onchange="toggleApplicationSelection(this.dataset.appId, this.checked)">
                                 </td>
                                 <td>
                                     <div class="candidate-info">
@@ -641,27 +662,13 @@ async function loadCompanyApplications() {
     }
 }
 
-function getStatusIcon(status) {
-    const icons = {
-        pending: '🔵',
-        shortlisted: '💛',
-        interviewed: '🟣',
-        hired: '💚',
-        rejected: '❌'
-    };
-    return icons[status] || '⚪';
-}
-
-function getScoreClass(score) {
-    if (score >= 80) return 'score-high';
-    if (score >= 60) return 'score-medium';
-    return 'score-low';
-}
+// getStatusIcon, getScoreClass — provided by shared-utils.js
 
 function toggleSelectAll(checked) {
-    const checkboxes = document.querySelectorAll('.application-row input[type="checkbox"]');
+    const checkboxes = document.querySelectorAll('.application-row input[type="checkbox"][data-app-id]');
     checkboxes.forEach(cb => {
-        const appId = cb.onchange.toString().match(/'([^']+)'/)[1];
+        const appId = cb.dataset.appId;
+        if (!appId) return;
         if (checked) {
             selectedApplications.add(appId);
             cb.checked = true;
@@ -718,6 +725,9 @@ async function updateApplicationStatus(appId, newStatus) {
     // Show confirmation modal
     const modal = document.createElement('div');
     modal.className = 'modal show';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Confirm status update');
     const isInterview = newStatus === 'interviewed';
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 500px;">
@@ -733,8 +743,22 @@ async function updateApplicationStatus(appId, newStatus) {
                     <p style="margin:4px 0 0; font-size: 13px; color: #6366F1;">An interview room link will be auto-generated and sent to the candidate.</p>
                 </div>
                 <div class="form-group">
+                    <label>Interview Type:</label>
+                    <select id="interviewType" class="form-control">
+                        <option value="ai_automated">🤖 AI Automated Interview</option>
+                        <option value="live">👤 Live Interview (Human Panel)</option>
+                        <option value="hybrid">🔄 Hybrid (AI + Human)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Interview Date & Time (optional):</label>
                     <input type="datetime-local" id="interviewDate" class="form-control" />
+                </div>
+                ` : ''}
+                ${newStatus === 'hired' ? `
+                <div style="background: #f0fdf4; padding: 12px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #10b981;">
+                    <p style="margin:0; font-size: 14px; color: #166534;"><strong>🎉 Onboarding Workflow</strong></p>
+                    <p style="margin:4px 0 0; font-size: 13px; color: #15803d;">An onboarding checklist will be generated and shared with the candidate automatically.</p>
                 </div>
                 ` : ''}
                 <div class="form-group">
@@ -754,10 +778,12 @@ async function updateApplicationStatus(appId, newStatus) {
 async function confirmStatusUpdate(appId, newStatus) {
     const note = document.getElementById('statusNote')?.value || '';
     const interviewDate = document.getElementById('interviewDate')?.value || '';
+    const interviewType = document.getElementById('interviewType')?.value || 'ai_automated';
     const modal = document.querySelector('.modal');
 
     const payload = { status: newStatus, note: note };
     if (newStatus === 'interviewed') {
+        payload.interview_type = interviewType;
         if (interviewDate) payload.interview_date = interviewDate;
     }
 
@@ -797,6 +823,9 @@ function bulkUpdateStatus() {
 
     const modal = document.createElement('div');
     modal.className = 'modal show';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Bulk status update');
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
@@ -859,6 +888,9 @@ async function confirmBulkUpdate() {
 async function viewJobCandidates(jobId) {
     const modal = document.createElement('div');
     modal.className = 'modal show';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Ranked candidates');
     modal.innerHTML = '<div class="modal-content"><div class="loading">Loading ranked candidates...</div></div>';
     document.body.appendChild(modal);
 
@@ -868,7 +900,8 @@ async function viewJobCandidates(jobId) {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to load candidates');
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || `Server returned ${response.status}`);
         }
 
         const data = await response.json();
@@ -972,15 +1005,20 @@ async function viewJobCandidates(jobId) {
                                 </div>
                                 
                                 <!-- Action Buttons -->
-                                <div style="display: flex; gap: 8px; margin-top: 16px;">
-                                    <button class="btn btn-secondary" onclick="viewApplicationDetails('${candidate.application_id}')" style="flex: 1;">
+                                <div style="display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap;">
+                                    <button class="btn btn-secondary" onclick="viewApplicationDetails('${candidate.application_id}')" style="flex: 1; min-width: 140px;">
                                         📄 View Full Profile
                                     </button>
                                     <button class="btn ${candidate.status === 'pending' ? 'btn-primary' : 'btn-secondary'}" 
                                             onclick="updateApplicationStatus('${candidate.application_id}', 'shortlisted')" 
-                                            style="flex: 1;">
+                                            style="flex: 1; min-width: 120px;">
                                         ⭐ ${candidate.status === 'shortlisted' ? 'Shortlisted' : 'Shortlist'}
                                     </button>
+                                    ${candidate.skills && candidate.skills.missing && candidate.skills.missing.length > 0 ? `
+                                    <button class="btn btn-primary" style="flex: 1; min-width: 160px; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); border: none;" 
+                                            onclick="event.stopPropagation(); launchFlanT5Interview('${jobId}', '${candidate.candidate_id}', '${esc(candidate.candidate_name || 'Candidate')}')">
+                                        🧠 AI Interview (${candidate.skills.missing.length} gaps)
+                                    </button>` : ''}
                                     ${candidate.resume_uploaded ?
                 `<button class="btn btn-secondary" onclick="downloadResume('${candidate.application_id}')">
                                             📥 Resume
@@ -1014,17 +1052,8 @@ async function viewJobCandidates(jobId) {
         `;
     } catch (error) {
         console.error('Error loading candidates:', error);
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Error</h3>
-                    <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-error">Failed to load candidates. Please try again.</div>
-                </div>
-            </div>
-        `;
+        modal.remove();
+        showErrorModal(error.message || 'Failed to load candidates. Please try again.');
     }
 }
 
@@ -1035,37 +1064,228 @@ async function viewApplicationDetails(appId) {
         });
 
         if (!response.ok) {
+            if (response.status === 403) {
+                console.warn('Application history: permission denied or session expired');
+                showNotification('Session may have expired. Please log in again.', 'warning');
+                return;
+            }
             throw new Error('Failed to load application details');
         }
 
         const data = await response.json();
+        const app = data.application || data;
 
-        // Show modal with application details
+        // Try to fetch video interview session for this application
+        let interviewInfo = '';
+        try {
+            const candidateId = app.candidate_id || '';
+            if (candidateId) {
+                const viResp = await fetch(`${API_URL}/video-interview/candidate/${candidateId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (viResp.ok) {
+                    const viData = await viResp.json();
+                    const sessions = (viData.sessions || []).filter(s =>
+                        s.job_id === app.job_id || s.application_id === appId
+                    );
+                    if (sessions.length > 0) {
+                        interviewInfo = sessions.map(s => {
+                            const typeLabel = { ai_automated: '🤖 AI', live: '👤 Live', hybrid: '🔄 Hybrid' }[s.interview_type] || s.interview_type;
+                            const hasRecording = s.recording_available || s.recordings?.length > 0;
+                            const malpractice = s.malpractice_events || s.malpractice_flags || [];
+                            const malpracticeCount = Array.isArray(malpractice) ? malpractice.length : (malpractice || 0);
+                            const evalScore = s.evaluation_score || s.ai_score;
+                            return `
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-bottom: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 600;">${typeLabel} Interview</span>
+                                    <span class="badge badge-${s.status === 'completed' ? 'success' : s.status === 'in_progress' ? 'warning' : 'info'}">${s.status}</span>
+                                </div>
+                                <div style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px;">
+                                    ${hasRecording ? `<span style="color: #dc2626;">🔴 Recording Available <a href="#" onclick="window.open('${API_URL}/video-interview/download-recording/${s._id || s.session_id}','_blank');return false;" style="color: #4F46E5;">Download</a></span>` :
+                                    `<span style="color: #94a3b8;">⚫ No Recording</span>`}
+                                    ${malpracticeCount > 0 ? `<span style="color: #dc2626; font-weight: 600;">⚠️ ${malpracticeCount} Proctoring Alert${malpracticeCount > 1 ? 's' : ''}</span>` :
+                                    `<span style="color: #10b981;">✅ No Proctoring Issues</span>`}
+                                    ${evalScore ? `<span style="color: #4F46E5; font-weight: 600;">🎯 Score: ${evalScore}%</span>` : ''}
+                                </div>
+                                ${malpracticeCount > 0 && Array.isArray(malpractice) ? `
+                                <details style="margin-top: 8px;">
+                                    <summary style="cursor: pointer; font-size: 12px; color: #dc2626;">View proctoring details</summary>
+                                    <ul style="margin: 6px 0 0 16px; font-size: 12px; color: #6b7280;">
+                                        ${malpractice.slice(0, 10).map(e => `<li>${e.event_type || e.type || e}: ${e.details || ''} ${e.timestamp ? '(' + new Date(e.timestamp).toLocaleTimeString() + ')' : ''}</li>`).join('')}
+                                    </ul>
+                                </details>
+                                ` : ''}
+                            </div>`;
+                        }).join('');
+                    }
+                }
+            }
+        } catch (viErr) {
+            console.warn('Could not fetch interview session info:', viErr);
+        }
+
+        // Fetch smart assessment sessions for this application
+        let smartSessions = [];
+        try {
+            const candidateId = app.candidate_id || '';
+            if (candidateId) {
+                const saResp = await fetch(`${API_URL}/smart-assessments/sessions?candidate_id=${candidateId}&application_id=${appId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (saResp.ok) {
+                    const saData = await saResp.json();
+                    smartSessions = saData.sessions || [];
+                }
+            }
+        } catch (saErr) {
+            console.warn('Could not fetch smart assessment sessions:', saErr);
+        }
+
+        // Build proctoring tab content from smart sessions
+        let proctoringContent = '<p style="color: #94a3b8;">No smart assessment sessions found for this application.</p>';
+        let recordingsContent = '<p style="color: #94a3b8;">No recording available for this application.</p>';
+        let auditContent = '<p style="color: #94a3b8;">No audit report available.</p>';
+
+        if (smartSessions.length > 0) {
+            const latestSession = smartSessions[0];
+            const sid = latestSession.session_id;
+
+            // Proctoring tab
+            const pScore = latestSession.proctoring_score != null ? latestSession.proctoring_score : '—';
+            const pStatus = latestSession.status || 'unknown';
+            const results = latestSession.results || {};
+            proctoringContent = `
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;">
+                        <div style="font-size:12px;color:#64748b;">Assessment Score</div>
+                        <div style="font-size:28px;font-weight:700;color:${(results.percentage || 0) >= 70 ? '#10b981' : (results.percentage || 0) >= 40 ? '#eab308' : '#ef4444'};">${results.percentage || results.final_percentage || '—'}%</div>
+                        <div style="font-size:11px;color:#94a3b8;">${results.verdict || ''}</div>
+                    </div>
+                    <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;">
+                        <div style="font-size:12px;color:#64748b;">Proctoring Score</div>
+                        <div style="font-size:28px;font-weight:700;color:${pScore >= 80 ? '#10b981' : pScore >= 50 ? '#eab308' : '#ef4444'};">${pScore}</div>
+                        <div style="font-size:11px;color:#94a3b8;">/100</div>
+                    </div>
+                    <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;">
+                        <div style="font-size:12px;color:#64748b;">Session Status</div>
+                        <div style="font-size:16px;font-weight:600;margin-top:6px;">
+                            <span class="badge badge-${pStatus === 'completed' ? 'success' : pStatus === 'terminated' ? 'danger' : 'warning'}">${pStatus}</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size:13px;color:#64748b;">
+                    Started: ${latestSession.started_at ? new Date(latestSession.started_at).toLocaleString() : '—'}<br>
+                    ${latestSession.completed_at ? 'Completed: ' + new Date(latestSession.completed_at).toLocaleString() : ''}
+                    ${latestSession.terminated_at ? '<span style="color:#ef4444;">Terminated: ' + new Date(latestSession.terminated_at).toLocaleString() + '</span>' : ''}
+                </div>
+            `;
+
+            // Recordings tab
+            if (latestSession.has_recording) {
+                recordingsContent = `
+                    <div style="margin-bottom:12px;">
+                        <video id="session-recording-player" controls preload="metadata"
+                            style="width:100%;max-height:400px;border-radius:10px;background:#000;"
+                            src="${API_URL}/smart-assessments/sessions/${sid}/recording?token=${authToken}">
+                            Your browser does not support video playback.
+                        </video>
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <a href="${API_URL}/smart-assessments/sessions/${sid}/recording"
+                           onclick="event.preventDefault();downloadRecording('${sid}')"
+                           style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:8px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">
+                           ⬇️ Download Recording
+                        </a>
+                        <span style="font-size:12px;color:#94a3b8;">Session: ${sid.substring(0, 8)}…</span>
+                    </div>
+                `;
+            }
+
+            // Audit report tab
+            auditContent = `
+                <div style="text-align:center;padding:24px;">
+                    <div style="font-size:48px;margin-bottom:12px;">📋</div>
+                    <h4 style="margin:0 0 8px;">Assessment Audit Report</h4>
+                    <p style="color:#64748b;font-size:13px;margin:0 0 20px;">
+                        Comprehensive PDF report with scoring, proctoring events, evidence snapshots, and configuration.
+                    </p>
+                    <div style="display:flex;gap:10px;justify-content:center;">
+                        <button onclick="downloadAuditReport('${sid}', false)"
+                            style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">
+                            📄 Download (Anonymized)
+                        </button>
+                        <button onclick="downloadAuditReport('${sid}', true)"
+                            style="background:#f1f5f9;color:#334155;padding:10px 24px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:13px;">
+                            Download with PII
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show modal with tabbed application details
         const modal = document.createElement('div');
         modal.className = 'modal show';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', 'Application details');
         modal.innerHTML = `
-            <div class="modal-content">
+            <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h3>Application Details</h3>
                     <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
                 </div>
+                <div style="display:flex;gap:0;border-bottom:2px solid #e2e8f0;padding:0 20px;">
+                    <button class="app-detail-tab active" data-tab="overview" onclick="switchAppDetailTab(this,'overview')"
+                        style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#667eea;border-bottom:2px solid #667eea;margin-bottom:-2px;">
+                        📋 Overview
+                    </button>
+                    <button class="app-detail-tab" data-tab="proctoring" onclick="switchAppDetailTab(this,'proctoring')"
+                        style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-bottom:-2px;">
+                        🔍 Proctoring
+                    </button>
+                    <button class="app-detail-tab" data-tab="recordings" onclick="switchAppDetailTab(this,'recordings')"
+                        style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-bottom:-2px;">
+                        🎥 Recordings
+                    </button>
+                    <button class="app-detail-tab" data-tab="audit" onclick="switchAppDetailTab(this,'audit')"
+                        style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-bottom:-2px;">
+                        📊 Audit Report
+                    </button>
+                </div>
                 <div class="modal-body">
-                    <div class="application-details">
-                        <h4>Status History</h4>
-                        ${(data.history || data.status_history) && (data.history || data.status_history).length > 0 ? `
-                            <div class="status-timeline">
-                                ${(data.history || data.status_history).map(h => `
-                                    <div class="timeline-item">
-                                        <div class="timeline-icon">${getStatusIcon(h.status)}</div>
-                                        <div class="timeline-content">
-                                            <div class="timeline-status">${h.status}</div>
-                                            <div class="timeline-date">${new Date(h.changed_at).toLocaleString()}</div>
-                                            ${h.note ? `<div class="timeline-note">${h.note}</div>` : ''}
+                    <div class="app-tab-content" data-tab="overview">
+                        <div class="application-details">
+                            ${interviewInfo ? `
+                            <h4>🎥 Interview Sessions</h4>
+                            ${interviewInfo}
+                            ` : ''}
+                            <h4>Status History</h4>
+                            ${(data.history || data.status_history) && (data.history || data.status_history).length > 0 ? `
+                                <div class="status-timeline">
+                                    ${(data.history || data.status_history).map(h => `
+                                        <div class="timeline-item">
+                                            <div class="timeline-icon">${getStatusIcon(h.status)}</div>
+                                            <div class="timeline-content">
+                                                <div class="timeline-status">${esc(h.status)}</div>
+                                                <div class="timeline-date">${new Date(h.changed_at).toLocaleString()}</div>
+                                                ${h.note ? `<div class="timeline-note">${esc(h.note)}</div>` : ''}
+                                            </div>
                                         </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : '<p>No status history available</p>'}
+                                    `).join('')}
+                                </div>
+                            ` : '<p>No status history available</p>'}
+                        </div>
+                    </div>
+                    <div class="app-tab-content" data-tab="proctoring" style="display:none;">
+                        ${proctoringContent}
+                    </div>
+                    <div class="app-tab-content" data-tab="recordings" style="display:none;">
+                        ${recordingsContent}
+                    </div>
+                    <div class="app-tab-content" data-tab="audit" style="display:none;">
+                        ${auditContent}
                     </div>
                 </div>
             </div>
@@ -1077,6 +1297,71 @@ async function viewApplicationDetails(appId) {
     }
 }
 
+// Tab switching for application details modal
+function switchAppDetailTab(btn, tabId) {
+    const modal = btn.closest('.modal-content');
+    // Deactivate all tabs
+    modal.querySelectorAll('.app-detail-tab').forEach(t => {
+        t.style.color = '#64748b';
+        t.style.borderBottom = '2px solid transparent';
+    });
+    // Activate clicked tab
+    btn.style.color = '#667eea';
+    btn.style.borderBottom = '2px solid #667eea';
+    // Toggle content
+    modal.querySelectorAll('.app-tab-content').forEach(c => {
+        c.style.display = c.dataset.tab === tabId ? 'block' : 'none';
+    });
+}
+
+// Download recording helper
+async function downloadRecording(sessionId) {
+    try {
+        const resp = await fetch(`${API_URL}/smart-assessments/sessions/${sessionId}/recording`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (!resp.ok) throw new Error('Download failed');
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `recording_${sessionId.substring(0, 8)}.webm`;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        a.remove();
+        showNotification('✓ Recording downloaded', 'success');
+    } catch (err) {
+        showNotification('Failed to download recording: ' + err.message, 'error');
+    }
+}
+
+// Download audit report helper
+async function downloadAuditReport(sessionId, includePii) {
+    try {
+        showNotification('Generating audit report...', 'info');
+        const resp = await fetch(`${API_URL}/smart-assessments/sessions/${sessionId}/audit-report?include_pii=${includePii}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || 'Report generation failed');
+        }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit_report_${sessionId.substring(0, 8)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        a.remove();
+        showNotification('✓ Audit report downloaded', 'success');
+    } catch (err) {
+        showNotification('Failed to generate report: ' + err.message, 'error');
+    }
+}
+
 async function downloadResume(appId) {
     try {
         const response = await fetch(`${API_URL}/candidates/resume/${appId}`, {
@@ -1084,31 +1369,42 @@ async function downloadResume(appId) {
         });
 
         if (!response.ok) {
-            throw new Error('Resume not available');
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Resume not available');
         }
 
         const blob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition') || '';
+        let filename = `resume_${appId}.pdf`;
+        const match = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (match) {
+            filename = match[1];
+        }
+
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `resume_${appId}.pdf`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
-        showNotification('✓ Resume downloaded successfully', 'success');
+        showNotification('✓ Resume downloaded (PII anonymised)', 'success');
     } catch (error) {
         console.error('Error downloading resume:', error);
-        showNotification('Resume download not available yet. Feature coming soon!', 'info');
+        showNotification('Failed to download resume: ' + error.message, 'error');
     }
 }
 
 function companyLogout() {
-    // Clear authentication data
+    // Clear all authentication data including role-specific tokens
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
     localStorage.removeItem('currentRole');
+    localStorage.removeItem('candidate_token');
+    localStorage.removeItem('recruiter_token');
+    localStorage.removeItem('admin_token');
 
     // Reload the page to return to login
     window.location.href = '/';
@@ -1548,14 +1844,88 @@ function exportAnalytics() {
 }
 
 // ============================================
+// AI-POWERED ASSESSMENT MANAGEMENT
+// ============================================
+async function loadCompanyAssessments() {
+    const container = document.getElementById('companyAssessments');
+    container.innerHTML = '<div class="loading">Loading assessments...</div>';
+
+    container.innerHTML = `
+        <div class="content-header" style="display:flex;justify-content:space-between;align-items:center;">
+            <h2>🧠 AI Assessment Manager</h2>
+            <a href="assessment-config.html" class="btn btn-primary" target="_blank">📋 Open Full Config Panel</a>
+        </div>
+        <div class="card" style="border-left:4px solid #6366f1;">
+            <h3>Quick Overview</h3>
+            <p style="color:#64748b;">Manage AI-powered assessments with Claude/GPT question generation, live code execution, and intelligent scoring.</p>
+            <div id="companyAssessmentStats" style="display:flex;gap:16px;flex-wrap:wrap;margin:16px 0;"></div>
+        </div>
+        <div id="companyAssessmentConfigs">
+            <div class="loading">Loading configurations...</div>
+        </div>
+    `;
+
+    try {
+        const resp = await fetch(`${API_URL}/smart-assessments/configs`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const data = await resp.json();
+        const configs = data.configs || [];
+
+        // Stats
+        const totalSessions = configs.reduce((s, c) => s + (c.sessions_count || 0), 0);
+        document.getElementById('companyAssessmentStats').innerHTML = `
+            <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-content"><div class="stat-label">Configs</div><div class="stat-value">${configs.length}</div></div></div>
+            <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-content"><div class="stat-label">Active</div><div class="stat-value">${configs.filter(c => c.is_active).length}</div></div></div>
+            <div class="stat-card"><div class="stat-icon">👤</div><div class="stat-content"><div class="stat-label">Sessions</div><div class="stat-value">${totalSessions}</div></div></div>
+        `;
+
+        if (configs.length === 0) {
+            document.getElementById('companyAssessmentConfigs').innerHTML = `
+                <div class="card"><div class="empty-state">
+                    <div style="font-size:64px;margin-bottom:16px;">🧠</div>
+                    <h3>No Assessments Configured</h3>
+                    <p>Create your first AI-powered assessment from the config panel.</p>
+                    <a href="assessment-config.html" class="btn btn-primary" target="_blank">+ Create Assessment</a>
+                </div></div>
+            `;
+            return;
+        }
+
+        document.getElementById('companyAssessmentConfigs').innerHTML = `
+            <div class="card"><h3>📋 Assessment Configurations</h3>
+            <div class="jobs-grid">
+                ${configs.map(c => `
+                    <div class="job-card" style="border-left:4px solid #6366f1;">
+                        <h3 style="margin:0 0 8px;">${c.title}</h3>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+                            <span class="tag" style="background:#ede9fe;color:#7c3aed;">${c.job_role}</span>
+                            ${(c.question_types || []).map(t => `<span class="tag">${t}</span>`).join('')}
+                        </div>
+                        <div style="font-size:13px;color:#64748b;">
+                            📝 ${c.total_questions} questions • ⏱ ${c.duration_minutes} min • 🎯 ${c.passing_score}% pass • 📊 ${c.sessions_count || 0} sessions
+                        </div>
+                    </div>
+                `).join('')}
+            </div></div>
+        `;
+    } catch (error) {
+        console.error('Failed to load smart assessments:', error);
+        document.getElementById('companyAssessmentConfigs').innerHTML = `
+            <div class="card"><div class="alert alert-error">Failed to load assessment configs. ${error.message}</div></div>
+        `;
+    }
+}
+
+// ============================================
 // FAIRNESS AUDIT INTERFACE
 // ============================================
-async function loadCompanyAudit() {
+async function loadCompanyAudit(days = 30) {
     const container = document.getElementById('companyAudit');
     container.innerHTML = '<div class="loading">Loading audit data...</div>';
 
     try {
-        const response = await fetch(`${API_URL}/audit/report?days=30`, {
+        const response = await fetch(`${API_URL}/audit/report?days=${days}`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
 
@@ -1793,7 +2163,9 @@ async function generateAuditTimeline() {
             return '<div class="empty-state">No audit events yet</div>';
         }
 
-        const logs = await response.json();
+        const data = await response.json();
+        // Backend returns {total, logs} object, extract the logs array
+        const logs = Array.isArray(data) ? data : (data.logs || []);
 
         if (!logs || logs.length === 0) {
             return '<div class="empty-state">No audit events yet</div>';
@@ -1836,7 +2208,7 @@ async function generateAuditTimeline() {
 
 function filterAuditReport(days) {
     showNotification(`Loading audit data for last ${days} days...`, 'info');
-    loadCompanyAudit();
+    loadCompanyAudit(days);
 }
 
 function exportAuditReport() {
@@ -1914,5 +2286,368 @@ function exportAuditReport() {
     } catch (error) {
         console.error('Export error:', error);
         showNotification('Failed to export audit report. Please try again.', 'error');
+    }
+}
+
+
+// ============================================================================
+// FLAN-T5 AI INTERVIEW ENGINE — Company Portal Integration
+// ============================================================================
+
+/**
+ * Load Flan-T5 engine status and display notification banner on dashboard
+ */
+async function loadFlanT5Status() {
+    const banner = document.getElementById('flanT5Notification');
+    if (!banner) return;
+
+    try {
+        const response = await fetch(`${API_URL}/ai-interview-v2/flan-t5/status`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+
+        if (!response.ok) {
+            banner.style.display = 'none';
+            return;
+        }
+
+        const status = await response.json();
+
+        if (status.flan_t5_model_loaded) {
+            banner.style.display = 'block';
+            banner.innerHTML = `
+                <div style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); border-radius: 12px; padding: 20px 24px; color: white; margin-bottom: 24px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                        <div style="display: flex; align-items: center; gap: 14px; flex: 1;">
+                            <div style="font-size: 36px;">🧠</div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 18px; font-weight: 700;">Flan-T5 AI Interview Engine — Active</h3>
+                                <p style="margin: 4px 0 0; opacity: 0.9; font-size: 14px;">
+                                    Dynamic question generation powered by Google Flan-T5. 
+                                    Gap Analysis identifies missing skills → AI generates targeted interview questions in real-time.
+                                </p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 8px 16px; text-align: center;">
+                                <div style="font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px;">Model</div>
+                                <div style="font-size: 14px; font-weight: 600;">Flan-T5 Base</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 8px 16px; text-align: center;">
+                                <div style="font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px;">Evaluator</div>
+                                <div style="font-size: 14px; font-weight: 600;">SBERT ${status.sbert_model_loaded ? '✓' : '✗'}</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 8px 16px; text-align: center;">
+                                <div style="font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px;">Threshold</div>
+                                <div style="font-size: 14px; font-weight: 600;">${status.evaluation_threshold || 0.70}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            banner.style.display = 'block';
+            banner.innerHTML = `
+                <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; padding: 16px 24px; color: white; margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="font-size: 28px;">⚠️</div>
+                        <div>
+                            <h3 style="margin: 0; font-size: 16px;">AI Interview Engine — Fallback Mode</h3>
+                            <p style="margin: 4px 0 0; opacity: 0.9; font-size: 13px;">
+                                Flan-T5 model not loaded. Interviews will use the static question bank (1575 questions). 
+                                ${status.message || ''}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+    } catch (error) {
+        console.log('Flan-T5 status check skipped:', error.message);
+        if (banner) banner.style.display = 'none';
+    }
+}
+
+/**
+ * Launch Flan-T5 Gap-Based AI Interview for a specific candidate
+ */
+async function launchFlanT5Interview(jobId, candidateId, candidateName) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.id = 'flanT5InterviewModal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Flan-T5 AI interview');
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: white; padding: 20px 24px;">
+                <div>
+                    <h3 class="modal-title" style="margin: 0; font-size: 20px;">🧠 Flan-T5 AI Interview Engine</h3>
+                    <p style="margin: 6px 0 0; opacity: 0.9; font-size: 14px;">Gap Analysis → Dynamic Question Generation for ${esc(candidateName)}</p>
+                </div>
+                <button class="modal-close" onclick="this.closest('.modal').remove()" style="color: white; opacity: 0.9;">×</button>
+            </div>
+            <div class="modal-body" style="padding: 24px; overflow-y: auto; max-height: calc(90vh - 140px);">
+                <div style="text-align: center; padding: 40px;">
+                    <div class="loading-spinner" style="width: 48px; height: 48px; border: 4px solid #e2e8f0; border-top-color: #7c3aed; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+                    <p style="color: #64748b; font-size: 15px;">Running Gap Analysis & generating targeted questions...</p>
+                    <p style="color: #94a3b8; font-size: 13px;">probe_zone = job_required_skills − candidate_skills</p>
+                </div>
+            </div>
+        </div>
+        <style>
+            @keyframes spin { to { transform: rotate(360deg); } }
+        </style>
+    `;
+    document.body.appendChild(modal);
+
+    try {
+        // Difficulty selection — default medium
+        const difficulty = 'medium';
+        const maxQuestions = 10;
+
+        const response = await fetch(`${API_URL}/ai-interview-v2/flan-t5/gap-interview`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                job_id: jobId,
+                candidate_id: candidateId,
+                difficulty_level: difficulty,
+                max_questions: maxQuestions
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to generate interview');
+        }
+
+        const gap = data.gap_analysis || {};
+        const questions = data.generated_questions || [];
+        const summary = data.summary || {};
+
+        const modalBody = modal.querySelector('.modal-body');
+        modalBody.innerHTML = `
+            <!-- Gap Analysis Summary -->
+            <div style="background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #c7d2fe;">
+                <h4 style="margin: 0 0 12px; color: #4338ca; font-size: 16px;">📊 Gap Analysis Results</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
+                    <div style="background: white; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                        <div style="font-size: 24px; font-weight: 700; color: #10b981;">${gap.total_matched || 0}</div>
+                        <div style="font-size: 12px; color: #64748b;">Matched Skills</div>
+                    </div>
+                    <div style="background: white; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                        <div style="font-size: 24px; font-weight: 700; color: #ef4444;">${gap.total_missing || 0}</div>
+                        <div style="font-size: 12px; color: #64748b;">Missing Skills</div>
+                    </div>
+                    <div style="background: white; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                        <div style="font-size: 24px; font-weight: 700; color: #4f46e5;">${gap.coverage_percentage || 0}%</div>
+                        <div style="font-size: 12px; color: #64748b;">Skill Coverage</div>
+                    </div>
+                    <div style="background: white; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                        <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">${questions.length}</div>
+                        <div style="font-size: 12px; color: #64748b;">Questions Generated</div>
+                    </div>
+                </div>
+                
+                <!-- Skill Tags -->
+                <div style="margin-top: 16px;">
+                    ${(gap.matched_skills || []).length > 0 ? `
+                        <div style="margin-bottom: 8px;">
+                            <span style="font-size: 12px; font-weight: 600; color: #166534;">✅ Matched:</span>
+                            ${(gap.matched_skills || []).map(s => `<span style="background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 12px; font-size: 12px; margin: 2px; display: inline-block;">${esc(s)}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                    ${(gap.missing_skills || []).length > 0 ? `
+                        <div>
+                            <span style="font-size: 12px; font-weight: 600; color: #991b1b;">⚠️ Probe Zone:</span>
+                            ${(gap.missing_skills || []).map(s => `<span style="background: #fee2e2; color: #991b1b; padding: 3px 10px; border-radius: 12px; font-size: 12px; margin: 2px; display: inline-block;">${esc(s)}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+
+            <!-- Generation Summary -->
+            <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+                <span style="background: #f0fdf4; color: #166534; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; border: 1px solid #bbf7d0;">
+                    🧠 Flan-T5: ${summary.flan_t5_generated || 0} questions
+                </span>
+                <span style="background: #fefce8; color: #854d0e; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; border: 1px solid #fef08a;">
+                    📚 Fallback: ${summary.fallback_generated || 0} questions
+                </span>
+                <span style="background: #f0f4ff; color: #4338ca; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; border: 1px solid #c7d2fe;">
+                    🎯 Difficulty: ${esc(summary.difficulty_level || 'medium')}
+                </span>
+            </div>
+
+            <!-- Generated Questions -->
+            <h4 style="margin: 0 0 16px; color: #1e293b; font-size: 16px;">📝 Generated Interview Questions</h4>
+            <div id="flanT5QuestionsList">
+                ${questions.map((q, idx) => `
+                    <div class="flan-question-card" id="flanQ${idx}" style="background: white; border: 2px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 12px; transition: all 0.3s;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="background: #7c3aed; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;">
+                                    ${idx + 1}
+                                </span>
+                                <span style="background: ${q.source === 'flan-t5' ? '#f0fdf4' : '#fefce8'}; color: ${q.source === 'flan-t5' ? '#166534' : '#854d0e'}; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
+                                    ${q.source === 'flan-t5' ? '🧠 Flan-T5' : '📚 Bank'}
+                                </span>
+                                <span style="background: #f1f5f9; color: #475569; padding: 3px 10px; border-radius: 12px; font-size: 11px;">
+                                    ${esc(q.skill || '')}
+                                </span>
+                            </div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <span style="font-size: 12px; color: #64748b;">⏱ ${q.time_limit_minutes || 8}min</span>
+                                <span style="font-size: 12px; color: #64748b;">💰 ${q.points || 10}pts</span>
+                                <span style="background: ${q.difficulty === 'easy' ? '#dcfce7' : q.difficulty === 'hard' ? '#fee2e2' : '#fef3c7'}; color: ${q.difficulty === 'easy' ? '#166534' : q.difficulty === 'hard' ? '#991b1b' : '#854d0e'}; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                                    ${esc(q.difficulty || 'medium')}
+                                </span>
+                            </div>
+                        </div>
+                        <p style="margin: 0 0 12px; color: #1e293b; font-size: 14px; line-height: 1.5;">
+                            <strong>Q:</strong> ${esc(q.generated_question || q.question || '')}
+                        </p>
+                        <div id="flanAnswer${idx}" style="display: none;">
+                            <div style="background: #fffbeb; border: 1px solid #fef08a; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                                <div style="font-size: 11px; color: #854d0e; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">📖 Model Answer (Reference)</div>
+                                <p style="margin: 0; font-size: 13px; color: #78350f; line-height: 1.5;">${esc(q.model_answer || 'N/A')}</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="toggleModelAnswer(${idx})">
+                                👁 Toggle Model Answer
+                            </button>
+                        </div>
+                        <div id="flanEvalResult${idx}"></div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <!-- Interview Set Info -->
+            ${data.interview_set_id ? `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px; margin-top: 16px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 24px;">✅</span>
+                        <div>
+                            <div style="font-weight: 600; color: #166534;">Interview Set Saved</div>
+                            <div style="font-size: 13px; color: #15803d;">ID: ${esc(data.interview_set_id)} — Ready to send to candidate</div>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+        `;
+
+        // Store interview set ID for answer submission
+        modal.dataset.interviewSetId = data.interview_set_id || '';
+
+        showNotification(`🧠 Generated ${questions.length} AI interview questions for ${candidateName}`, 'success');
+
+    } catch (error) {
+        console.error('Flan-T5 interview generation error:', error);
+        const modalBody = modal.querySelector('.modal-body');
+        modalBody.innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                <h3 style="color: #991b1b;">Interview Generation Failed</h3>
+                <p style="color: #64748b;">${esc(error.message)}</p>
+                <p style="color: #94a3b8; font-size: 13px;">The system will fall back to the static question bank.</p>
+                <button class="btn btn-primary" onclick="this.closest('.modal').remove()">Close</button>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Toggle model answer visibility for a question
+ */
+function toggleModelAnswer(idx) {
+    const el = document.getElementById(`flanAnswer${idx}`);
+    if (el) {
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+/**
+ * Evaluate a candidate answer via SBERT cosine similarity
+ */
+async function evaluateFlanT5Answer(interviewSetId, questionIndex) {
+    const textarea = document.getElementById(`flanAnswerInput${questionIndex}`);
+    if (!textarea || !textarea.value.trim()) {
+        showNotification('Please enter an answer before evaluating.', 'warning');
+        return;
+    }
+
+    const candidateAnswer = textarea.value.trim();
+    const resultDiv = document.getElementById(`flanEvalResult${questionIndex}`);
+
+    resultDiv.innerHTML = `
+        <div style="text-align: center; padding: 12px; color: #64748b;">
+            <span style="animation: spin 1s linear infinite; display: inline-block;">⏳</span> Evaluating with SBERT cosine similarity...
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`${API_URL}/ai-interview-v2/flan-t5/full-interview`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                interview_set_id: interviewSetId,
+                question_index: questionIndex,
+                candidate_answer: candidateAnswer
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Evaluation failed');
+        }
+
+        const eval_ = data.evaluation || {};
+        const passed = eval_.passed;
+        const score = eval_.similarity_score || 0;
+
+        resultDiv.innerHTML = `
+            <div style="background: ${passed ? '#f0fdf4' : '#fef2f2'}; border: 1px solid ${passed ? '#bbf7d0' : '#fecaca'}; border-radius: 8px; padding: 14px; margin-top: 12px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 700; color: ${passed ? '#166534' : '#991b1b'}; font-size: 15px;">
+                        ${passed ? '✅ PASSED' : '❌ BELOW THRESHOLD'}
+                    </span>
+                    <span style="background: ${passed ? '#dcfce7' : '#fee2e2'}; color: ${passed ? '#166534' : '#991b1b'}; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 14px;">
+                        ${(score * 100).toFixed(1)}%
+                    </span>
+                </div>
+                <div style="background: #e2e8f0; border-radius: 4px; height: 8px; overflow: hidden; margin-bottom: 8px;">
+                    <div style="background: ${score >= 0.85 ? '#10b981' : score >= 0.70 ? '#3b82f6' : score >= 0.50 ? '#f59e0b' : '#ef4444'}; height: 100%; width: ${(score * 100).toFixed(0)}%; border-radius: 4px; transition: width 0.5s;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #64748b;">
+                    <span>Method: ${esc(eval_.evaluation_method || 'SBERT')}</span>
+                    <span>Threshold: ${eval_.threshold || 0.70}</span>
+                </div>
+                <p style="margin: 8px 0 0; font-size: 13px; color: #475569;">${esc(eval_.feedback || '')}</p>
+            </div>
+        `;
+
+        // Highlight the question card border based on pass/fail
+        const card = document.getElementById(`flanQ${questionIndex}`);
+        if (card) {
+            card.style.borderColor = passed ? '#10b981' : '#ef4444';
+        }
+
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-top: 12px;">
+                <p style="margin: 0; color: #991b1b; font-size: 13px;">⚠️ Evaluation failed: ${esc(error.message)}</p>
+            </div>
+        `;
     }
 }

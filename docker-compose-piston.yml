@@ -1,0 +1,32 @@
+# =============================================================================
+# Self-Hosted Piston — Code Execution Engine (FREE, no limits)
+# =============================================================================
+# Start:   docker-compose -f docker-compose-piston.yml up -d
+# Stop:    docker-compose -f docker-compose-piston.yml down
+# Test:    curl http://localhost:2000/api/v2/piston/runtimes
+#
+# Install languages after startup:
+#   docker exec piston_api /piston/packages/python/3.10.0/install.sh
+# Or use the CLI:
+#   curl -X POST http://localhost:2000/api/v2/piston/packages -d '{"language":"python","version":"3.10.0"}'
+# =============================================================================
+
+services:
+  piston_api:
+    image: ghcr.io/engineer-man/piston
+    container_name: piston_api
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "2000:2000"
+    volumes:
+      - piston-packages:/piston/packages
+    tmpfs:
+      - /piston/jobs:exec,uid=1000,gid=1000
+    environment:
+      - PISTON_RUN_TIMEOUT=10000
+      - PISTON_COMPILE_TIMEOUT=10000
+      - PISTON_OUTPUT_MAX_SIZE=1048576
+
+volumes:
+  piston-packages:

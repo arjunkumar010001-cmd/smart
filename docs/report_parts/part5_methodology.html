@@ -1,0 +1,640 @@
+<!-- PART 5: CHAPTER 4 — METHODOLOGY -->
+
+<div class="page">
+    <h2 class="chapter-title">CHAPTER 4<br>METHODOLOGY</h2>
+
+    <p>
+        This chapter details the implementation methodology for each of the six phases of Smart
+        Hiring, including algorithms, mathematical formulations, data flows, and key design decisions.
+    </p>
+
+    <h3>4.1 Phase 1: Intelligent Job Posting</h3>
+
+    <p>
+        The Job Posting module transforms raw job descriptions into optimized, inclusive, and
+        SEO-friendly listings using Large Language Models.
+    </p>
+
+    <p><strong>Workflow:</strong></p>
+    <ol>
+        <li>Recruiter creates a job posting with title, description, required skills, experience level, and salary range.</li>
+        <li>The <code>JobOptimizerService</code> sends the description to the Groq LLaMA-3.3-70B API via a structured prompt.</li>
+        <li>The LLM returns: optimized description, suggested additional skills, inclusivity score (0–100), inclusivity suggestions (e.g., removing gendered language), SEO keywords, and readability notes.</li>
+        <li>The recruiter reviews and accepts/modifies the suggestions before publishing.</li>
+    </ol>
+
+    <p><strong>AI Provider Waterfall:</strong></p>
+    <div class="formula-box">
+<pre style="font-size:10pt;">
+Provider Selection Algorithm:
+1. TRY Groq (LLaMA-3.3-70B-versatile)  — FREE, 500 req/day
+   └─ IF available AND within daily limit → USE
+2. TRY OpenAI (GPT-4o-mini)             — $0.15/1M tokens
+   └─ IF API key configured AND within limit → USE
+3. RETURN error "No AI providers available"
+</pre>
+    </div>
+
+    <p><strong>Key Features:</strong></p>
+    <ul>
+        <li><strong>Inclusivity Analysis:</strong> Detects gendered language ("rockstar developer," "ninja"), age-biased terms ("young and dynamic"), and disability-exclusionary language ("must be able to stand for 8 hours").</li>
+        <li><strong>SEO Optimization:</strong> Generates keywords that improve job visibility on search engines and job boards.</li>
+        <li><strong>Skill Suggestion:</strong> Cross-references the job description against a skill ontology (250+ skills with aliases) to suggest commonly associated skills the recruiter may have overlooked.</li>
+    </ul>
+
+    <h3>4.2 Phase 2: Resume Refinery</h3>
+
+    <p>
+        The Resume Refinery is the core matching engine that ranks candidates against job
+        requirements using a hybrid approach combining semantic embeddings and statistical methods.
+    </p>
+
+    <p><strong>Architecture:</strong></p>
+
+    <div class="formula-box">
+        <p><strong>Resume Processing Pipeline:</strong></p>
+<pre style="font-size:10pt;">
+Resume (PDF/DOCX)
+    │
+    ▼
+[Parser Layer]
+    ├── PyPDF2 (PDF text extraction)
+    ├── python-docx (DOCX text extraction)
+    └── pdfplumber (complex PDF layouts)
+    │
+    ▼
+[NLP Layer]
+    ├── spaCy NER → Extract: names, emails, phones, organizations
+    ├── Regex → Extract: years of experience, education, certifications
+    └── Skill Ontology Mapper → Normalize skill names via aliases
+    │
+    ▼
+[Matching Layer]
+    ├── Primary: SBERT (all-MiniLM-L6-v2) → 384-dim embeddings → cosine similarity
+    └── Fallback: TF-IDF (scikit-learn) → sparse vectors → cosine similarity
+    │
+    ▼
+[Scoring Layer]
+    ├── Semantic Score (40% weight)
+    ├── Skill Match Score (30% weight)
+    ├── Experience Score (15% weight)
+    └── Certification/Project Score (15% weight)
+    │
+    ▼
+Final Match Score (0–100%)
+</pre>
+    </div>
+
+    <p><strong>SBERT Semantic Matching Algorithm:</strong></p>
+
+    <div class="formula-box">
+        <p>Given a job description <em>J</em> and a candidate resume <em>R</em>:</p>
+        <ol>
+            <li>Encode both into 384-dimensional vectors:
+                <br><em>v<sub>J</sub></em> = SBERT(<em>J</em>) ∈ ℝ<sup>384</sup>
+                <br><em>v<sub>R</sub></em> = SBERT(<em>R</em>) ∈ ℝ<sup>384</sup>
+            </li>
+            <li>Compute cosine similarity:
+                <br><em>sim</em>(<em>J</em>, <em>R</em>) = (<em>v<sub>J</sub></em> · <em>v<sub>R</sub></em>) / (||<em>v<sub>J</sub></em>|| × ||<em>v<sub>R</sub></em>||)
+            </li>
+            <li>Normalize to percentage: <em>semantic_score</em> = <em>sim</em> × 100</li>
+        </ol>
+    </div>
+
+    <p><strong>Skill Ontology Mapping:</strong></p>
+    <p>
+        The system maintains a skill ontology of 250+ skills organized into categories
+        (programming_languages, frameworks, databases, cloud, devops, soft_skills). Each skill
+        has a canonical name and a list of aliases. For example:
+    </p>
+
+    <table class="data-table">
+        <thead><tr><th>Canonical Skill</th><th>Aliases</th></tr></thead>
+        <tbody>
+            <tr><td>JavaScript</td><td>js, javascript, ecmascript, es6, es2015</td></tr>
+            <tr><td>React</td><td>reactjs, react.js, react js, react native</td></tr>
+            <tr><td>Python</td><td>python3, python 3, py, cpython</td></tr>
+            <tr><td>Machine Learning</td><td>ml, deep learning, dl, artificial intelligence, ai</td></tr>
+        </tbody>
+    </table>
+
+    <p><strong>Composite Score Calculation:</strong></p>
+    <div class="formula-box">
+        <p style="text-align:center; font-size:12pt;">
+            <em>FinalScore</em> = 0.40 × <em>SemanticScore</em> + 0.30 × <em>SkillScore</em> + 0.15 × <em>ExperienceScore</em> + 0.15 × <em>CertProjectScore</em>
+        </p>
+        <p>Where:</p>
+        <ul>
+            <li><em>SemanticScore</em>: SBERT cosine similarity × 100 (or TF-IDF fallback)</li>
+            <li><em>SkillScore</em>: |matched_skills ∩ required_skills| / |required_skills| × 100</li>
+            <li><em>ExperienceScore</em>: min(candidate_years / required_years, 1.0) × 100</li>
+            <li><em>CertProjectScore</em>: Weighted count of relevant certifications and project keywords</li>
+        </ul>
+    </div>
+
+    <h3>4.3 Phase 3: Smart Assessment Engine</h3>
+
+    <p>
+        The Smart Assessment Engine is the most feature-rich module of Smart Hiring, combining
+        AI question generation, real-time code execution, browser-based proctoring, and a
+        comprehensive anti-cheating system.
+    </p>
+
+    <p><strong>4.3.1 AI Question Generation</strong></p>
+
+    <p>
+        Questions are generated dynamically for each assessment session using a multi-provider
+        AI waterfall architecture:
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.1: AI Question Generation Waterfall</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+┌──────────────────────┐
+│   Assessment Request │
+│  (skills, difficulty,│
+│   experience_level,  │
+│   question_types)    │
+└──────────┬───────────┘
+           ▼
+    ┌──────────────┐     Success
+    │  Groq API    │────────────────▶ Parse JSON → Validate → Store in MongoDB
+    │ LLaMA-3.3   │                  (Cache for deduplication)
+    │  (FREE)      │
+    └──────┬───────┘
+           │ Failure / Rate Limited
+           ▼
+    ┌──────────────┐     Success
+    │  Claude API  │────────────────▶ Parse JSON → Validate → Store
+    │  (Fallback)  │
+    └──────┬───────┘
+           │ Failure / No Key
+           ▼
+    ┌──────────────┐     Success
+    │  OpenAI API  │────────────────▶ Parse JSON → Validate → Store
+    │ GPT-4o-mini  │
+    └──────┬───────┘
+           │ Failure / No Key
+           ▼
+    ┌──────────────┐
+    │  Static Pool │────────────────▶ Return pre-built questions
+    │  (Fallback)  │                  (no AI dependency)
+    └──────────────┘
+</pre>
+    </div>
+
+    <p><strong>Question Types Supported:</strong></p>
+    <table class="data-table">
+        <thead><tr><th>Type</th><th>Description</th><th>Evaluation Method</th></tr></thead>
+        <tbody>
+            <tr><td>Coding</td><td>Algorithmic problems with test cases</td><td>Code execution (Piston/Judge0) — exact output match</td></tr>
+            <tr><td>MCQ</td><td>Multiple-choice with 4 options</td><td>Exact answer match</td></tr>
+            <tr><td>Debugging</td><td>Broken code that needs fixing</td><td>Code execution with hidden test cases</td></tr>
+            <tr><td>Aptitude</td><td>Logical and mathematical reasoning</td><td>Exact answer match</td></tr>
+            <tr><td>Logical Reasoning</td><td>Pattern recognition, sequences</td><td>Exact answer match</td></tr>
+        </tbody>
+    </table>
+
+    <p><strong>Experience-Level Calibration:</strong></p>
+    <p>
+        The AI prompt system adjusts question complexity based on the intersection of difficulty
+        level (easy/medium/hard) and experience level (fresher/mid/senior):
+    </p>
+    <ul>
+        <li><strong>Fresher + Easy:</strong> Basic fundamentals, simple syntax (e.g., "reverse a string")</li>
+        <li><strong>Fresher + Hard:</strong> Tricky edge cases, foundational (e.g., "handle integer overflow in palindrome check")</li>
+        <li><strong>Senior + Easy:</strong> Straightforward real-world scenarios (e.g., "implement a basic LRU cache")</li>
+        <li><strong>Senior + Hard:</strong> System design patterns, concurrency (e.g., "thread-safe producer-consumer with rate limiting")</li>
+    </ul>
+
+    <p><strong>4.3.2 Code Execution Sandbox</strong></p>
+
+    <p>
+        Candidate code is executed in isolated sandboxes via two API providers:
+    </p>
+    <ul>
+        <li><strong>Piston API (Primary):</strong> Supports 60+ programming languages, 5-second timeout per execution, memory limits, no network access in sandbox.</li>
+        <li><strong>Judge0 API (Fallback):</strong> Used when Piston is unavailable. Supports similar language coverage with configurable time/memory limits.</li>
+    </ul>
+    <p>
+        The Monaco Editor (version 0.44.0) provides a VS Code-like coding experience directly
+        in the browser with syntax highlighting, auto-completion, and error indicators for
+        12+ programming languages.
+    </p>
+
+    <p><strong>4.3.3 Anti-Cheating Module (9 Mechanisms)</strong></p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.2: Anti-Cheating Module Flow</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+┌──────────────────────────────────────────────────┐
+│              ANTI-CHEAT ENGINE                    │
+│                                                  │
+│  ┌──────────────┐  ┌──────────────┐             │
+│  │ 1. Tab Switch │  │ 2. Window    │             │
+│  │  Detection    │  │   Blur       │   Strike    │
+│  └──────┬───────┘  └──────┬───────┘  Counter    │
+│         │                  │         ┌────────┐  │
+│  ┌──────┴───────┐  ┌──────┴───────┐ │        │  │
+│  │ 3. Copy/Paste│  │ 4. Right     │ │ 1st:   │  │
+│  │   Blocking   │  │   Click Ban  │ │ Warn   │  │
+│  └──────┬───────┘  └──────┬───────┘ │        │  │
+│         │                  │         │ 2nd:   │  │
+│  ┌──────┴───────┐  ┌──────┴───────┐ │ Warn   │  │
+│  │ 5. DevTools  │  │ 6. Keyboard  │ │        │  │
+│  │   Detection  │  │   Shortcuts  │ │ 3rd:   │  │
+│  └──────┬───────┘  └──────┬───────┘ │TERMINATE│  │
+│         │                  │         └────────┘  │
+│  ┌──────┴───────┐  ┌──────┴───────┐             │
+│  │ 7. Face      │  │ 8. Multi-Face│             │
+│  │   Absence    │  │  Detection   │             │
+│  └──────┬───────┘  └──────┬───────┘             │
+│         │                  │                     │
+│  ┌──────┴──────────────────┘                     │
+│  │ 9. Video/Audio Recording (Evidence)           │
+│  └───────────────────────────────────────────────│
+└──────────────────────────────────────────────────┘
+         │
+         ▼  On 3 strikes
+┌──────────────────┐
+│ SESSION TERMINATED│
+│ Score = 0, Status│
+│ = "terminated"   │
+└──────────────────┘
+</pre>
+    </div>
+
+    <table class="data-table">
+        <thead><tr><th>#</th><th>Mechanism</th><th>Detection Method</th><th>Response</th></tr></thead>
+        <tbody>
+            <tr><td>1</td><td>Tab Switch Detection</td><td><code>visibilitychange</code> event</td><td>Warning → Strike</td></tr>
+            <tr><td>2</td><td>Window Blur</td><td><code>window.blur</code> event</td><td>Warning → Strike</td></tr>
+            <tr><td>3</td><td>Copy/Paste Blocking</td><td><code>copy/paste/cut</code> events prevented</td><td>Silent block + log</td></tr>
+            <tr><td>4</td><td>Right-Click Disabled</td><td><code>contextmenu</code> event prevented</td><td>Silent block</td></tr>
+            <tr><td>5</td><td>DevTools Detection</td><td>Window size delta monitoring</td><td>Warning → Strike</td></tr>
+            <tr><td>6</td><td>Keyboard Shortcuts</td><td>F12, Ctrl+Shift+I/J/C blocked</td><td>Silent block + log</td></tr>
+            <tr><td>7</td><td>Face Absence</td><td>TinyFaceDetector (0 faces)</td><td>Warning → Strike</td></tr>
+            <tr><td>8</td><td>Multiple Faces</td><td>TinyFaceDetector (>1 faces)</td><td>Warning → Strike</td></tr>
+            <tr><td>9</td><td>Video Recording</td><td>MediaRecorder API (webm)</td><td>Evidence preservation</td></tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 4.2: Anti-Cheating Mechanisms Summary</p>
+
+    <p><strong>4.3.4 Face Detection Pipeline</strong></p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.3: Face Detection Pipeline</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+┌─────────────┐    640×480     ┌──────────────────┐
+│   Webcam    │───────────────▶│  &lt;video&gt; element │
+│ getUserMedia│   constraints  │  (loadeddata     │
+│             │                │   event wait)    │
+└─────────────┘                └────────┬─────────┘
+                                        │
+                                        ▼
+                               ┌──────────────────┐
+                               │  face-api.js     │
+                               │  TinyFaceDetector│
+                               │  ─────────────── │
+                               │  inputSize: 320  │
+                               │  scoreThreshold: │
+                               │    0.3           │
+                               └────────┬─────────┘
+                                        │
+                               Detections Array
+                                        │
+                          ┌─────────────┼─────────────┐
+                          │             │             │
+                     0 Faces       1 Face        2+ Faces
+                          │             │             │
+                     ┌────▼────┐  ┌────▼────┐  ┌────▼──────┐
+                     │ WARNING │  │   OK    │  │ WARNING   │
+                     │"Face not│  │(Normal) │  │"Multiple  │
+                     │detected"│  │         │  │ faces"    │
+                     │→ Strike │  │         │  │→ Strike   │
+                     └─────────┘  └─────────┘  └───────────┘
+</pre>
+    </div>
+
+    <p><strong>Scoring Algorithm:</strong></p>
+    <div class="formula-box">
+        <p style="text-align:center; font-size:12pt;">
+            <em>FinalScore</em> = <em>BaseScore</em> + <em>EfficiencyBonus</em>
+        </p>
+        <p>Where:</p>
+        <ul>
+            <li><em>BaseScore</em> = (Σ correct_answers × question_points) / max_possible_points × 100</li>
+            <li><em>EfficiencyBonus</em> = max(0, (allotted_time − actual_time) / allotted_time × 10)</li>
+            <li>Maximum efficiency bonus: 10% (for completing in &lt;10% of allotted time)</li>
+        </ul>
+    </div>
+
+    <h3>4.4 Phase 4: AI-Powered Interview</h3>
+
+    <p>
+        The AI Interview module provides a fully automated, interactive interview experience
+        featuring an AI avatar named "Alex" that conducts technical interviews with real-time
+        speech synthesis and recognition.
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.4: AI Interview Sequence Diagram</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+ Candidate            Frontend                Backend              AI Service
+    │                    │                      │                    │
+    │── Join Interview──▶│                      │                    │
+    │                    │── GET /start ────────▶│                    │
+    │                    │                      │── Generate Qs ────▶│
+    │                    │                      │◀── Questions ──────│
+    │                    │◀── Question + TTS ───│                    │
+    │                    │                      │                    │
+    │◀─ Avatar Speaks ──│                      │                    │
+    │   (Web Speech API)│                      │                    │
+    │                    │                      │                    │
+    │── Speaks Answer ──▶│                      │                    │
+    │   (STT: Speech    │                      │                    │
+    │    Recognition)   │                      │                    │
+    │                    │── POST /answer ──────▶│                    │
+    │                    │                      │── Evaluate ───────▶│
+    │                    │                      │◀── Score + ────────│
+    │                    │                      │   Follow-up?       │
+    │                    │◀── Next Q or ────────│                    │
+    │                    │    Follow-up         │                    │
+    │                    │                      │                    │
+    │   ... (repeat for each question) ...      │                    │
+    │                    │                      │                    │
+    │                    │── POST /complete ────▶│                    │
+    │                    │                      │── Final Eval ─────▶│
+    │◀── Results ───────│◀── Score + Report ───│◀── Report ────────│
+    │                    │                      │                    │
+    │                    │── Upload Recording ──▶│                    │
+    │                    │                      │── Save to disk ────│
+</pre>
+    </div>
+
+    <p><strong>Key Components:</strong></p>
+    <ul>
+        <li><strong>AI Avatar "Alex":</strong> Animated CSS avatar with visual speech indicators (pulsing ring during TTS playback), providing a human-like interview experience.</li>
+        <li><strong>Text-to-Speech (TTS):</strong> Web Speech API <code>SpeechSynthesis</code> reads questions aloud with configurable voice, rate (0.95), and pitch (1.0).</li>
+        <li><strong>Speech-to-Text (STT):</strong> Web Speech API <code>SpeechRecognition</code> captures candidate responses with real-time transcription display. Falls back to text input if microphone is unavailable.</li>
+        <li><strong>Dynamic Follow-up Questions:</strong> Based on the candidate's response quality, the AI generates contextual follow-up questions using Flan-T5 (google/flan-t5-base) or Groq API.</li>
+        <li><strong>Video/Audio Recording:</strong> Records the entire interview session via MediaRecorder API (video/webm;codecs=vp9,opus), uploads to server at <code>uploads/interview_recordings/</code>, downloadable by both candidate and recruiter.</li>
+        <li><strong>Anti-Malpractice:</strong> Tab-switch detection, face presence monitoring, and violation logging active throughout the interview.</li>
+    </ul>
+
+    <p><strong>Response Evaluation:</strong></p>
+    <p>
+        Each candidate response is evaluated by the AI service on multiple dimensions:
+    </p>
+    <ul>
+        <li><strong>Technical Accuracy (40%):</strong> Correctness of technical concepts</li>
+        <li><strong>Completeness (25%):</strong> Coverage of all relevant aspects</li>
+        <li><strong>Communication (20%):</strong> Clarity and structure of explanation</li>
+        <li><strong>Problem-Solving Approach (15%):</strong> Methodology and reasoning</li>
+    </ul>
+
+    <h3>4.5 Phase 5: Fairness Audit Engine</h3>
+
+    <p>
+        The Fairness Audit Engine is a custom-built module that evaluates hiring decisions for
+        algorithmic bias across multiple protected attributes (gender, ethnicity, age group,
+        disability status) using five standard mathematical fairness metrics.
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.5: Fairness Metrics Computation Flow</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+┌────────────────────┐
+│ Hiring Decisions   │  (predictions, labels, sensitive_features)
+│ from MongoDB       │
+└────────┬───────────┘
+         ▼
+┌────────────────────────────────────────────────┐
+│           FairnessMetrics Class                 │
+│  ┌──────────────────────────────────────────┐  │
+│  │  _compute_group_statistics()              │  │
+│  │  For each group in sensitive_features:    │  │
+│  │    - TP, FP, TN, FN                       │  │
+│  │    - Selection Rate, Base Rate            │  │
+│  │    - TPR, FPR, TNR, FNR                   │  │
+│  │    - Precision, Recall                    │  │
+│  └──────────────────────────────────────────┘  │
+│                      │                          │
+│  ┌───────┬───────┬───┴───┬─────────┬─────────┐ │
+│  │ Demo. │Dispar.│ Equal │Equalized│Predictive│ │
+│  │Parity │Impact │ Opp.  │  Odds   │ Parity  │ │
+│  └───┬───┴───┬───┴───┬───┴────┬────┴────┬────┘ │
+│      │       │       │        │         │       │
+│      ▼       ▼       ▼        ▼         ▼       │
+│  ΔSR ≤0.1  SR_min  ΔTPR    ΔTPR+     ΔPrec    │
+│            /SR_max  ≤0.1    ΔFPR      ≤0.1     │
+│            ≥0.8              ≤0.1               │
+└────────────────────────────────────────────────┘
+         │
+         ▼
+┌────────────────────┐
+│  Fairness Report   │  Pass/Fail per metric + overall assessment
+│  + Recommendations │
+└────────────────────┘
+</pre>
+    </div>
+
+    <p><strong>Mathematical Definitions:</strong></p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Metric</th><th>Formula</th><th>Fair Threshold</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Demographic Parity</td>
+                <td>|P(Ŷ=1|A=0) − P(Ŷ=1|A=1)| ≤ ε</td>
+                <td>ε ≤ 0.1 (10%)</td>
+            </tr>
+            <tr>
+                <td>Disparate Impact</td>
+                <td>min(SR<sub>a</sub>) / max(SR<sub>a</sub>)</td>
+                <td>Ratio ≥ 0.8 (80% Rule)</td>
+            </tr>
+            <tr>
+                <td>Equal Opportunity</td>
+                <td>|TPR<sub>A=0</sub> − TPR<sub>A=1</sub>| ≤ ε</td>
+                <td>ε ≤ 0.1 (10%)</td>
+            </tr>
+            <tr>
+                <td>Equalized Odds</td>
+                <td>|ΔTPR| ≤ ε AND |ΔFPR| ≤ ε</td>
+                <td>ε ≤ 0.1 for both</td>
+            </tr>
+            <tr>
+                <td>Predictive Parity</td>
+                <td>|Prec<sub>A=0</sub> − Prec<sub>A=1</sub>| ≤ ε</td>
+                <td>ε ≤ 0.1 (10%)</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 4.3: Fairness Metrics Mathematical Definitions</p>
+
+    <p><strong>Automated Bias Correction:</strong></p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.6: Bias Correction Algorithm Flow</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+┌─────────────────┐
+│ Fairness Audit  │
+│    Results      │
+└────────┬────────┘
+         ▼
+   Is bias detected?
+   (any metric fails)
+    ┌─────┴─────┐
+    No          Yes
+    │            │
+    ▼            ▼
+  ┌────┐   ┌────────────────────────────┐
+  │Done│   │ Identify disadvantaged     │
+  └────┘   │ groups (lowest selection   │
+           │ rates per metric)          │
+           └──────────┬─────────────────┘
+                      ▼
+           ┌────────────────────────────┐
+           │ Compute correction weights │
+           │ weight = (max_SR - group_SR│
+           │          / max_SR)         │
+           │ CAP: max 15% boost         │
+           └──────────┬─────────────────┘
+                      ▼
+           ┌────────────────────────────┐
+           │ Apply to candidate scores  │
+           │ new_score = old_score ×    │
+           │   (1 + correction_weight)  │
+           │                            │
+           │ Mode: dry_run or commit    │
+           └──────────┬─────────────────┘
+                      ▼
+           ┌────────────────────────────┐
+           │ Log correction in MongoDB  │
+           │ (audit trail for           │
+           │  regulatory compliance)    │
+           └────────────────────────────┘
+</pre>
+    </div>
+
+    <p><strong>Committee Override:</strong></p>
+    <p>
+        For cases where algorithmic scores may not capture the full picture, authorized committee
+        members can submit manual score overrides with mandatory justification. A complete audit
+        trail is maintained for all overrides.
+    </p>
+
+    <h3>4.6 Phase 6: Digital Onboarding</h3>
+
+    <p>
+        The Digital Onboarding module automates the entire post-selection process with 11 API
+        endpoints handling the complete workflow:
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:10px;">Fig 4.7: Onboarding Workflow State Machine</p>
+<pre style="font-family:monospace; font-size:9pt; text-align:center;">
+       ┌──────────┐
+       │ Selected │
+       └────┬─────┘
+            ▼
+   ┌──────────────────┐    Email with offer
+   │  Offer Sent      │───────────────────▶ Candidate
+   └────┬────────┬────┘
+        │        │
+   Accepted    Rejected
+        │        │
+        ▼        ▼
+┌────────────┐ ┌───────┐
+│ Digital    │ │ Done  │
+│ Signature  │ │(Closed│
+│ (SHA-256)  │ └───────┘
+└─────┬──────┘
+      ▼
+┌────────────────┐
+│ Doc Upload     │  (ID proof, certificates,
+│ & Verification │   address proof, photos)
+└─────┬──────────┘
+      ▼
+┌────────────────┐
+│ NDA E-Sign     │  (Digital signature with
+│                │   timestamp + IP logging)
+└─────┬──────────┘
+      ▼
+┌────────────────┐
+│ IT Setup       │  (Laptop, email, VPN,
+│ Request        │   software licenses)
+└─────┬──────────┘
+      ▼
+┌────────────────┐
+│ Orientation    │  (Date, time, location,
+│ Scheduled      │   mentor assignment)
+└─────┬──────────┘
+      ▼
+┌────────────────┐
+│  ONBOARDING    │
+│  COMPLETE ✓    │
+└────────────────┘
+</pre>
+    </div>
+
+    <p><strong>Key Features:</strong></p>
+    <ul>
+        <li><strong>Offer Letter Generation:</strong> HTML email with company branding, position details, salary, joining date, and acceptance link.</li>
+        <li><strong>Digital Acceptance:</strong> SHA-256 hash of candidate's full name serves as a digital signature, stored with timestamp and IP address.</li>
+        <li><strong>Document Upload:</strong> Multipart file upload supporting PDF/DOCX/JPG/PNG up to 10MB, stored in <code>uploads/onboarding_documents/</code>.</li>
+        <li><strong>Document Verification:</strong> HR can verify/reject uploaded documents with comments.</li>
+        <li><strong>NDA E-Signing:</strong> Legally-binding digital signature with SHA-256 hash, timestamp, and user-agent logging.</li>
+        <li><strong>IT Provisioning:</strong> Structured request for equipment and access (laptop model, email, VPN, tools, software licenses).</li>
+        <li><strong>Orientation Scheduling:</strong> Date, time, location, agenda, and mentor assignment.</li>
+    </ul>
+
+    <h3>4.7 AI Provider Waterfall Architecture</h3>
+
+    <p>
+        Smart Hiring implements a resilient multi-provider AI architecture that ensures zero-downtime
+        AI functionality regardless of individual provider availability:
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Priority</th><th>Provider</th><th>Model</th><th>Cost</th><th>Daily Limit</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>1 (Primary)</td><td>Groq</td><td>LLaMA-3.3-70B Versatile</td><td>Free</td><td>500 requests</td></tr>
+            <tr><td>2 (Fallback 1)</td><td>Anthropic</td><td>Claude 3.5 Sonnet</td><td>$3/1M tokens</td><td>50 requests</td></tr>
+            <tr><td>3 (Fallback 2)</td><td>OpenAI</td><td>GPT-4o-mini</td><td>$0.15/1M tokens</td><td>50 requests</td></tr>
+            <tr><td>4 (Emergency)</td><td>Static Pool</td><td>Pre-built questions</td><td>Free</td><td>Unlimited</td></tr>
+        </tbody>
+    </table>
+
+    <p>
+        The system maintains daily call counters per provider and automatically switches to the
+        next provider when rate limits are reached or API errors occur. This ensures that the
+        system remains fully functional even when running on free-tier API plans.
+    </p>
+
+    <h3>4.8 Security and Anti-Cheating</h3>
+
+    <p><strong>Authentication &amp; Authorization:</strong></p>
+    <ul>
+        <li><strong>JWT Tokens:</strong> Flask-JWT-Extended with configurable expiry, stored in HTTP-only cookies or Authorization headers.</li>
+        <li><strong>RBAC:</strong> Four roles — admin, company, recruiter, candidate — with decorator-based route protection.</li>
+        <li><strong>Password Security:</strong> bcrypt hashing with 12 rounds via Flask-Bcrypt.</li>
+        <li><strong>CORS:</strong> Configurable origins via Flask-CORS.</li>
+        <li><strong>Rate Limiting:</strong> Per-IP and per-user rate limits on sensitive endpoints.</li>
+    </ul>
+
+    <p><strong>Assessment Security:</strong></p>
+    <ul>
+        <li>One active session per candidate per job (enforced server-side)</li>
+        <li>Session timeout with UTC timestamps (timezone-independent)</li>
+        <li>Server-side answer validation (answers cannot be modified after submission)</li>
+        <li>Violation logging with question context for post-assessment review</li>
+        <li>Blacklist enforcement: blacklisted candidates are blocked from starting assessments</li>
+        <li>Video recording evidence preserved on server for dispute resolution</li>
+    </ul>
+</div>

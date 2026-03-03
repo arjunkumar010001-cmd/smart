@@ -1,9 +1,10 @@
 from flask import Blueprint, request, jsonify, Response, make_response
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson import ObjectId
 import os
 import io
+import re
 import logging
 
 from backend.models.database import get_db
@@ -21,7 +22,7 @@ try:
     from backend.services.ml_matching_service import get_ml_matching_service, analyze_candidate
     from backend.services.anonymization_service import anonymize_text, get_anonymizer
     ML_SERVICES_AVAILABLE = True
-except ImportError:
+except (ImportError, AttributeError, Exception) as _ml_err:
     from backend.utils.matching import extract_skills, analyze_candidate
     from backend.services.resume_parser_service import anonymize_text
     ML_SERVICES_AVAILABLE = False
@@ -176,7 +177,16 @@ def _legacy_upload_resume(user_id: str, file):
 @bp.route('/resume/<application_id>', methods=['GET'])
 @jwt_required()
 def download_resume(application_id):
-    """Download resume for an application - accessible by recruiters and the candidate themselves"""
+    """Download resume for an application — accessible by recruiters and the candidate.
+
+    Fallback chain:
+      1. Disk file (original upload) — anonymised PDF for recruiters, raw for candidate
+      2. Text-to-PDF generation from stored resume_text
+      3. Graceful 404
+
+    For recruiters/company/admin: PII is anonymised (name → Candidate [ID], etc.)
+    For the candidate themselves: original resume is served as-is.
+    """
     try:
         current_user = get_jwt_identity()
         if isinstance(current_user, str):
@@ -188,86 +198,763 @@ def download_resume(application_id):
         users_collection = db['users']
         user = users_collection.find_one({'_id': ObjectId(user_id)})
         if not user:
-            return jsonify({'error': 'User not found'}), 404
+            return jsonify({'success': False, 'error': 'User not found'}), 404
 
         role = user.get('role', '')
 
         # Look up the application
         application = db['applications'].find_one({'_id': ObjectId(application_id)})
         if not application:
-            return jsonify({'error': 'Application not found'}), 404
+            return jsonify({'success': False, 'error': 'Application not found'}), 404
 
         candidate_id = application.get('candidate_id')
 
         # Authorization: only the candidate themselves, company, recruiter, or admin
         if role == 'candidate' and str(user_id) != str(candidate_id):
-            return jsonify({'error': 'Unauthorized'}), 403
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
 
         # Get candidate's resume data
         candidate = db['candidates'].find_one({'user_id': str(candidate_id)})
         if not candidate:
-            return jsonify({'error': 'Candidate profile not found'}), 404
+            return jsonify({'success': False, 'error': 'Candidate profile not found'}), 404
 
-        resume_text = candidate.get('resume_text', '')
-        resume_file = candidate.get('resume_file', 'resume.txt')
+        # Check ALL possible resume-text field names (Bug #3 / #7 field-name mismatch)
+        resume_text = (
+            candidate.get('resume_text')
+            or candidate.get('resume_content')
+            or ''
+        )
+        resume_file = (
+            candidate.get('resume_file')
+            or candidate.get('resume_path')
+            or ''
+        )
 
-        if not resume_text:
-            return jsonify({'error': 'No resume uploaded for this candidate'}), 404
+        if not resume_text and not resume_file:
+            return jsonify({'success': False, 'error': 'No resume uploaded for this candidate'}), 404
 
-        # Check if the original uploaded file exists on disk
-        uploads_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads')
+        # Determine if this is a recruiter viewing (needs anonymisation)
+        is_recruiter_view = role in ('company', 'recruiter', 'admin')
+
+        # Get candidate user info for PII anonymisation
+        candidate_user = users_collection.find_one({'_id': ObjectId(candidate_id)})
+        candidate_name = candidate_user.get('full_name', 'Candidate') if candidate_user else 'Candidate'
+        candidate_email = candidate_user.get('email', '') if candidate_user else ''
+        candidate_phone = candidate.get('phone', '') or (candidate_user.get('phone', '') if candidate_user else '')
+        skills = candidate.get('skills', [])
+
+        logger.info(
+            f"Resume download: app={application_id}, candidate={candidate_id[:8]}…, "
+            f"role={role}, recruiter_view={is_recruiter_view}, "
+            f"resume_file={'yes' if resume_file else 'no'}, "
+            f"resume_text={'yes' if resume_text else 'no'}"
+        )
+
+        # ── FALLBACK 1: Serve disk file ─────────────────────────────────────
+        uploads_folder = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads'
+        )
         candidate_upload_dir = os.path.join(uploads_folder, str(candidate_id))
         disk_file_path = os.path.join(candidate_upload_dir, resume_file) if resume_file else None
 
         if disk_file_path and os.path.exists(disk_file_path):
-            # Serve actual file from disk
             ext = resume_file.rsplit('.', 1)[-1].lower() if '.' in resume_file else 'txt'
-            mime_types = {
-                'pdf': 'application/pdf',
-                'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'doc': 'application/msword',
-                'txt': 'text/plain'
-            }
-            mime = mime_types.get(ext, 'application/octet-stream')
-            with open(disk_file_path, 'rb') as f:
-                file_data = f.read()
-            response = make_response(file_data)
-            response.headers['Content-Type'] = mime
-            response.headers['Content-Disposition'] = f'attachment; filename="{resume_file}"'
-            return response
+            logger.info(f"Resume disk file found: {disk_file_path} (ext={ext})")
 
-        # Fallback: generate a plain-text resume from stored text
-        # Get candidate user info for a nice header
-        candidate_user = users_collection.find_one({'_id': ObjectId(candidate_id)})
-        candidate_name = candidate_user.get('full_name', 'Candidate') if candidate_user else 'Candidate'
-        candidate_email = candidate_user.get('email', '') if candidate_user else ''
-        skills = candidate.get('skills', [])
+            if not is_recruiter_view:
+                # Serve original file to candidate
+                try:
+                    with open(disk_file_path, 'rb') as f:
+                        file_data = f.read()
+                    mime_types = {
+                        'pdf': 'application/pdf',
+                        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'doc': 'application/msword',
+                        'txt': 'text/plain',
+                    }
+                    mime = mime_types.get(ext, 'application/octet-stream')
+                    response = make_response(file_data)
+                    response.headers['Content-Type'] = mime
+                    response.headers['Content-Disposition'] = f'attachment; filename="{resume_file}"'
+                    logger.info(f"Serving original resume from disk ({len(file_data)} bytes)")
+                    return response
+                except Exception as disk_err:
+                    logger.warning(f"Disk read failed, falling through: {disk_err}")
 
-        # Build text resume
-        lines = []
-        lines.append("=" * 60)
-        lines.append(f"  RESUME - {candidate_name}")
-        lines.append("=" * 60)
-        if candidate_email:
-            lines.append(f"  Email: {candidate_email}")
-        if skills:
-            lines.append(f"  Skills: {', '.join(skills[:20])}")
-        lines.append("-" * 60)
-        lines.append("")
-        lines.append(resume_text)
-        content = "\n".join(lines)
+            elif ext == 'pdf':
+                # Anonymise PDF using PyMuPDF for recruiter downloads
+                try:
+                    anonymised_data = bytes(_anonymise_pdf_file(
+                        disk_file_path, candidate_name, candidate_email,
+                        candidate_phone, candidate_id
+                    ))
+                    response = make_response(anonymised_data)
+                    response.headers['Content-Type'] = 'application/pdf'
+                    response.headers['Content-Disposition'] = (
+                        f'attachment; filename="resume_candidate_{candidate_id[:8]}.pdf"'
+                    )
+                    logger.info(f"Serving anonymised PDF from disk ({len(anonymised_data)} bytes)")
+                    return response
+                except Exception as anon_err:
+                    logger.warning(f"PDF anonymisation failed, falling through: {anon_err}")
+            else:
+                # Recruiter viewing a non-PDF file — fall through to text-PDF generation
+                logger.info(f"Non-PDF disk file for recruiter view, falling through to text-PDF")
+        else:
+            logger.info(
+                f"Disk file not found (path={disk_file_path}), "
+                f"falling through to text-PDF generation"
+            )
 
-        response = make_response(content)
-        response.headers['Content-Type'] = 'text/plain; charset=utf-8'
-        safe_name = resume_file if resume_file else f'resume_{candidate_name.replace(" ", "_")}.txt'
-        if not safe_name.endswith('.txt') and not safe_name.endswith('.pdf'):
-            safe_name = safe_name.rsplit('.', 1)[0] + '.txt'
-        response.headers['Content-Disposition'] = f'attachment; filename="{safe_name}"'
-        return response
+        # ── FALLBACK 2: Generate PDF from stored resume text ────────────────
+        if resume_text:
+            try:
+                display_name = f"Candidate [{candidate_id[:8]}]" if is_recruiter_view else candidate_name
+                display_email = "***@***.com" if is_recruiter_view else candidate_email
+                display_phone = "XXX-XXX-XXXX" if is_recruiter_view else candidate_phone
+
+                # Anonymise resume text content for recruiters
+                display_text = resume_text
+                if is_recruiter_view:
+                    display_text = _anonymise_resume_text(
+                        resume_text, candidate_name, candidate_email, candidate_phone
+                    )
+
+                pdf_bytes = bytes(_generate_resume_pdf(
+                    display_name, display_email, display_phone, skills, display_text
+                ))
+
+                filename = (
+                    f"resume_candidate_{candidate_id[:8]}.pdf"
+                    if is_recruiter_view
+                    else f"resume_{candidate_name.replace(' ', '_')}.pdf"
+                )
+                response = make_response(pdf_bytes)
+                response.headers['Content-Type'] = 'application/pdf'
+                response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+                logger.info(f"Generated text-to-PDF resume ({len(pdf_bytes)} bytes)")
+                return response
+            except Exception as gen_err:
+                logger.error(f"Text-to-PDF generation failed: {gen_err}", exc_info=True)
+
+        # ── FALLBACK 3: Graceful failure ────────────────────────────────────
+        logger.error(f"All resume download fallbacks exhausted for app={application_id}")
+        return jsonify({
+            'success': False,
+            'error': 'Resume could not be downloaded. Please re-upload your resume.'
+        }), 404
 
     except Exception as e:
-        logger.error(f"Resume download error: {e}")
-        return jsonify({'error': 'Failed to download resume'}), 500
+        logger.error(f"Resume download error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Failed to download resume'}), 500
+
+
+def _anonymise_resume_text(text, name, email, phone):
+    """Replace PII in resume text with comprehensive anonymised placeholders.
+
+    Redacts: name, email, phone, street addresses, city/country/state,
+    college/university/school names, company names, CGPA/GPA/percentage scores,
+    LinkedIn/GitHub URLs, and date-of-birth patterns.
+
+    IMPORTANT: email/phone exact-value and regex replacement runs BEFORE name
+    replacement to avoid partial-name corruption of email addresses.
+    """
+    import re
+    result = text
+
+    # --- 1. Email (BEFORE name — name parts may exist inside emails) ---
+    if email:
+        result = result.replace(email, '[EMAIL REDACTED]')
+    result = re.sub(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', '[EMAIL REDACTED]', result)
+
+    # --- 2. Phone (BEFORE name — phone digits are safe but do it early) ---
+    if phone:
+        result = result.replace(phone, '[PHONE REDACTED]')
+    # International / Indian / US formats
+    result = re.sub(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', '[PHONE REDACTED]', result)
+    result = re.sub(r'\b\d{10}\b', '[PHONE REDACTED]', result)
+    result = re.sub(r'\+91[-.\s]?\d{5}[-.\s]?\d{5}', '[PHONE REDACTED]', result)
+
+    # --- 3. Name (after email/phone to avoid corrupting them) ---
+    if name and len(name) > 1:
+        for variant in [name, name.upper(), name.lower(), name.title()]:
+            result = result.replace(variant, '[CANDIDATE]')
+        parts = name.split()
+        for part in parts:
+            if len(part) > 2:
+                result = re.sub(r'\b' + re.escape(part) + r'\b', '[REDACTED]', result, flags=re.IGNORECASE)
+
+    # --- 4. Street addresses (including Indian-style: "No. 12, 2nd Cross, ..." / "H.No ...") ---
+    result = re.sub(
+        r'\d{1,5}\s[\w\s]{3,40}(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Court|Ct|Place|Pl)\.?'
+        r'(?:\s*,?\s*[\w\s]+,?\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)?',
+        '[ADDRESS REDACTED]', result, flags=re.IGNORECASE)
+    result = re.sub(
+        r'(?:H\.?\s*No\.?|No\.?|Plot|Flat|Door)\s*[\d/\-]+[\w\s,\-]{5,60}',
+        '[ADDRESS REDACTED]', result, flags=re.IGNORECASE)
+
+    # --- 5. City / State / Country ---
+    _CITIES = (
+        'Mumbai|Bombay|Delhi|Bangalore|Bengaluru|Hyderabad|Chennai|Kolkata|Pune|Ahmedabad|Jaipur|Lucknow|Kanpur|Nagpur|Indore|Thane|Bhopal|'
+        'Visakhapatnam|Patna|Vadodara|Ghaziabad|Ludhiana|Agra|Nashik|Faridabad|Meerut|Rajkot|Varanasi|Srinagar|Aurangabad|'
+        'Coimbatore|Madurai|Kochi|Trivandrum|Thiruvananthapuram|Noida|Gurgaon|Gurugram|Chandigarh|Mysore|Mysuru|Mangalore|'
+        'New York|San Francisco|Los Angeles|Chicago|Houston|Seattle|Austin|Boston|London|Berlin|Toronto|Sydney|Singapore|Dubai|'
+        'Tokyo|Paris|Amsterdam|Dublin|Zurich|Munich|Stockholm|Helsinki|Copenhagen|Melbourne|Vancouver|Montreal|Calgary|'
+        'San Jose|Sunnyvale|Mountain View|Palo Alto|Cupertino|Redmond|Kirkland'
+    )
+    _STATES = (
+        'Tamil Nadu|Karnataka|Maharashtra|Telangana|Andhra Pradesh|Kerala|West Bengal|Gujarat|Rajasthan|Uttar Pradesh|'
+        'Madhya Pradesh|Bihar|Punjab|Haryana|Odisha|Jharkhand|Chhattisgarh|Uttarakhand|Himachal Pradesh|Goa|'
+        'California|Texas|Washington|New York|Massachusetts|Illinois|Georgia|Virginia|Florida|Oregon|'
+        'Colorado|Pennsylvania|New Jersey|Maryland|North Carolina|Ohio|Michigan|Arizona|Minnesota|Connecticut'
+    )
+    _COUNTRIES = (
+        'India|United States|USA|U\\.S\\.A|UK|United Kingdom|Canada|Australia|Germany|France|Japan|Singapore|'
+        'Netherlands|Ireland|Switzerland|Sweden|Norway|Denmark|Finland|New Zealand|UAE|Israel|South Korea|China'
+    )
+    # Replace "City, State" / "City, Country" / standalone known cities in context
+    result = re.sub(
+        r'\b(' + _CITIES + r')\s*[,\-]\s*(' + _STATES + r'|' + _COUNTRIES + r')\b',
+        '[LOCATION REDACTED]', result, flags=re.IGNORECASE)
+    result = re.sub(
+        r'\b(' + _STATES + r')\s*[,\-]\s*(' + _COUNTRIES + r')\b',
+        '[LOCATION REDACTED]', result, flags=re.IGNORECASE)
+    # Standalone city — match when city appears near a comma, newline, dash, or whitespace-bounded context
+    result = re.sub(
+        r'(?:^|[,\n\-])\s*\b(' + _CITIES + r')\b\s*(?:[,\n\-]|$)',
+        ' [LOCATION REDACTED] ', result, flags=re.IGNORECASE | re.MULTILINE)
+    # City after a comma (common in "Role - Company, City    Date" lines)
+    result = re.sub(
+        r',\s*\b(' + _CITIES + r')\b(?=\s|,|$)',
+        ', [LOCATION REDACTED]', result, flags=re.IGNORECASE)
+    # PIN codes (Indian 6-digit)
+    result = re.sub(r'\b\d{6}\b', '[PIN REDACTED]', result)
+    # US ZIP codes
+    result = re.sub(r'\b\d{5}(?:-\d{4})?\b', '[ZIP REDACTED]', result)
+
+    # --- 6. College / University / School names ---
+    _INSTITUTIONS = (
+        'IIT\\s+\\w+|NIT\\s+\\w+|IIIT\\s+\\w+|BITS\\s+\\w+|'
+        'Indian Institute of Technology|National Institute of Technology|'
+        'Indian Institute of Information Technology|Birla Institute|'
+        'IIT|NIT|IIIT|BITS|VIT|SRM|'
+        'Anna University|Amity|Manipal|LPU|Lovely Professional|Jadavpur|'
+        'JNTU|Jawaharlal Nehru|Osmania|Savitribai Phule|Mumbai University|'
+        'Delhi University|Calcutta University|Madras University|'
+        'MIT|Stanford|Harvard|Carnegie Mellon|UC Berkeley|Georgia Tech|'
+        'Caltech|Princeton|Yale|Columbia|Cornell|Oxford|Cambridge|'
+        'University of \\w+|\\w+ University|\\w+ Institute of Technology|'
+        'College of \\w+|\\w+ College|\\w+ School of \\w+'
+    )
+    result = re.sub(
+        r'\b(' + _INSTITUTIONS + r')(?:\s*,\s*[\w\s,]+)?',
+        '[INSTITUTION REDACTED]', result, flags=re.IGNORECASE)
+
+    # --- 6b. Company / Employer names ---
+    _COMPANIES = (
+        'TCS|Tata Consultancy|Infosys|Wipro|HCL|Tech Mahindra|Cognizant|'
+        'Accenture|Capgemini|IBM|Oracle|Microsoft|Google|Amazon|Meta|Facebook|'
+        'Apple|Netflix|Uber|Flipkart|Zomato|Swiggy|Paytm|Razorpay|Freshworks|'
+        'Zoho|Mindtree|Mphasis|L&T Infotech|LTIMindtree|Deloitte|PwC|EY|KPMG|'
+        'McKinsey|BCG|Bain|Goldman Sachs|JPMorgan|Morgan Stanley|Barclays|'
+        'SAP|Salesforce|Adobe|VMware|Cisco|Intel|Qualcomm|Samsung|'
+        'Reliance|Jio|Ola|BYJU|Unacademy|PhonePe|CRED|Meesho|Dunzo|'
+        'Thoughtworks|Atlassian|Shopify|Stripe|Twilio|Databricks|Snowflake'
+    )
+    result = re.sub(
+        r'\b(' + _COMPANIES + r')\b',
+        '[COMPANY REDACTED]', result, flags=re.IGNORECASE)
+
+    # --- 7. CGPA / GPA / Percentage scores ---
+    result = re.sub(r'\b(?:CGPA|GPA|CPI|SPI)\s*[:\-]?\s*\d+\.?\d*\s*(?:/\s*\d+\.?\d*)?', '[SCORE REDACTED]', result, flags=re.IGNORECASE)
+    result = re.sub(r'\b\d{1,2}\.\d{1,2}\s*/\s*(?:10|4(?:\.0)?)\b', '[SCORE REDACTED]', result)
+    result = re.sub(r'\b(?:percentage|percent|marks)\s*[:\-]?\s*\d{1,3}\.?\d*\s*%?', '[SCORE REDACTED]', result, flags=re.IGNORECASE)
+    result = re.sub(r'\b\d{2,3}(?:\.\d+)?\s*%', '[SCORE REDACTED]', result)
+
+    # --- 8. LinkedIn / GitHub / personal URLs ---
+    result = re.sub(r'https?://(?:www\.)?linkedin\.com/in/[\w\-]+/?', '[LINKEDIN REDACTED]', result, flags=re.IGNORECASE)
+    result = re.sub(r'https?://(?:www\.)?github\.com/[\w\-]+/?', '[GITHUB REDACTED]', result, flags=re.IGNORECASE)
+    result = re.sub(r'https?://[\w\-]+\.[\w\-.]+(?:/[\w\-./]*)?', '[URL REDACTED]', result)
+
+    # --- 9. Date of birth ---
+    result = re.sub(
+        r'\b(?:DOB|Date\s+of\s+Birth|D\.O\.B)\s*[:\-]?\s*\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4}',
+        '[DOB REDACTED]', result, flags=re.IGNORECASE)
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Resume section parser – extracts structured sections from raw text
+# ---------------------------------------------------------------------------
+_SECTION_PATTERNS = {
+    'summary':        re.compile(r'^(?:PROFESSIONAL\s+)?(?:SUMMARY|OBJECTIVE|PROFILE|ABOUT\s+ME)\s*[:\-]?\s*$', re.IGNORECASE),
+    'experience':     re.compile(r'^(?:WORK\s+)?(?:EXPERIENCE|EMPLOYMENT|WORK\s+HISTORY|PROFESSIONAL\s+EXPERIENCE)\s*[:\-]?\s*$', re.IGNORECASE),
+    'education':      re.compile(r'^EDUCATION(?:AL)?\s*(?:BACKGROUND|QUALIFICATIONS?)?\s*[:\-]?\s*$', re.IGNORECASE),
+    'skills':         re.compile(r'^(?:TECHNICAL\s+)?SKILLS?\s*(?:&\s*(?:TOOLS|TECHNOLOGIES))?\s*[:\-]?\s*$', re.IGNORECASE),
+    'projects':       re.compile(r'^(?:PERSONAL\s+|ACADEMIC\s+)?PROJECTS?\s*[:\-]?\s*$', re.IGNORECASE),
+    'certifications': re.compile(r'^CERTIFICATIONS?\s*(?:&\s*LICEN[SC]ES?)?\s*[:\-]?\s*$', re.IGNORECASE),
+    'languages':      re.compile(r'^LANGUAGES?\s*[:\-]?\s*$', re.IGNORECASE),
+    'achievements':   re.compile(r'^(?:AWARDS?\s*(?:&\s*)?)?(?:ACHIEVEMENTS?|HONORS?|ACCOMPLISHMENTS?)\s*[:\-]?\s*$', re.IGNORECASE),
+    'interests':      re.compile(r'^(?:HOBBIES?\s*(?:&\s*)?)?INTERESTS?\s*[:\-]?\s*$', re.IGNORECASE),
+    'publications':   re.compile(r'^PUBLICATIONS?\s*[:\-]?\s*$', re.IGNORECASE),
+    'references':     re.compile(r'^REFERENCES?\s*[:\-]?\s*$', re.IGNORECASE),
+}
+
+import re as _re_module  # top-level for section patterns
+
+
+def _parse_resume_sections(resume_text):
+    """Parse raw resume text into labelled sections.
+
+    Returns an OrderedDict: section_name → list[str] (lines).
+    Unknown content before the first heading goes into 'header'.
+    """
+    from collections import OrderedDict
+    sections = OrderedDict()
+    current = 'header'
+    sections[current] = []
+
+    for line in resume_text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            sections.setdefault(current, []).append('')
+            continue
+        matched = False
+        for sec_name, pattern in _SECTION_PATTERNS.items():
+            if pattern.match(stripped):
+                current = sec_name
+                sections.setdefault(current, [])
+                matched = True
+                break
+        if not matched:
+            sections.setdefault(current, []).append(line)
+    # Remove empty trailing lines per section
+    for k in sections:
+        while sections[k] and sections[k][-1].strip() == '':
+            sections[k].pop()
+    return sections
+
+
+# ---------------------------------------------------------------------------
+# Skill categorisation helper
+# ---------------------------------------------------------------------------
+_SKILL_CATEGORIES = {
+    'Languages': {'python', 'java', 'javascript', 'typescript', 'c', 'c++', 'c#', 'go', 'rust', 'ruby', 'php',
+                  'swift', 'kotlin', 'scala', 'r', 'matlab', 'perl', 'dart', 'lua', 'shell', 'bash', 'sql',
+                  'html', 'css', 'sass', 'less'},
+    'Frontend': {'react', 'reactjs', 'react.js', 'angular', 'angularjs', 'vue', 'vuejs', 'vue.js', 'svelte',
+                 'next.js', 'nextjs', 'nuxt', 'gatsby', 'tailwind', 'tailwindcss', 'bootstrap', 'material-ui',
+                 'chakra', 'redux', 'webpack', 'vite', 'jquery'},
+    'Backend': {'node', 'nodejs', 'node.js', 'express', 'expressjs', 'django', 'flask', 'fastapi',
+                'spring', 'spring boot', 'springboot', '.net', 'asp.net', 'rails', 'laravel', 'nestjs',
+                'graphql', 'rest', 'grpc', 'microservices'},
+    'Databases': {'mysql', 'postgresql', 'postgres', 'mongodb', 'redis', 'sqlite', 'oracle', 'sql server',
+                  'cassandra', 'dynamodb', 'elasticsearch', 'neo4j', 'firebase', 'supabase', 'couchdb',
+                  'mariadb', 'cockroachdb'},
+    'Cloud & DevOps': {'aws', 'azure', 'gcp', 'google cloud', 'docker', 'kubernetes', 'k8s', 'terraform',
+                       'ansible', 'jenkins', 'ci/cd', 'github actions', 'gitlab ci', 'circleci', 'heroku',
+                       'vercel', 'netlify', 'cloudflare', 'nginx', 'apache', 'linux', 'helm', 'prometheus',
+                       'grafana', 'datadog', 'aws lambda', 'ec2', 's3'},
+    'Data & ML': {'pandas', 'numpy', 'scikit-learn', 'sklearn', 'tensorflow', 'pytorch', 'keras', 'spark',
+                  'hadoop', 'airflow', 'kafka', 'tableau', 'power bi', 'matplotlib', 'seaborn', 'opencv',
+                  'nltk', 'spacy', 'huggingface', 'transformers', 'llm', 'deep learning', 'machine learning',
+                  'data science', 'data engineering', 'etl', 'data pipeline'},
+    'Tools & Other': {'git', 'github', 'gitlab', 'bitbucket', 'jira', 'confluence', 'figma', 'postman',
+                      'swagger', 'vs code', 'intellij', 'agile', 'scrum', 'kanban', 'tdd', 'bdd',
+                      'unit testing', 'jest', 'pytest', 'selenium', 'cypress', 'playwright'},
+}
+
+
+def _categorise_skills(skills):
+    """Group a flat skill list into categories. Returns dict[category] → list[str]."""
+    categorised = {}
+    uncategorised = []
+    skill_lower_map = {s.lower().strip(): s for s in skills}
+    assigned = set()
+
+    for category, keywords in _SKILL_CATEGORIES.items():
+        matched = []
+        for kw in keywords:
+            if kw in skill_lower_map and kw not in assigned:
+                matched.append(skill_lower_map[kw])
+                assigned.add(kw)
+        if matched:
+            categorised[category] = sorted(matched, key=str.lower)
+
+    for s_lower, s_orig in skill_lower_map.items():
+        if s_lower not in assigned:
+            uncategorised.append(s_orig)
+    if uncategorised:
+        categorised['Other'] = sorted(uncategorised, key=str.lower)
+
+    return categorised
+
+
+def _generate_resume_pdf(name, email, phone, skills, resume_text):
+    """Generate a professional, structured PDF resume from resume text using fpdf2.
+
+    Layout:
+      - Header: Name centred, contact line
+      - Professional Summary (first few lines or parsed summary section)
+      - Technical Skills grouped by category
+      - Work Experience with role / company / dates / bullet points
+      - Projects
+      - Education
+      - Certifications
+      - Languages / Achievements / Other sections
+    """
+    try:
+        from fpdf import FPDF
+    except ImportError:
+        return _generate_minimal_pdf(name, resume_text)
+
+    # --- Parse resume into sections ---
+    sections = _parse_resume_sections(resume_text)
+
+    class ResumePDF(FPDF):
+        """Custom PDF with helper drawing methods."""
+        _accent = (37, 99, 235)   # Blue accent #2563EB
+        _dark   = (30, 41, 59)    # Slate-800
+        _muted  = (100, 116, 139) # Slate-500
+        _light  = (241, 245, 249) # Slate-100
+
+        def _section_heading(self, title):
+            self.ln(3)
+            self.set_font('Helvetica', 'B', 11)
+            self.set_text_color(*self._accent)
+            self.cell(0, 7, title.upper(), ln=True)
+            self.set_draw_color(*self._accent)
+            self.set_line_width(0.5)
+            self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+            self.ln(2)
+            self.set_text_color(*self._dark)
+
+        def _body_text(self, text, bold=False):
+            self.set_font('Helvetica', 'B' if bold else '', 9.5)
+            self.set_x(self.l_margin)  # always reset to left margin
+            clean = text.encode('latin-1', errors='replace').decode('latin-1')
+            self.multi_cell(0, 4.5, clean)
+
+        def _bullet_line(self, text):
+            self.set_font('Helvetica', '', 9.5)
+            self.set_x(self.l_margin)
+            self.cell(5, 4.5, '-')  # safe latin-1 bullet
+            clean = text.strip().encode('latin-1', errors='replace').decode('latin-1')
+            if not clean:
+                self.ln(4.5)
+                return
+            avail_w = self.w - self.r_margin - self.get_x()
+            if avail_w < 20:
+                self.ln(4.5)
+                self.set_x(self.l_margin + 5)
+                avail_w = self.w - self.r_margin - self.l_margin - 5
+            self.multi_cell(avail_w, 4.5, clean)
+
+        def _tag_row(self, items, per_row=6):
+            """Draw skill tags in a row."""
+            self.set_font('Helvetica', '', 8.5)
+            x_start = self.l_margin
+            x = x_start
+            for item in items:
+                clean = item.encode('latin-1', errors='replace').decode('latin-1')
+                tw = self.get_string_width(clean) + 8
+                if x + tw > self.w - self.r_margin:
+                    self.ln(6.5)
+                    x = x_start
+                self.set_xy(x, self.get_y())
+                # Tag background
+                self.set_fill_color(*self._light)
+                self.set_draw_color(200, 200, 200)
+                self.cell(tw, 5.5, clean, border=1, fill=True, align='C')
+                x += tw + 3
+            self.ln(7)
+
+    pdf = ResumePDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_margins(18, 15, 18)
+
+    # ===== HEADER =====
+    pdf.set_font('Helvetica', 'B', 20)
+    pdf.set_text_color(*ResumePDF._dark)
+    header_name = name.encode('latin-1', errors='replace').decode('latin-1')
+    pdf.cell(0, 10, header_name, ln=True, align='C')
+
+    contact_parts = []
+    if email:
+        contact_parts.append(email)
+    if phone:
+        contact_parts.append(phone)
+    # Try to pull location from header section (first couple of lines)
+    header_lines = sections.get('header', [])
+    for hl in header_lines[:3]:
+        hl_stripped = hl.strip()
+        if hl_stripped and hl_stripped != name and '@' not in hl_stripped and not hl_stripped.replace('-','').replace('+','').replace(' ','').isdigit():
+            # Likely a tagline / location / link – skip if it looks like a section start
+            if len(hl_stripped) < 80 and not any(p.match(hl_stripped) for p in _SECTION_PATTERNS.values()):
+                contact_parts.append(hl_stripped)
+                break
+
+    if contact_parts:
+        pdf.set_font('Helvetica', '', 9)
+        pdf.set_text_color(*ResumePDF._muted)
+        contact_str = '  |  '.join(contact_parts).encode('latin-1', errors='replace').decode('latin-1')
+        pdf.cell(0, 5, contact_str, ln=True, align='C')
+
+    pdf.ln(2)
+    pdf.set_draw_color(*ResumePDF._accent)
+    pdf.set_line_width(0.6)
+    pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+    pdf.ln(3)
+
+    # ===== PROFESSIONAL SUMMARY =====
+    summary_lines = sections.get('summary', [])
+    if not summary_lines:
+        # Fallback: use first non-empty header lines as summary
+        summary_lines = [l for l in header_lines if l.strip() and l.strip() != name][:5]
+    if summary_lines:
+        pdf._section_heading('Professional Summary')
+        summary_text = '\n'.join(summary_lines).strip()
+        pdf._body_text(summary_text)
+        pdf.ln(2)
+
+    # ===== TECHNICAL SKILLS =====
+    categorised = _categorise_skills(skills) if skills else {}
+    parsed_skills_lines = sections.get('skills', [])
+    if categorised:
+        pdf._section_heading('Technical Skills')
+        for cat, items in categorised.items():
+            pdf.set_font('Helvetica', 'B', 9)
+            pdf.set_text_color(*ResumePDF._muted)
+            pdf.cell(0, 5, f'{cat}:', ln=True)
+            pdf.set_text_color(*ResumePDF._dark)
+            pdf._tag_row(items)
+        pdf.ln(1)
+    elif parsed_skills_lines:
+        pdf._section_heading('Technical Skills')
+        for sl in parsed_skills_lines:
+            if sl.strip():
+                pdf._body_text(sl.strip())
+        pdf.ln(2)
+
+    # ===== WORK EXPERIENCE =====
+    exp_lines = sections.get('experience', [])
+    if exp_lines:
+        pdf._section_heading('Work Experience')
+        for line in exp_lines:
+            stripped = line.strip()
+            if not stripped:
+                pdf.ln(2)
+                continue
+            # Heuristic: lines with dates are likely role/company headers
+            if _re_module.search(r'\b(19|20)\d{2}\b', stripped) or _re_module.search(r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{4}', stripped, _re_module.IGNORECASE):
+                pdf._body_text(stripped, bold=True)
+            elif stripped.startswith(('-', '*', chr(8226), chr(9679))):
+                pdf._bullet_line(stripped.lstrip('-*' + chr(8226) + chr(9679) + ' '))
+            else:
+                pdf._body_text(stripped)
+        pdf.ln(2)
+
+    # ===== PROJECTS =====
+    proj_lines = sections.get('projects', [])
+    if proj_lines:
+        pdf._section_heading('Projects')
+        for line in proj_lines:
+            stripped = line.strip()
+            if not stripped:
+                pdf.ln(2)
+                continue
+            if stripped.startswith(('-', '*', chr(8226), chr(9679))):
+                pdf._bullet_line(stripped.lstrip('-*' + chr(8226) + chr(9679) + ' '))
+            elif len(stripped) < 80 and not stripped.endswith('.'):
+                pdf._body_text(stripped, bold=True)
+            else:
+                pdf._body_text(stripped)
+        pdf.ln(2)
+
+    # ===== EDUCATION =====
+    edu_lines = sections.get('education', [])
+    if edu_lines:
+        pdf._section_heading('Education')
+        for line in edu_lines:
+            stripped = line.strip()
+            if not stripped:
+                pdf.ln(2)
+                continue
+            if _re_module.search(r'\b(19|20)\d{2}\b', stripped):
+                pdf._body_text(stripped, bold=True)
+            elif stripped.startswith(('-', '*', chr(8226))):
+                pdf._bullet_line(stripped.lstrip('-*' + chr(8226) + ' '))
+            else:
+                pdf._body_text(stripped)
+        pdf.ln(2)
+
+    # ===== CERTIFICATIONS =====
+    cert_lines = sections.get('certifications', [])
+    if cert_lines:
+        pdf._section_heading('Certifications')
+        for line in cert_lines:
+            stripped = line.strip()
+            if stripped:
+                pdf._bullet_line(stripped.lstrip('-*' + chr(8226) + ' '))
+        pdf.ln(2)
+
+    # ===== LANGUAGES =====
+    lang_lines = sections.get('languages', [])
+    if lang_lines:
+        pdf._section_heading('Languages')
+        pdf._body_text(', '.join(l.strip() for l in lang_lines if l.strip()))
+        pdf.ln(2)
+
+    # ===== ACHIEVEMENTS =====
+    ach_lines = sections.get('achievements', [])
+    if ach_lines:
+        pdf._section_heading('Awards & Achievements')
+        for line in ach_lines:
+            stripped = line.strip()
+            if stripped:
+                pdf._bullet_line(stripped.lstrip('-*' + chr(8226) + ' '))
+        pdf.ln(2)
+
+    # ===== REMAINING SECTIONS =====
+    rendered = {'header', 'summary', 'experience', 'education', 'skills', 'projects',
+                'certifications', 'languages', 'achievements', 'interests', 'references', 'publications'}
+    for sec_name, lines in sections.items():
+        if sec_name in rendered or not lines:
+            continue
+        pdf._section_heading(sec_name.replace('_', ' ').title())
+        for line in lines:
+            stripped = line.strip()
+            if stripped:
+                pdf._body_text(stripped)
+        pdf.ln(2)
+
+    # If NO sections were parsed at all, dump the full text neatly
+    meaningful_sections = [k for k in sections if k != 'header' and sections[k]]
+    if not meaningful_sections and not skills:
+        pdf._section_heading('Resume Content')
+        clean_text = resume_text.encode('latin-1', errors='replace').decode('latin-1')
+        pdf.set_font('Helvetica', '', 9.5)
+        pdf.set_x(pdf.l_margin)
+        pdf.multi_cell(0, 4.5, clean_text)
+
+    # ===== BIAS-FREE HIRING FOOTER =====
+    # Add a notice at the bottom if name contains "Candidate [" (anonymised view)
+    if name.startswith('Candidate ['):
+        pdf.ln(6)
+        pdf.set_draw_color(*ResumePDF._accent)
+        pdf.set_line_width(0.3)
+        pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+        pdf.ln(3)
+        pdf.set_font('Helvetica', 'I', 7.5)
+        pdf.set_text_color(130, 130, 130)
+        pdf.set_x(pdf.l_margin)
+        notice = (
+            'CONFIDENTIAL - Bias-Free Hiring: This resume has been automatically anonymised to remove '
+            'personally identifiable information (name, contact details, institutions, locations, scores) '
+            'to support fair and unbiased candidate evaluation. Generated by Smart Hiring System.'
+        )
+        pdf.multi_cell(0, 3.5, notice.encode('latin-1', errors='replace').decode('latin-1'))
+
+    return pdf.output()
+
+
+def _generate_minimal_pdf(name, text):
+    """Minimal PDF generation without any library dependencies."""
+    clean = text.encode('latin-1', errors='replace').decode('latin-1')
+    content = f"""%PDF-1.4
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj
+5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj
+4 0 obj
+<</Length {len(clean) + 50}>>
+stream
+BT /F1 12 Tf 72 720 Td ({name}) Tj 0 -20 Td /F1 10 Tf ({clean[:2000]}) Tj ET
+endstream
+endobj
+xref
+0 6
+trailer<</Size 6/Root 1 0 R>>
+startxref
+0
+%%EOF"""
+    return content.encode('latin-1')
+
+
+def _anonymise_pdf_file(file_path, name, email, phone, candidate_id):
+    """Anonymise PII in a PDF file using PyMuPDF (fitz).
+
+    Redacts: name, email, phone, LinkedIn/GitHub URLs, city/college names, CGPA/GPA.
+    """
+    import fitz  # PyMuPDF
+    import re
+
+    doc = fitz.open(file_path)
+
+    # Build list of literal PII strings to redact
+    pii_patterns = []
+    if name and len(name) > 1:
+        pii_patterns.append(name)
+        pii_patterns.append(name.upper())
+        pii_patterns.append(name.title())
+        for part in name.split():
+            if len(part) > 2:
+                pii_patterns.append(part)
+    if email:
+        pii_patterns.append(email)
+    if phone:
+        pii_patterns.append(phone)
+
+    # Regex patterns to search per-span
+    _regex_patterns = [
+        re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'),                 # emails
+        re.compile(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'),         # phones
+        re.compile(r'\b\d{10}\b'),                                                        # 10-digit phones
+        re.compile(r'\+91[-.\s]?\d{5}[-.\s]?\d{5}'),                                      # Indian phones
+        re.compile(r'https?://(?:www\.)?linkedin\.com/in/[\w\-]+/?', re.I),               # LinkedIn
+        re.compile(r'https?://(?:www\.)?github\.com/[\w\-]+/?', re.I),                    # GitHub
+        re.compile(r'\b(?:CGPA|GPA|CPI|SPI)\s*[:\-]?\s*\d+\.?\d*(?:\s*/\s*\d+\.?\d*)?', re.I),  # CGPA
+        re.compile(r'\b\d{1,2}\.\d{1,2}\s*/\s*(?:10|4(?:\.0)?)\b'),                      # x.x/10
+        re.compile(r'\b\d{2,3}(?:\.\d+)?\s*%'),                                           # percentage
+    ]
+
+    for page in doc:
+        # 1. Redact literal PII strings
+        for pattern in pii_patterns:
+            for inst in page.search_for(pattern):
+                page.add_redact_annot(inst, fill=(0, 0, 0))
+
+        # 2. Redact regex-matched PII in text spans
+        blocks = page.get_text("dict")["blocks"]
+        for block in blocks:
+            if "lines" not in block:
+                continue
+            for line in block["lines"]:
+                for span in line["spans"]:
+                    text = span["text"]
+                    for rgx in _regex_patterns:
+                        for match in rgx.finditer(text):
+                            for r in page.search_for(match.group()):
+                                page.add_redact_annot(r, fill=(0, 0, 0))
+
+        # Apply all redactions
+        page.apply_redactions()
+
+        # Watermark on first page
+        if page.number == 0:
+            page.insert_text(
+                fitz.Point(72, 30),
+                f"ANONYMISED - Candidate [{candidate_id[:8]}]",
+                fontsize=9,
+                color=(0.5, 0.5, 0.5)
+            )
+
+    output = io.BytesIO()
+    doc.save(output)
+    doc.close()
+    return output.getvalue()
 
 
 @bp.route('/apply/<job_id>', methods=['POST'])
@@ -294,6 +981,12 @@ def apply_to_job(job_id):
         
         if role != 'candidate':
             return jsonify({'error': 'Only candidates can apply to jobs'}), 403
+        
+        # ── Blacklist enforcement ──
+        from backend.routes.blacklist_routes import enforce_blacklist
+        bl = enforce_blacklist(user_id)
+        if bl:
+            return bl
         
         db = get_db()
         jobs_collection = db['jobs']
@@ -418,6 +1111,28 @@ def apply_to_job(job_id):
             }
         )
         
+        # Log auto-shortlist / auto-filter as a status_changed audit event
+        auto_status = application_data.get('status', 'pending')
+        if auto_status != 'pending':
+            log_audit_event(
+                event_type='status_changed',
+                user_id='system',
+                job_id=job_id,
+                candidate_id=user_id,
+                application_id=application_id,
+                details={
+                    'old_status': 'pending',
+                    'new_status': auto_status,
+                    'note': application_data.get('auto_status_reason', 'Auto-decision by scoring engine'),
+                    'decision_type': auto_status,
+                    'automated': True
+                },
+                scores={
+                    'overall_score': analysis['overall_score'],
+                    'skill_match': analysis['skill_match']
+                }
+            )
+        
         # Update job application count (ONLY for new applications, not re-applications)
         if not is_reapplication:
             jobs_collection.update_one(
@@ -458,8 +1173,78 @@ def apply_to_job(job_id):
                         analysis['overall_score']
                     )
         except Exception as email_error:
-            print(f"⚠️ Application emails failed: {email_error}")
-        
+            logger.warning(f"⚠️ Application emails failed: {email_error}")
+
+        # ── Bug #1: Auto-assign assessment session if job has an assessment config ──
+        try:
+            assessment_config = db['assessment_configs'].find_one({
+                'job_id': job_id,
+                'is_active': True
+            })
+            if assessment_config and not is_reapplication:
+                # Check if candidate already has a session for this config
+                existing_session = db['smart_sessions'].find_one({
+                    'candidate_id': user_id,
+                    'config_id': str(assessment_config['_id'])
+                })
+                if not existing_session:
+                    session_doc = {
+                        'candidate_id': user_id,
+                        'config_id': str(assessment_config['_id']),
+                        'application_id': application_id,
+                        'job_id': job_id,
+                        'status': 'assigned',
+                        'assigned_at': datetime.utcnow(),
+                        'expires_at': datetime.utcnow() + timedelta(days=7),
+                        'attempts_remaining': assessment_config.get('max_attempts', 3),
+                        'questions': [],
+                        'answers': {},
+                        'final_score': 0.0,
+                        'final_percentage': 0.0,
+                        'passed': False,
+                        'verdict': 'pending',
+                        'created_at': datetime.utcnow()
+                    }
+                    session_result = db['smart_sessions'].insert_one(session_doc)
+                    logger.info(
+                        f"Assessment session auto-assigned: session={session_result.inserted_id}, "
+                        f"config={assessment_config['_id']}, candidate={user_id[:8]}, "
+                        f"expires_at={session_doc['expires_at'].isoformat()}"
+                    )
+
+                    # Send assessment notification email
+                    try:
+                        from backend.services.email_templates import EmailTemplates
+                        from backend.services.email_service import EmailNotificationSystem
+
+                        candidate_user = db['users'].find_one({'_id': ObjectId(user_id)})
+                        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5000')
+                        email_html = EmailTemplates.render_template('assessment_invitation', {
+                            'candidate_name': candidate_user.get('full_name', 'Candidate') if candidate_user else 'Candidate',
+                            'job_title': job.get('title', 'the position'),
+                            'assessment_title': assessment_config.get('title', assessment_config.get('job_role', 'Assessment')),
+                            'question_count': assessment_config.get('total_questions', 'N/A'),
+                            'time_limit': assessment_config.get('duration_minutes', 'N/A'),
+                            'deadline': session_doc['expires_at'].strftime('%B %d, %Y'),
+                            'assessment_url': f"{frontend_url}/candidate.html#assessments",
+                        })
+                        email_system = EmailNotificationSystem()
+                        candidate_email = candidate_user.get('email', '') if candidate_user else ''
+                        if candidate_email:
+                            email_system.send_email(
+                                candidate_email,
+                                f"Assessment Ready: {job.get('title', 'Position')}",
+                                email_html
+                            )
+                            logger.info(f"Assessment notification sent to {candidate_email}")
+                    except Exception as email_err:
+                        logger.warning(f"Assessment email notification failed: {email_err}")
+
+                else:
+                    logger.info(f"Assessment session already exists for candidate={user_id[:8]}, config={assessment_config['_id']}")
+        except Exception as assess_err:
+            logger.warning(f"Assessment auto-assignment failed: {assess_err}")
+
         # Return appropriate response
         if is_reapplication:
             return jsonify({
@@ -525,6 +1310,13 @@ def get_my_applications():
                 app['job_title'] = job['title']
                 app['company_name'] = job.get('company_name', 'Company')
                 app['location'] = job.get('location', 'Remote')
+                # Bug #4 fix: include job_details for skills match insights
+                app['job_details'] = {
+                    'required_skills': job.get('required_skills', []),
+                    'job_type': job.get('job_type', ''),
+                    'department': job.get('department', ''),
+                    'title': job['title']
+                }
             
             # Convert applied_date to applied_at for frontend compatibility
             if 'applied_date' in app:
@@ -562,6 +1354,8 @@ def get_candidate_profile():
         if not candidate:
             # Create default candidate profile
             user = users_collection.find_one({'_id': ObjectId(user_id)})
+            if not user:
+                return jsonify({'error': 'User account not found'}), 404
             
             default_profile = {
                 'user_id': user_id,
@@ -591,7 +1385,32 @@ def get_candidate_profile():
             del candidate['resume_text']
         if 'anonymized_resume' in candidate:
             del candidate['anonymized_resume']
-        
+
+        # Bug #3 fix: compute profile completion_score server-side
+        user = users_collection.find_one({'_id': ObjectId(user_id)})
+        completion_details = {
+            'name': bool(user and user.get('full_name')),
+            'phone': bool(candidate.get('phone')),
+            'location': bool(candidate.get('location')),
+            'about_me': len(candidate.get('bio', '') or '') > 50,
+            'skills': len(candidate.get('skills', [])) >= 3,
+            'experience': (candidate.get('experience_years', 0) or 0) > 0,
+            'education': bool(candidate.get('education')),
+            'resume': bool(
+                candidate.get('resume_uploaded')
+                or candidate.get('resume_file')
+                or candidate.get('resume_path')
+            ),
+        }
+        weights = {
+            'name': 10, 'phone': 10, 'location': 10, 'about_me': 15,
+            'skills': 15, 'experience': 15, 'education': 15, 'resume': 10
+        }
+        candidate['completion_score'] = sum(
+            weights[k] for k, v in completion_details.items() if v
+        )
+        candidate['completion_details'] = completion_details
+
         return jsonify(candidate), 200
         
     except Exception as e:
@@ -650,9 +1469,39 @@ def update_candidate_profile():
             {'$set': {'full_name': full_name}}
         )
         
+        # Bug #6 fix: Recompute and persist completion_score on every profile save
+        completion_details = {
+            'name': bool(update_data.get('first_name') and update_data.get('last_name')),
+            'phone': bool(update_data.get('phone')),
+            'location': bool(update_data.get('location')),
+            'bio': bool(update_data.get('bio') and len(update_data.get('bio', '')) > 50),
+            'skills': bool(update_data.get('skills') and len(update_data.get('skills', [])) >= 3),
+            'experience': bool(update_data.get('experience_years')),
+            'education': bool(update_data.get('education')),
+            'resume': False  # check from DB
+        }
+        # Check resume from existing profile
+        existing = candidates_collection.find_one({'user_id': user_id})
+        if existing and (existing.get('resume_file') or existing.get('resume_uploaded')):
+            completion_details['resume'] = True
+        
+        weights = {
+            'name': 10, 'phone': 10, 'location': 10, 'bio': 15,
+            'skills': 15, 'experience': 15, 'education': 15, 'resume': 10
+        }
+        completion_score = sum(weights[k] for k, v in completion_details.items() if v)
+        
+        # Persist the score
+        candidates_collection.update_one(
+            {'user_id': user_id},
+            {'$set': {'completion_score': completion_score, 'completion_details': completion_details}}
+        )
+        
         return jsonify({
             'message': 'Profile updated successfully',
-            'profile': update_data
+            'profile': update_data,
+            'completion_score': completion_score,
+            'completion_details': completion_details
         }), 200
         
     except Exception as e:
@@ -741,6 +1590,50 @@ def delete_self_identification():
         )
 
         return jsonify({'message': 'Self-identification data removed.'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/applications/<application_id>/onboarding', methods=['PUT'])
+@jwt_required()
+@require_role(['candidate', 'admin'])
+def update_onboarding_step(application_id):
+    """Toggle an onboarding checklist step for a hired candidate."""
+    try:
+        current_user = get_jwt_identity()
+        user_id = current_user if isinstance(current_user, str) else current_user.get('user_id')
+
+        data = request.get_json()
+        step = data.get('step')
+        completed = data.get('completed', False)
+
+        valid_steps = [
+            'offer_accepted', 'documents_uploaded', 'profile_completed',
+            'nda_signed', 'it_setup_requested', 'orientation_scheduled'
+        ]
+        if step not in valid_steps:
+            return jsonify({'error': 'Invalid onboarding step'}), 400
+
+        db = get_db()
+        applications_collection = db['applications']
+
+        # Verify the application belongs to this candidate and is hired
+        application = applications_collection.find_one({
+            '_id': ObjectId(application_id),
+            'candidate_id': user_id,
+            'status': 'hired'
+        })
+        if not application:
+            return jsonify({'error': 'Application not found or not in hired status'}), 404
+
+        # Update the specific onboarding step
+        applications_collection.update_one(
+            {'_id': ObjectId(application_id)},
+            {'$set': {f'onboarding.{step}': completed}}
+        )
+
+        return jsonify({'message': f'Onboarding step {step} updated', 'step': step, 'completed': completed}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500

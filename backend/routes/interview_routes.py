@@ -6,7 +6,7 @@ Blueprint prefix (registered in app.py): /api/interviews
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from bson import ObjectId
@@ -247,6 +247,9 @@ def my_interviews():
     """
     Get interviews for the current user (candidate or recruiter).
 
+    Bug #6 fix: auto-completes expired interviews via bulk update_many
+    before fetching, so past-dated interviews no longer show as 'scheduled'.
+
     Returns:
         200: { success: true, data: [...], total: N }
     """
@@ -255,6 +258,29 @@ def my_interviews():
         return jsonify({"success": False, "error": "Authentication required"}), 401
 
     try:
+        # Bug #6: bulk auto-complete expired interviews (30min grace period)
+        now = datetime.utcnow()
+        cutoff = now - timedelta(minutes=30)
+        db = get_db()
+        auto_result = db["interviews"].update_many(
+            {
+                "status": "scheduled",
+                "scheduled_at": {"$lt": cutoff},
+            },
+            {
+                "$set": {
+                    "status": "completed",
+                    "completed_at": now,
+                    "auto_completed": True,
+                    "auto_complete_reason": "Past scheduled time + grace period",
+                }
+            },
+        )
+        if auto_result.modified_count > 0:
+            logger.info(
+                f"Bug #6: Auto-completed {auto_result.modified_count} expired interview(s)"
+            )
+
         if role in ("company", "recruiter", "admin"):
             interviews = interview_service.list_interviews_for_recruiter(user_id)
         else:
