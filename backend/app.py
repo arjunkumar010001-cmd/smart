@@ -18,6 +18,7 @@ from config.config import config
 from backend.models.database import Database
 from backend.routes import auth_routes, job_routes, candidate_routes, company_routes, email_preferences_routes, assessment_routes, audit_routes, dsr_routes, dashboard_routes, ai_interview_routes, admin_routes, google_oauth_routes, interview_routes, analytics_routes, llm_routes
 from backend.routes import smart_assessment_routes
+from backend.routes import blacklist_routes, onboarding_routes, committee_routes
 # Import enhanced v2 routes
 try:
     from backend.routes import ai_interview_routes_v2
@@ -64,7 +65,7 @@ def create_app(config_name=None):
 
     # Initialize extensions
     # SECURITY: Configure CORS properly for production
-    allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000').split(',')
+    allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000,http://127.0.0.1:5000,http://127.0.0.1:3000').split(',')
     CORS(flask_app, 
          resources={r"/api/*": {
              "origins": allowed_origins,
@@ -120,12 +121,13 @@ def create_app(config_name=None):
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
         response.headers['Content-Security-Policy'] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.socket.io https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
             "img-src 'self' data: https: blob:; "
-            "font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com; "
-            "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://*.googleapis.com blob:; "
-            "media-src 'self' blob:; "
+            "font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+            "connect-src 'self' ws: wss: blob: https://accounts.google.com https://oauth2.googleapis.com https://*.googleapis.com https://cdn.jsdelivr.net https://unpkg.com http://localhost:* http://127.0.0.1:*; "
+            "media-src 'self' blob: mediastream:; "
+            "worker-src 'self' blob:; "
             "frame-src 'self' https://accounts.google.com"
         )
         return response
@@ -153,6 +155,10 @@ def create_app(config_name=None):
     flask_app.register_blueprint(ai_interview_routes.bp, url_prefix='/api/ai-interview')
     flask_app.register_blueprint(interview_routes.bp, url_prefix='/api/interviews')
     flask_app.register_blueprint(admin_routes.bp, url_prefix='/api/admin')
+    flask_app.register_blueprint(blacklist_routes.bp, url_prefix='/api/blacklist')
+    flask_app.register_blueprint(onboarding_routes.bp, url_prefix='/api/onboarding')
+    flask_app.register_blueprint(committee_routes.bp, url_prefix='/api/committee')
+    logger.info("\u2705 Blacklist, Onboarding & Committee routes registered")
 
     # v1 feature routes (analytics & LLM) — url_prefix defined inside the Blueprint
     flask_app.register_blueprint(analytics_routes.bp)   # /api/analytics
@@ -287,11 +293,17 @@ def create_app(config_name=None):
                 'jobs': '/api/jobs',
                 'candidates': '/api/candidates',
                 'assessments': '/api/assessments',
+                'smart_assessments': '/api/smart-assessments',
                 'dashboard': '/api/dashboard',
                 'video_interview': '/api/video-interview',
+                'interviews': '/api/interviews',
                 'analytics': '/api/analytics',
                 'llm': '/api/llm',
                 'ai_interview_v2': '/api/ai-interview-v2',
+                'blacklist': '/api/blacklist',
+                'onboarding': '/api/onboarding',
+                'committee': '/api/committee',
+                'audit': '/api/audit',
                 'flan_t5_engine': '/api/ai-interview-v2/flan-t5',
             },
             'documentation': 'See API_DOCUMENTATION.md for details'
@@ -366,7 +378,10 @@ def _create_default_accounts(db):
 
         created_count = 0
         for account in default_accounts:
-            existing = users_collection.find_one({'email': account['email']})
+            import hashlib as _hl
+            _email_hash = _hl.sha256(account['email'].lower().strip().encode()).hexdigest()
+            existing = users_collection.find_one({'email_hash': _email_hash}) or \
+                       users_collection.find_one({'email': account['email']})
             if not existing:
                 users_collection.insert_one(account)
                 print(f"✅ Created default account: {account['email']}")

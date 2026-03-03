@@ -1,0 +1,475 @@
+<!-- PART 6: CHAPTER 5 — SYSTEM IMPLEMENTATION -->
+
+<div class="page">
+    <h2 class="chapter-title">CHAPTER 5<br>SYSTEM IMPLEMENTATION</h2>
+
+    <h3>5.1 Development Environment Setup</h3>
+
+    <p><strong>Backend Setup:</strong></p>
+<pre class="code-block">
+<span class="code-comment"># 1. Clone the repository</span>
+git clone https://github.com/[username]/smart_hiring.git
+cd smart_hiring
+
+<span class="code-comment"># 2. Create Python virtual environment</span>
+python -m venv .venv
+.venv\Scripts\Activate.ps1   <span class="code-comment"># Windows</span>
+source .venv/bin/activate    <span class="code-comment"># Linux/Mac</span>
+
+<span class="code-comment"># 3. Install dependencies</span>
+pip install -r requirements.txt
+
+<span class="code-comment"># 4. Configure environment variables</span>
+copy .env.example .env
+<span class="code-comment"># Edit .env: MONGODB_URI, GROQ_API_KEY, JWT_SECRET_KEY, etc.</span>
+
+<span class="code-comment"># 5. Start the server</span>
+python backend/app.py
+<span class="code-comment"># Server starts on http://localhost:5000 with 172+ API routes</span>
+</pre>
+
+    <p><strong>Project Directory Structure:</strong></p>
+<pre class="code-block">
+smart_hiring/
+├── backend/
+│   ├── app.py                    <span class="code-comment"># Flask application entry point</span>
+│   ├── routes/
+│   │   ├── auth_routes.py        <span class="code-comment"># Login, Register, JWT management</span>
+│   │   ├── job_routes.py         <span class="code-comment"># Job CRUD + AI optimizer</span>
+│   │   ├── candidate_routes.py   <span class="code-comment"># Applications, resume upload</span>
+│   │   ├── smart_assessment_routes.py  <span class="code-comment"># Assessment engine (1300+ lines)</span>
+│   │   ├── interview_routes.py   <span class="code-comment"># AI interview management</span>
+│   │   ├── fairness_routes.py    <span class="code-comment"># Fairness audit endpoints</span>
+│   │   ├── blacklist_routes.py   <span class="code-comment"># Blacklist CRUD + enforcement</span>
+│   │   ├── onboarding_routes.py  <span class="code-comment"># 11 onboarding endpoints</span>
+│   │   └── committee_routes.py   <span class="code-comment"># Overrides, rubrics, bias</span>
+│   ├── services/
+│   │   ├── ml_matching_service.py      <span class="code-comment"># SBERT + TF-IDF matching</span>
+│   │   ├── ai_question_generator.py    <span class="code-comment"># Multi-LLM question generation</span>
+│   │   ├── ai_interviewer_service_v2.py <span class="code-comment"># AI interview logic</span>
+│   │   ├── fairness_engine.py          <span class="code-comment"># 5-metric fairness calculator</span>
+│   │   ├── bias_correction_service.py  <span class="code-comment"># Automated bias correction</span>
+│   │   └── job_optimizer_service.py    <span class="code-comment"># AI job description optimizer</span>
+│   ├── middleware/                <span class="code-comment"># Auth, CORS, rate limiting</span>
+│   ├── models/                   <span class="code-comment"># MongoDB document schemas</span>
+│   └── security/                 <span class="code-comment"># Session management, encryption</span>
+├── frontend/
+│   ├── index.html                <span class="code-comment"># Main dashboard</span>
+│   ├── smart-assessment.html     <span class="code-comment"># Assessment engine UI (1500+ lines)</span>
+│   ├── interview_room.html       <span class="code-comment"># AI interview room (1400+ lines)</span>
+│   ├── styles.css                <span class="code-comment"># Main stylesheet</span>
+│   ├── app.js                    <span class="code-comment"># Core frontend logic</span>
+│   ├── api.js                    <span class="code-comment"># API communication layer</span>
+│   └── models/                   <span class="code-comment"># face-api.js + TinyFaceDetector weights</span>
+├── config/
+│   ├── config.py                 <span class="code-comment"># Application configuration</span>
+│   ├── scoring_config.py         <span class="code-comment"># Matching score weights</span>
+│   └── skill_ontology.py         <span class="code-comment"># 250+ skills with aliases</span>
+├── requirements.txt              <span class="code-comment"># 40+ Python dependencies</span>
+├── Dockerfile                    <span class="code-comment"># Docker containerization</span>
+└── docker-compose.yml            <span class="code-comment"># Multi-service orchestration</span>
+</pre>
+
+    <h3>5.2 Backend Implementation</h3>
+
+    <p><strong>Flask Application Bootstrap (app.py):</strong></p>
+    <p>
+        The main application file initializes Flask with all extensions, registers 12+ route
+        blueprints, and configures middleware:
+    </p>
+
+<pre class="code-block">
+<span class="code-comment"># backend/app.py — Key initialization snippet</span>
+from flask import Flask
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager
+from flask_bcrypt import Bcrypt
+from flask_socketio import SocketIO
+
+app = Flask(__name__, static_folder=frontend_folder,
+            static_url_path='')
+CORS(app, supports_credentials=True)
+jwt = JWTManager(app)
+bcrypt = Bcrypt(app)
+socketio = SocketIO(app, cors_allowed_origins="*",
+                    async_mode='eventlet')
+
+<span class="code-comment"># Register all route blueprints</span>
+app.register_blueprint(auth_routes, url_prefix='/api/auth')
+app.register_blueprint(job_routes, url_prefix='/api/jobs')
+app.register_blueprint(candidate_routes, url_prefix='/api/candidates')
+app.register_blueprint(smart_assessment_routes,
+                       url_prefix='/api/smart-assessments')
+app.register_blueprint(interview_routes, url_prefix='/api/interviews')
+app.register_blueprint(fairness_routes, url_prefix='/api/fairness')
+app.register_blueprint(blacklist_routes, url_prefix='/api/blacklist')
+app.register_blueprint(onboarding_routes, url_prefix='/api/onboarding')
+app.register_blueprint(committee_routes, url_prefix='/api/committee')
+<span class="code-comment"># ... additional blueprints</span>
+
+<span class="code-comment"># Total: 172+ registered API routes</span>
+</pre>
+
+    <p><strong>API Route Summary:</strong></p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Blueprint</th><th>Prefix</th><th>Route Count</th><th>Key Endpoints</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>auth_routes</td><td>/api/auth</td><td>~15</td><td>login, register, refresh, 2FA setup/verify</td></tr>
+            <tr><td>job_routes</td><td>/api/jobs</td><td>~12</td><td>CRUD, optimize-description, search, filter</td></tr>
+            <tr><td>candidate_routes</td><td>/api/candidates</td><td>~18</td><td>apply, upload-resume, match-score, status</td></tr>
+            <tr><td>smart_assessment</td><td>/api/smart-assessments</td><td>~25</td><td>start, answer, submit, results, recordings</td></tr>
+            <tr><td>interview_routes</td><td>/api/interviews</td><td>~20</td><td>schedule, start, respond, evaluate, recording</td></tr>
+            <tr><td>fairness_routes</td><td>/api/fairness</td><td>~12</td><td>audit, metrics, report, history</td></tr>
+            <tr><td>blacklist_routes</td><td>/api/blacklist</td><td>~5</td><td>add, remove, list, check</td></tr>
+            <tr><td>onboarding_routes</td><td>/api/onboarding</td><td>~11</td><td>send-offer, accept, documents, nda, it-setup</td></tr>
+            <tr><td>committee_routes</td><td>/api/committee</td><td>~12</td><td>overrides, rubrics CRUD, bias analyze/correct</td></tr>
+            <tr><td>analytics_routes</td><td>/api/analytics</td><td>~15</td><td>dashboard, reports, trends, exports</td></tr>
+            <tr><td>Others</td><td>/api/*</td><td>~27</td><td>email, uploads, settings, health, admin</td></tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 5.2: API Endpoint Summary (172+ Routes)</p>
+
+    <h3>5.3 Frontend Implementation</h3>
+
+    <p>
+        The frontend is built with vanilla HTML5, CSS3, and JavaScript (ES6+) — intentionally
+        avoiding framework dependencies (React, Vue, Angular) to minimize bundle size and
+        maximize deployment flexibility.
+    </p>
+
+    <p><strong>Key Frontend Technologies:</strong></p>
+    <ul>
+        <li><strong>Monaco Editor (v0.44.0):</strong> VS Code's editor component for coding questions with IntelliSense, syntax highlighting, and error indicators.</li>
+        <li><strong>face-api.js (v1.7.12):</strong> TensorFlow.js-based face detection running entirely in the browser. Models loaded locally from <code>frontend/models/</code> (TinyFaceDetector, ~190KB).</li>
+        <li><strong>Web Speech API:</strong> Native browser APIs for Text-to-Speech (<code>SpeechSynthesis</code>) and Speech-to-Text (<code>SpeechRecognition</code>).</li>
+        <li><strong>MediaRecorder API:</strong> Records webcam video+audio as <code>video/webm;codecs=vp9,opus</code> for evidence preservation.</li>
+        <li><strong>CSS Custom Properties:</strong> Design tokens for theming (<code>--sa-primary</code>, <code>--sa-accent</code>, etc.) enabling dark/light mode support.</li>
+    </ul>
+
+    <p><strong>Assessment Page Structure (smart-assessment.html — 1531 lines):</strong></p>
+<pre class="code-block">
+<span class="code-comment">// Initialization flow</span>
+async function startAssessment(config) {
+    <span class="code-comment">// 1. Check blacklist status</span>
+    const blacklistResp = await apiFetch(
+        '/blacklist/check/' + candidateId);
+
+    <span class="code-comment">// 2. Start session via API</span>
+    const session = await apiFetch(
+        '/smart-assessments/start', {
+        method: 'POST',
+        body: JSON.stringify({
+            job_id, skills, difficulty,
+            question_types, experience_level
+        })
+    });
+
+    <span class="code-comment">// 3. Initialize anti-cheat</span>
+    initAntiCheat();
+
+    <span class="code-comment">// 4. Initialize face detection</span>
+    await initFaceDetection();
+
+    <span class="code-comment">// 5. Start camera recording</span>
+    startCameraRecording();
+
+    <span class="code-comment">// 6. Start timer (UTC-based)</span>
+    startTimer(session.time_limit_minutes);
+
+    <span class="code-comment">// 7. Display first question</span>
+    showQuestion(0);
+}
+</pre>
+
+    <h3>5.4 Database Schema Design</h3>
+
+    <p>
+        Smart Hiring uses MongoDB as its primary database, chosen for its schema flexibility
+        (accommodating varying resume formats and question structures), native JSON support
+        (matching the REST API payload format), and horizontal scalability.
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Collection</th><th>Key Fields</th><th>Indexes</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>users</td>
+                <td>name, email, password_hash, role, phone, created_at, last_login, 2fa_secret</td>
+                <td>email (unique), role</td>
+            </tr>
+            <tr>
+                <td>jobs</td>
+                <td>title, description, skills[], experience_level, salary_range, company_id, status, posted_at</td>
+                <td>company_id, skills, status</td>
+            </tr>
+            <tr>
+                <td>applications</td>
+                <td>candidate_id, job_id, resume_url, match_score, status, applied_at, semantic_score, skill_score</td>
+                <td>candidate_id+job_id (compound), status</td>
+            </tr>
+            <tr>
+                <td>smart_sessions</td>
+                <td>candidate_id, job_id, questions[], answers[], score, violations[], recordings[], status, started_at, completed_at</td>
+                <td>candidate_id+job_id, status</td>
+            </tr>
+            <tr>
+                <td>interviews</td>
+                <td>application_id, candidate_id, questions[], responses[], evaluation, recording_url, score, status</td>
+                <td>candidate_id, application_id</td>
+            </tr>
+            <tr>
+                <td>fairness_audits</td>
+                <td>job_id, metrics{}, recommendations[], corrections[], timestamp</td>
+                <td>job_id, timestamp</td>
+            </tr>
+            <tr>
+                <td>onboarding</td>
+                <td>candidate_id, job_id, offer_status, digital_signature, documents[], nda_signed, it_setup, orientation</td>
+                <td>candidate_id+job_id</td>
+            </tr>
+            <tr>
+                <td>blacklist</td>
+                <td>candidate_id, reason, blacklisted_by, created_at, active</td>
+                <td>candidate_id (unique), active</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 5.1: MongoDB Collections and Fields</p>
+
+    <h3>5.5 Sample Code and Explanations</h3>
+
+    <p><strong>5.5.1 SBERT Semantic Matching (ml_matching_service.py):</strong></p>
+<pre class="code-block">
+class MLMatchingService:
+    """Production-ready semantic matching using
+    Sentence-BERT embeddings"""
+
+    def __init__(self):
+        self.sbert_model = None
+        self.tfidf_vectorizer = TfidfVectorizer(
+            max_features=5000,
+            stop_words='english',
+            ngram_range=(1, 2)
+        )
+        self._load_model()
+
+    def _load_model(self):
+        """Load SBERT model (all-MiniLM-L6-v2)"""
+        if SBERT_AVAILABLE:
+            self.sbert_model = SentenceTransformer(
+                'all-MiniLM-L6-v2')
+            logger.info("SBERT model loaded: "
+                       "all-MiniLM-L6-v2 (384-dim)")
+
+    def compute_semantic_similarity(
+        self, text1: str, text2: str
+    ) -> float:
+        """Compute cosine similarity between two texts
+        using SBERT embeddings"""
+        if self.sbert_model:
+            embeddings = self.sbert_model.encode(
+                [text1, text2],
+                convert_to_numpy=True
+            )
+            <span class="code-comment"># Cosine similarity</span>
+            similarity = np.dot(
+                embeddings[0], embeddings[1]
+            ) / (
+                np.linalg.norm(embeddings[0]) *
+                np.linalg.norm(embeddings[1])
+            )
+            return float(similarity)
+        else:
+            <span class="code-comment"># TF-IDF fallback</span>
+            return self._tfidf_similarity(
+                text1, text2)
+</pre>
+
+    <p><strong>5.5.2 Fairness Metrics Computation (fairness_engine.py):</strong></p>
+<pre class="code-block">
+class FairnessMetrics:
+    """5-metric fairness calculator using numpy/pandas"""
+
+    def __init__(self, predictions, labels,
+                 sensitive_features, favorable_label=1):
+        self.predictions = np.array(predictions)
+        self.labels = np.array(labels)
+        self.sensitive_features = np.array(
+            sensitive_features)
+        self.favorable_label = favorable_label
+        self._compute_group_statistics()
+
+    def demographic_parity(self) -> dict:
+        """P(Ŷ=1|A=0) should equal P(Ŷ=1|A=1)"""
+        selection_rates = {}
+        for group in self.groups:
+            stats = self.group_stats[group]
+            selection_rates[str(group)] = \
+                stats['selection_rate']
+
+        rates = list(selection_rates.values())
+        max_diff = max(rates) - min(rates)
+        is_fair = max_diff &lt;= 0.1  <span class="code-comment"># 10% threshold</span>
+
+        return {
+            'metric': 'demographic_parity',
+            'selection_rates': selection_rates,
+            'max_difference': round(max_diff, 4),
+            'is_fair': is_fair,
+            'threshold': 0.1
+        }
+
+    def disparate_impact(self) -> dict:
+        """80% Rule: min(SR) / max(SR) >= 0.8"""
+        rates = [self.group_stats[g]['selection_rate']
+                 for g in self.groups]
+        ratio = min(rates) / max(rates) \
+            if max(rates) > 0 else 0
+        return {
+            'metric': 'disparate_impact',
+            'ratio': round(ratio, 4),
+            'is_fair': ratio >= 0.8,
+            'threshold': 0.8
+        }
+</pre>
+
+    <p><strong>5.5.3 Anti-Cheating Module (smart-assessment.html):</strong></p>
+<pre class="code-block">
+<span class="code-comment">// ANTI-CHEAT ENGINE — BRUTAL MODE</span>
+function initAntiCheat() {
+    <span class="code-comment">// 1. Tab switch detection</span>
+    document.addEventListener('visibilitychange',
+        () => {
+        if (document.hidden) {
+            addStrike('Tab switch detected');
+        }
+    });
+
+    <span class="code-comment">// 2. Window blur detection</span>
+    window.addEventListener('blur', () => {
+        addStrike('Window lost focus');
+    });
+
+    <span class="code-comment">// 3. Copy/Paste blocking</span>
+    ['copy','paste','cut'].forEach(evt =>
+        document.addEventListener(evt, e => {
+            e.preventDefault();
+            logViolation(evt, 'Clipboard blocked');
+        })
+    );
+
+    <span class="code-comment">// 4. Right-click disabled</span>
+    document.addEventListener('contextmenu',
+        e => e.preventDefault());
+
+    <span class="code-comment">// 5. DevTools detection</span>
+    setInterval(() => {
+        if (window.outerWidth - window.innerWidth
+            > 160) {
+            addStrike('DevTools detected');
+        }
+    }, 2000);
+
+    <span class="code-comment">// 6. Keyboard shortcut blocking</span>
+    document.addEventListener('keydown', e => {
+        if (e.key === 'F12' ||
+            (e.ctrlKey && e.shiftKey &&
+             ['I','J','C'].includes(e.key))) {
+            e.preventDefault();
+            logViolation('keyboard',
+                'Blocked: ' + e.key);
+        }
+    });
+}
+
+function addStrike(reason) {
+    strikes++;
+    logViolation('strike', reason);
+    if (strikes >= 3) {
+        terminateSession(
+            'Auto-terminated: 3 strikes');
+    }
+}
+</pre>
+
+    <h3>5.6 User Manual with Screenshots</h3>
+
+    <p>
+        This section provides a step-by-step walkthrough of the Smart Hiring platform
+        from each user's perspective.
+    </p>
+
+    <p><strong>Step 1: Registration and Login</strong></p>
+    <p>
+        Users can register as a Candidate, Company, or Recruiter. The registration form
+        requires name, email, password (bcrypt-hashed), and role selection. After registration,
+        users log in to receive a JWT token that authorizes all subsequent API requests.
+    </p>
+    <div class="screenshot-placeholder">
+        <p>[Screenshot: Login Page — Fig 6.1]</p>
+        <p style="font-size:10pt; color:#666;">Insert screenshot of the login page showing email/password fields and role selector</p>
+    </div>
+
+    <p><strong>Step 2: Dashboard</strong></p>
+    <p>
+        Upon login, users are presented with a role-specific dashboard. Recruiters see job
+        postings, candidate pipelines, and analytics. Candidates see available jobs, application
+        status, and upcoming assessments.
+    </p>
+    <div class="screenshot-placeholder">
+        <p>[Screenshot: Recruiter Dashboard — Fig 6.2]</p>
+        <p style="font-size:10pt; color:#666;">Insert screenshot of the recruiter dashboard showing job listings and candidate counts</p>
+    </div>
+
+    <p><strong>Step 3: Creating a Job Posting (Recruiter)</strong></p>
+    <p>
+        Recruiters fill in job details (title, description, skills, experience level). Clicking
+        "Optimize with AI" sends the description to the Groq API, which returns an optimized
+        version with inclusivity score and keyword suggestions.
+    </p>
+
+    <p><strong>Step 4: Taking a Smart Assessment (Candidate)</strong></p>
+    <p>
+        Candidates click "Start Assessment" from their dashboard. The system requests webcam
+        permission, initializes face detection, starts recording, and presents AI-generated
+        questions one at a time with a countdown timer.
+    </p>
+    <div class="screenshot-placeholder">
+        <p>[Screenshot: Assessment Interface — Fig 6.3]</p>
+        <p style="font-size:10pt; color:#666;">Insert screenshot showing a coding question with Monaco Editor and timer</p>
+    </div>
+
+    <p><strong>Step 5: AI Interview (Candidate)</strong></p>
+    <p>
+        The AI avatar "Alex" greets the candidate and begins asking questions via TTS. The
+        candidate responds verbally (STT captures the response) or types. The avatar provides
+        natural transitions between questions.
+    </p>
+    <div class="screenshot-placeholder">
+        <p>[Screenshot: Interview Room — Fig 6.4]</p>
+        <p style="font-size:10pt; color:#666;">Insert screenshot showing AI avatar "Alex" with candidate webcam feed</p>
+    </div>
+
+    <p><strong>Step 6: Fairness Audit (Admin)</strong></p>
+    <p>
+        Admins navigate to the Fairness Dashboard to run audits on hiring decisions. The
+        system displays all five metrics with pass/fail indicators, visualizations, and
+        recommendations for bias correction.
+    </p>
+    <div class="screenshot-placeholder">
+        <p>[Screenshot: Fairness Dashboard — Fig 6.5]</p>
+        <p style="font-size:10pt; color:#666;">Insert screenshot showing fairness metrics with pass/fail indicators</p>
+    </div>
+
+    <p><strong>Step 7: Digital Onboarding (Candidate)</strong></p>
+    <p>
+        Selected candidates receive an offer letter via email with a unique acceptance link.
+        They digitally sign the offer (SHA-256 signature), upload required documents, e-sign
+        the NDA, and complete the onboarding checklist.
+    </p>
+</div>

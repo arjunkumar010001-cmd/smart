@@ -1,0 +1,309 @@
+<!-- PART 3: CHAPTER 2 — LITERATURE SURVEY -->
+
+<div class="page">
+    <h2 class="chapter-title">CHAPTER 2<br>LITERATURE SURVEY</h2>
+
+    <h3>2.1 AI in Recruitment</h3>
+
+    <p>
+        The application of Artificial Intelligence in recruitment has evolved significantly over
+        the past decade. Early approaches focused on keyword-matching algorithms for resume
+        filtering, but modern systems leverage deep learning, natural language understanding,
+        and generative AI to transform every stage of the hiring pipeline.
+    </p>
+
+    <p>
+        <strong>Nawaz (2019)</strong> conducted a comprehensive review of AI applications in
+        human resource management and found that AI-driven recruitment tools reduced time-to-hire
+        by 50–75% while improving candidate quality metrics. The study identified four key areas
+        where AI adds the most value: resume screening, candidate assessment, interview analysis,
+        and decision support <sup>[1]</sup>.
+    </p>
+
+    <p>
+        <strong>Van Esch et al. (2019)</strong> examined candidate perceptions of AI-driven
+        recruitment and found that transparency in algorithmic decision-making significantly
+        improved candidate trust and application completion rates. Their work underscored the
+        importance of explainable AI in hiring systems <sup>[2]</sup>.
+    </p>
+
+    <p>
+        <strong>Black &amp; van Esch (2020)</strong> proposed a framework for AI in talent
+        acquisition that segments the recruitment process into sourcing, screening, assessment,
+        and selection, noting that end-to-end automation (as implemented in Smart Hiring) remains
+        rare in both academic literature and commercial products <sup>[3]</sup>.
+    </p>
+
+    <h3>2.2 NLP-Based Resume Screening</h3>
+
+    <p>
+        Natural Language Processing has become the cornerstone of automated resume screening.
+        Traditional approaches relied on Boolean keyword matching or regular expressions, which
+        suffered from vocabulary mismatch problems — a candidate with experience in "ReactJS"
+        might not match a job requirement for "frontend JavaScript frameworks" despite being
+        highly relevant.
+    </p>
+
+    <p>
+        <strong>Kino et al. (2017)</strong> demonstrated that TF-IDF (Term Frequency–Inverse
+        Document Frequency) vectorization, combined with cosine similarity, significantly
+        outperformed keyword matching for resume-job matching tasks. Their approach achieved
+        a precision of 78% compared to 52% for keyword-based methods. However, TF-IDF remains
+        a bag-of-words approach that ignores semantic relationships between terms <sup>[4]</sup>.
+    </p>
+
+    <p>
+        <strong>Roy et al. (2020)</strong> applied Word2Vec and Doc2Vec embeddings to resume
+        matching and found improved semantic matching capabilities. However, these models
+        required extensive domain-specific training data and lacked the contextual understanding
+        offered by transformer-based models <sup>[5]</sup>.
+    </p>
+
+    <p>
+        <strong>De Mauro et al. (2021)</strong> explored the use of BERT-based models for job
+        description classification and found that fine-tuned BERT models achieved F1 scores
+        exceeding 0.90 for skill extraction tasks. Their work highlighted the potential of
+        pre-trained language models for recruitment-specific NLP tasks <sup>[6]</sup>.
+    </p>
+
+    <h3>2.3 Sentence-BERT and Semantic Similarity</h3>
+
+    <p>
+        Sentence-BERT (SBERT), introduced by <strong>Reimers &amp; Gurevych (2019)</strong>,
+        represents a pivotal advancement in semantic sentence similarity computation. SBERT
+        modifies the pre-trained BERT architecture with siamese and triplet network structures
+        to derive semantically meaningful sentence embeddings that can be efficiently compared
+        using cosine similarity <sup>[7]</sup>.
+    </p>
+
+    <p>
+        The key innovation of SBERT lies in its efficiency: while standard BERT requires both
+        sentences to be fed simultaneously through the model (resulting in O(n²) comparisons
+        for n sentences), SBERT encodes each sentence independently into a fixed-size vector
+        (default: 384 dimensions for all-MiniLM-L6-v2), enabling O(n) computation with
+        pre-computed embeddings. This makes it feasible to compare a candidate's resume against
+        hundreds of job descriptions in real-time.
+    </p>
+
+    <p>
+        The mathematical foundation of SBERT matching used in Smart Hiring is:
+    </p>
+
+    <div class="formula-box">
+        <p><strong>Cosine Similarity:</strong></p>
+        <p style="text-align:center; font-size:13pt; margin:10px 0;">
+            similarity(A, B) = cos(θ) = (A · B) / (||A|| × ||B||)
+        </p>
+        <p>
+            Where A and B are sentence embedding vectors of dimension d = 384,
+            A · B is the dot product, and ||A||, ||B|| are the L2 norms.
+        </p>
+    </div>
+
+    <p>
+        In Smart Hiring, we use the <strong>all-MiniLM-L6-v2</strong> variant, which offers
+        the optimal balance between performance and resource efficiency: 22.7M parameters,
+        384-dimensional embeddings, and inference speeds suitable for real-time applications.
+        The model is loaded via the <code>sentence-transformers</code> Python library and falls
+        back to TF-IDF when running in memory-constrained deployment environments (e.g., Render
+        free tier with 512MB RAM).
+    </p>
+
+    <h3>2.4 Online Assessment Proctoring</h3>
+
+    <p>
+        The shift to remote recruitment during and after the COVID-19 pandemic created an urgent
+        need for reliable online proctoring systems. Academic research and commercial products
+        have explored various approaches:
+    </p>
+
+    <p>
+        <strong>Coghlan et al. (2021)</strong> surveyed e-proctoring technologies and categorized
+        them into three tiers: (1) record-and-review proctoring, which records webcam footage for
+        post-assessment review; (2) live proctoring, where a human invigilator monitors candidates
+        in real-time; and (3) AI-based proctoring, which uses computer vision and behavioral
+        analysis for automated monitoring <sup>[8]</sup>.
+    </p>
+
+    <p>
+        <strong>Nigam et al. (2021)</strong> developed a face-detection-based proctoring system
+        using MTCNN (Multi-task Cascaded Convolutional Networks) and found that face-based
+        monitoring combined with tab-switch detection achieved 94% accuracy in identifying
+        cheating attempts compared to 67% for tab-switch detection alone <sup>[9]</sup>.
+    </p>
+
+    <p>
+        Smart Hiring implements a hybrid approach: face detection via TinyFaceDetector
+        (vladmandic/face-api.js) runs entirely in the browser using TensorFlow.js, enabling
+        real-time face presence/count monitoring without server round-trips or specialized
+        hardware. This is combined with behavioral analysis (tab switching, window blur,
+        copy-paste detection, DevTools detection, right-click disabling) and recording-based
+        evidence preservation (video/audio upload to server).
+    </p>
+
+    <h3>2.5 Fairness and Bias in AI-Driven Hiring</h3>
+
+    <p>
+        Algorithmic fairness in hiring has become a critical area of research, particularly
+        after several high-profile incidents of AI bias in recruitment:
+    </p>
+
+    <p>
+        <strong>Dastin (2018)</strong> reported on Amazon's experimental AI recruiting tool that
+        was found to systematically penalize resumes containing the word "women's" (e.g., "women's
+        chess club captain"). The tool was trained on historical hiring data that reflected existing
+        gender imbalances in the tech industry, demonstrating how AI can amplify rather than
+        mitigate biases when trained on biased data <sup>[10]</sup>.
+    </p>
+
+    <p>
+        <strong>Raghavan et al. (2020)</strong> conducted the first comprehensive audit of
+        commercial AI hiring tools and found that most platforms lacked transparency about their
+        fairness evaluation methodologies. They proposed a framework of five key fairness metrics
+        that should be mandatory for automated employment decision tools <sup>[11]</sup>:
+    </p>
+
+    <div class="formula-box">
+        <p><strong>Five Fairness Metrics (implemented in Smart Hiring):</strong></p>
+        <ol>
+            <li><strong>Demographic Parity:</strong> P(Ŷ=1|A=0) = P(Ŷ=1|A=1)<br>
+                <em>Selection rates should be equal across protected groups.</em></li>
+            <li><strong>Disparate Impact (80% Rule):</strong> P(Ŷ=1|A=0) / P(Ŷ=1|A=1) ≥ 0.8<br>
+                <em>The ratio of selection rates across groups should be at least 80%.</em></li>
+            <li><strong>Equal Opportunity:</strong> P(Ŷ=1|Y=1,A=0) = P(Ŷ=1|Y=1,A=1)<br>
+                <em>True positive rates should be equal across groups.</em></li>
+            <li><strong>Equalized Odds:</strong> Equal TPR and FPR across groups<br>
+                <em>Both true positive and false positive rates should be equalized.</em></li>
+            <li><strong>Predictive Parity:</strong> P(Y=1|Ŷ=1,A=0) = P(Y=1|Ŷ=1,A=1)<br>
+                <em>Precision should be equal across groups.</em></li>
+        </ol>
+    </div>
+
+    <p>
+        <strong>Bellamy et al. (2019)</strong> introduced AIF360, IBM's open-source toolkit for
+        algorithmic fairness. While AIF360 provides comprehensive fairness metrics and bias
+        mitigation algorithms, it requires system-level dependencies (C libraries) that make
+        deployment on containerized cloud platforms challenging. Smart Hiring implements an
+        equivalent custom fairness engine using only NumPy and Pandas, ensuring deployment
+        compatibility across all environments <sup>[12]</sup>.
+    </p>
+
+    <h3>2.6 Comparison with Existing Systems</h3>
+
+    <p>
+        To contextualize Smart Hiring within the existing landscape, we compare it with major
+        commercial recruitment platforms:
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Feature</th>
+                <th>HackerRank</th>
+                <th>Greenhouse</th>
+                <th>HireVue</th>
+                <th>Workday</th>
+                <th>Smart Hiring (Ours)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>AI Job Optimization</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>Partial</td>
+                <td><strong>✓ (LLM-based)</strong></td>
+            </tr>
+            <tr>
+                <td>Semantic Resume Matching</td>
+                <td>✗</td>
+                <td>Keyword</td>
+                <td>✗</td>
+                <td>Keyword</td>
+                <td><strong>✓ (SBERT + TF-IDF)</strong></td>
+            </tr>
+            <tr>
+                <td>AI Question Generation</td>
+                <td>Manual</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td><strong>✓ (Multi-LLM waterfall)</strong></td>
+            </tr>
+            <tr>
+                <td>Code Execution Sandbox</td>
+                <td>✓</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td><strong>✓ (Piston + Judge0)</strong></td>
+            </tr>
+            <tr>
+                <td>Face-Based Proctoring</td>
+                <td>Partial</td>
+                <td>✗</td>
+                <td>✓</td>
+                <td>✗</td>
+                <td><strong>✓ (TinyFaceDetector)</strong></td>
+            </tr>
+            <tr>
+                <td>Anti-Cheating Module</td>
+                <td>Basic</td>
+                <td>✗</td>
+                <td>Basic</td>
+                <td>✗</td>
+                <td><strong>✓ (9 mechanisms)</strong></td>
+            </tr>
+            <tr>
+                <td>AI Interview Avatar</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>Video-only</td>
+                <td>✗</td>
+                <td><strong>✓ (TTS/STT + Avatar)</strong></td>
+            </tr>
+            <tr>
+                <td>Fairness Audit (5 Metrics)</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>Partial</td>
+                <td>Basic</td>
+                <td><strong>✓ (5 metrics + auto-correction)</strong></td>
+            </tr>
+            <tr>
+                <td>Digital Onboarding</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✓</td>
+                <td><strong>✓ (Full workflow)</strong></td>
+            </tr>
+            <tr>
+                <td>End-to-End Pipeline</td>
+                <td>✗</td>
+                <td>Partial</td>
+                <td>✗</td>
+                <td>✓</td>
+                <td><strong>✓ (6 phases)</strong></td>
+            </tr>
+            <tr>
+                <td>Open Source / Free Tier</td>
+                <td>Paid</td>
+                <td>Paid</td>
+                <td>Paid</td>
+                <td>Enterprise</td>
+                <td><strong>✓ (Free/Open)</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 2.1: Comparison of Smart Hiring with Existing Recruitment Platforms</p>
+
+    <p>
+        As evident from Table 2.1, Smart Hiring is unique in providing a complete end-to-end
+        pipeline with all six phases integrated into a single platform, including advanced features
+        like multi-LLM question generation, comprehensive fairness auditing, and full digital
+        onboarding — capabilities that are fragmented across multiple commercial products, each
+        requiring separate paid subscriptions.
+    </p>
+</div>

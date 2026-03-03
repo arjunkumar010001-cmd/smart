@@ -1159,11 +1159,6 @@ html {
     color: var(--text-secondary);
 }
 
-/* User info in navbar */
-[data-theme="dark"] .user-info {
-    color: var(--text-secondary);
-}
-
 /* ── Bug #2 remaining: Candidate analytics dark mode overrides ──────── */
 
 /* KPI trend badges */
@@ -1249,4 +1244,285 @@ html {
 }
 [data-theme="dark"] .skill-status.neutral {
     color: #94a3b8 !important;
+}
+
+/* ============================================
+   COMPREHENSIVE DARK MODE FIX — Issue #8
+   Targets inline-styled elements, white boxes,
+   invisible text, and unthemed components
+   ============================================ */
+
+/* Force ALL inline white/light backgrounds to dark */
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*="background:white"],
+[data-theme="dark"] [style*="background: #ffffff"],
+[data-theme="dark"] [style*="background:#ffffff"],
+[data-theme="dark"] [style*="background: #fff"],
+[data-theme="dark"] [style*="background:#fff"],
+[data-theme="dark"] [style*="background-color: white"],
+[data-theme="dark"] [style*="background-color:#ffffff"],
+[data-theme="dark"] [style*="background-color: #fff"] {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Light gray backgrounds used in cards/sections */
+[data-theme="dark"] [style*="background: #f8fafc"],
+[data-theme="dark"] [style*="background:#f8fafc"],
+[data-theme="dark"] [style*="background: #f1f5f9"],
+[data-theme="dark"] [style*="background:#f1f5f9"],
+[data-theme="dark"] [style*="background: #f0f9ff"],
+[data-theme="dark"] [style*="background:#f0f9ff"],
+[data-theme="dark"] [style*="background: #f3f4f6"],
+[data-theme="dark"] [style*="background:#f3f4f6"],
+[data-theme="dark"] [style*="background: #eef2ff"],
+[data-theme="dark"] [style*="background:#eef2ff"],
+[data-theme="dark"] [style*="background: #fef3f2"],
+[data-theme="dark"] [style*="background:#fef3f2"],
+[data-theme="dark"] [style*="background: #f0f4ff"],
+[data-theme="dark"] [style*="background:#f0f4ff"],
+[data-theme="dark"] [style*="background: #fffbeb"],
+[data-theme="dark"] [style*="background:#fffbeb"],
+[data-theme="dark"] [style*="background: #fef3c7"],
+[data-theme="dark"] [style*="background:#fef3c7"],
+[data-theme="dark"] [style*="background: #e2e8f0"],
+[data-theme="dark"] [style*="background:#e2e8f0"],
+[data-theme="dark"] [style*="background: #e5e7eb"],
+[data-theme="dark"] [style*="background:#e5e7eb"],
+[data-theme="dark"] [style*="background: #dbeafe"],
+[data-theme="dark"] [style*="background:#dbeafe"],
+[data-theme="dark"] [style*="background: #d1fae5"],
+[data-theme="dark"] [style*="background:#d1fae5"],
+[data-theme="dark"] [style*="background: #fee2e2"],
+[data-theme="dark"] [style*="background:#fee2e2"],
+[data-theme="dark"] [style*="background: #fce7f3"],
+[data-theme="dark"] [style*="background:#fce7f3"],
+[data-theme="dark"] [style*="background: #ede9fe"],
+[data-theme="dark"] [style*="background:#ede9fe"] {
+    background: var(--bg-secondary) !important;
+}
+
+/* Gradient backgrounds used for smart assessment cards */
+[data-theme="dark"] [style*="background:linear-gradient(135deg,#eef2ff"],
+[data-theme="dark"] [style*="background: linear-gradient(135deg, #eef2ff"] {
+    background: var(--card-bg) !important;
+    border-color: #4f46e5 !important;
+}
+
+/* Fix ALL dark text colors in dark mode */
+[data-theme="dark"] [style*="color: #1e293b"],
+[data-theme="dark"] [style*="color:#1e293b"],
+[data-theme="dark"] [style*="color: #111827"],
+[data-theme="dark"] [style*="color:#111827"],
+[data-theme="dark"] [style*="color: #0f172a"],
+[data-theme="dark"] [style*="color:#0f172a"],
+[data-theme="dark"] [style*="color: black"],
+[data-theme="dark"] [style*="color:black"],
+[data-theme="dark"] [style*="color: #000"],
+[data-theme="dark"] [style*="color:#000"],
+[data-theme="dark"] [style*="color: #333"],
+[data-theme="dark"] [style*="color:#333"],
+[data-theme="dark"] [style*="color: #374151"],
+[data-theme="dark"] [style*="color:#374151"],
+[data-theme="dark"] [style*="color: #1f2937"],
+[data-theme="dark"] [style*="color:#1f2937"] {
+    color: var(--text-primary) !important;
+}
+
+/* Fix muted text visibility */
+[data-theme="dark"] [style*="color: #64748b"],
+[data-theme="dark"] [style*="color:#64748b"],
+[data-theme="dark"] [style*="color: #4a5568"],
+[data-theme="dark"] [style*="color:#4a5568"],
+[data-theme="dark"] [style*="color: #475569"],
+[data-theme="dark"] [style*="color:#475569"],
+[data-theme="dark"] [style*="color: #94a3b8"],
+[data-theme="dark"] [style*="color:#94a3b8"],
+[data-theme="dark"] [style*="color: #6b7280"],
+[data-theme="dark"] [style*="color:#6b7280"],
+[data-theme="dark"] [style*="color: #4b5563"],
+[data-theme="dark"] [style*="color:#4b5563"],
+[data-theme="dark"] [style*="color: #9ca3af"],
+[data-theme="dark"] [style*="color:#9ca3af"] {
+    color: var(--text-secondary) !important;
+}
+
+/* Fix ALL border colors in dark mode */
+[data-theme="dark"] [style*="border: 1px solid #e2e8f0"],
+[data-theme="dark"] [style*="border:1px solid #e2e8f0"],
+[data-theme="dark"] [style*="border: 2px solid #e2e8f0"],
+[data-theme="dark"] [style*="border:2px solid #e2e8f0"],
+[data-theme="dark"] [style*="border-top: 1px solid #e2e8f0"],
+[data-theme="dark"] [style*="border-bottom: 1px solid #e2e8f0"],
+[data-theme="dark"] [style*="border: 1px solid #e5e7eb"],
+[data-theme="dark"] [style*="border:1px solid #e5e7eb"],
+[data-theme="dark"] [style*="border: 2px solid #e5e7eb"],
+[data-theme="dark"] [style*="border-color: #e2e8f0"],
+[data-theme="dark"] [style*="border-color:#e2e8f0"],
+[data-theme="dark"] [style*="border-color: #e5e7eb"],
+[data-theme="dark"] [style*="border-left: 4px solid"],
+[data-theme="dark"] [style*="border-left:4px solid"] {
+    border-color: var(--border-color) !important;
+}
+
+/* Job cards, stat cards, and any card-like containers with inline styles */
+[data-theme="dark"] .jobs-grid .job-card,
+[data-theme="dark"] .stats-grid .stat-card,
+[data-theme="dark"] .funnel-container,
+[data-theme="dark"] .decision-breakdown,
+[data-theme="dark"] .skills-insights,
+[data-theme="dark"] .recommendations-grid {
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+
+/* Company portal job cards */
+[data-theme="dark"] .job-card h3,
+[data-theme="dark"] .stat-card h3,
+[data-theme="dark"] .card h3 {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .job-card p,
+[data-theme="dark"] .stat-card p,
+[data-theme="dark"] .card p {
+    color: var(--text-secondary);
+}
+
+/* Fix inline <span> text in cards */
+[data-theme="dark"] .job-card span,
+[data-theme="dark"] .stat-card span {
+    color: var(--text-secondary);
+}
+
+/* Analytics section inner elements */
+[data-theme="dark"] .analytics-section h3,
+[data-theme="dark"] .analytics-section h4 {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .analytics-section p,
+[data-theme="dark"] .analytics-section span {
+    color: var(--text-secondary);
+}
+
+/* Section headers (class-based, no !important) */
+[data-theme="dark"] .section-header p.subtitle,
+[data-theme="dark"] .subtitle {
+    color: var(--text-secondary);
+}
+
+/* Profile strength section */
+[data-theme="dark"] .strength-tips,
+[data-theme="dark"] .strength-tips h4 {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .strength-tips ul li {
+    color: var(--text-secondary);
+}
+
+/* Funnel bars in analytics */
+[data-theme="dark"] .funnel-stage {
+    color: var(--text-secondary);
+}
+
+/* Decision bar background */
+[data-theme="dark"] .decision-bar {
+    background: var(--bg-secondary);
+}
+
+/* KPI trend labels */
+[data-theme="dark"] .kpi-trend span {
+    color: var(--text-secondary) !important;
+}
+
+/* KPI cards - fix inner text */
+[data-theme="dark"] .kpi-card .kpi-content .kpi-value {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .kpi-card .kpi-content .kpi-label {
+    color: var(--text-secondary) !important;
+}
+
+/* Smart assessment card styles in dark mode */
+[data-theme="dark"] [style*="border:2px solid #818cf8"],
+[data-theme="dark"] [style*="border: 2px solid #818cf8"] {
+    border-color: #6366f1 !important;
+    background: var(--card-bg) !important;
+}
+
+/* Fix stat-icon background in dark mode */
+[data-theme="dark"] .stat-icon {
+    background: var(--bg-secondary);
+}
+
+/* Progress bars background */
+[data-theme="dark"] [style*="background: #e2e8f0"] {
+    background: var(--bg-secondary) !important;
+}
+
+/* Ensure SVG text is visible */
+[data-theme="dark"] .circular-progress text {
+    fill: var(--text-primary);
+}
+
+/* Fix strength-value text inside SVG circle */
+[data-theme="dark"] .strength-value {
+    color: var(--text-primary) !important;
+}
+
+/* Company portal My Jobs page fixes */
+[data-theme="dark"] .content-header,
+[data-theme="dark"] .jobs-header {
+    color: var(--text-primary);
+}
+
+/* Search/filter bars */
+[data-theme="dark"] .search-bar,
+[data-theme="dark"] .filter-bar,
+[data-theme="dark"] .search-container {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .search-bar input::placeholder,
+[data-theme="dark"] .filter-bar input::placeholder {
+    color: var(--text-secondary);
+}
+
+/* Table rows */
+[data-theme="dark"] table,
+[data-theme="dark"] table tr,
+[data-theme="dark"] table td {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] table thead,
+[data-theme="dark"] table thead tr,
+[data-theme="dark"] table thead th {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* Loading spinner text */
+[data-theme="dark"] .loading {
+    color: var(--text-secondary);
+}
+
+/* Empty state */
+[data-theme="dark"] .empty-state h3 {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .empty-state p {
+    color: var(--text-secondary);
 }

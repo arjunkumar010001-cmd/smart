@@ -1,0 +1,408 @@
+<!-- PART 4: CHAPTER 3 — SYSTEM ANALYSIS -->
+
+<div class="page">
+    <h2 class="chapter-title">CHAPTER 3<br>SYSTEM ANALYSIS</h2>
+
+    <h3>3.1 Existing System and Drawbacks</h3>
+
+    <p>
+        The conventional recruitment process in most organizations follows a linear, predominantly
+        manual workflow:
+    </p>
+
+    <ol>
+        <li><strong>Job Posting:</strong> HR teams manually draft job descriptions and post them across multiple platforms (LinkedIn, Indeed, Naukri). Descriptions are often recycled without optimization, leading to poor candidate targeting and low-quality applicant pools.</li>
+        <li><strong>Resume Collection &amp; Screening:</strong> Resumes arrive via email or job portals in various formats (PDF, DOCX, plain text). HR personnel manually read each resume, a process that is time-intensive (averaging 7.4 seconds per resume according to eye-tracking studies by Ladders Inc., 2018) and prone to cognitive biases.</li>
+        <li><strong>Assessment:</strong> Technical assessments are typically conducted using generic quiz platforms or take-home assignments. These lack real-time code execution, adaptive difficulty, and anti-cheating mechanisms, making results unreliable for remote candidates.</li>
+        <li><strong>Interview:</strong> Human-conducted interviews suffer from inconsistency due to unstructured questions, interviewer fatigue, and unconscious biases. Scheduling across time zones adds logistical overhead.</li>
+        <li><strong>Selection &amp; Offer:</strong> Final decisions are often made without quantitative fairness analysis, relying on committee discussions that can be influenced by groupthink and seniority bias.</li>
+        <li><strong>Onboarding:</strong> Paper-based or email-based onboarding with manual document collection, physical signatures, and untracked IT provisioning, leading to delays of days to weeks.</li>
+    </ol>
+
+    <p><strong>Key Drawbacks of the Existing System:</strong></p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Drawback</th><th>Impact</th><th>Severity</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Manual resume screening</td><td>23+ hours per hire, inconsistent evaluation</td><td>Critical</td></tr>
+            <tr><td>No semantic understanding</td><td>Keyword mismatch causes qualified candidates to be filtered out</td><td>High</td></tr>
+            <tr><td>Unproctored remote assessments</td><td>Assessment integrity compromised, unfair advantage for cheaters</td><td>Critical</td></tr>
+            <tr><td>Interviewer bias</td><td>Discriminatory outcomes, reduced diversity</td><td>High</td></tr>
+            <tr><td>No fairness auditing</td><td>Legal liability, regulatory non-compliance</td><td>Critical</td></tr>
+            <tr><td>Fragmented tool ecosystem</td><td>Data silos, poor candidate experience, high subscription costs</td><td>Medium</td></tr>
+            <tr><td>Manual onboarding</td><td>Slow time-to-productivity, poor first impression</td><td>Medium</td></tr>
+        </tbody>
+    </table>
+
+    <h3>3.2 Proposed System</h3>
+
+    <p>
+        Smart Hiring addresses every drawback identified above through a unified, AI-driven
+        platform with six integrated phases:
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Phase</th><th>Existing Problem</th><th>Smart Hiring Solution</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1. Job Posting</td>
+                <td>Generic, non-optimized descriptions</td>
+                <td>LLM-powered optimization with inclusivity scoring, SEO keywords</td>
+            </tr>
+            <tr>
+                <td>2. Resume Screening</td>
+                <td>Keyword matching, manual review</td>
+                <td>SBERT semantic matching + TF-IDF + skill ontology mapping</td>
+            </tr>
+            <tr>
+                <td>3. Assessment</td>
+                <td>Static questions, no proctoring</td>
+                <td>AI-generated adaptive questions, code sandbox, 9 anti-cheat mechanisms, face detection</td>
+            </tr>
+            <tr>
+                <td>4. Interview</td>
+                <td>Human interviewer bias, scheduling overhead</td>
+                <td>AI avatar with TTS/STT, standardized evaluation, 24/7 availability</td>
+            </tr>
+            <tr>
+                <td>5. Selection</td>
+                <td>No fairness analysis</td>
+                <td>5-metric fairness audit, automated bias correction, committee overrides</td>
+            </tr>
+            <tr>
+                <td>6. Onboarding</td>
+                <td>Paper-based, slow</td>
+                <td>Digital offers, e-signatures, document verification, IT provisioning</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>
+        <strong>Advantages of the Proposed System:</strong>
+    </p>
+    <ul>
+        <li>Reduces time-to-hire from weeks to hours through automation</li>
+        <li>Eliminates vocabulary mismatch with semantic understanding (SBERT)</li>
+        <li>Ensures assessment integrity through multi-layered anti-cheating</li>
+        <li>Provides mathematically verifiable fairness with 5-metric audit engine</li>
+        <li>24/7 AI interviewer availability eliminates scheduling constraints</li>
+        <li>Single platform replaces 5+ fragmented tools</li>
+        <li>Fully deployable on free-tier cloud services for academic use</li>
+    </ul>
+
+    <h3>3.3 System Architecture</h3>
+
+    <p>
+        Smart Hiring follows a three-tier architecture pattern with clear separation of concerns:
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:15px;">Fig 3.1: System Architecture Diagram</p>
+<pre style="font-family:monospace; font-size:9pt; line-height:1.4; text-align:center;">
+┌─────────────────────────────────────────────────────────────────┐
+│                      PRESENTATION LAYER                         │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐  │
+│  │  Login /  │ │Dashboard │ │Assessment│ │  Interview Room  │  │
+│  │ Register │ │  (Admin/ │ │  Engine  │ │  (AI Avatar +    │  │
+│  │   Page   │ │ Company/ │ │ (Monaco  │ │   TTS/STT +      │  │
+│  │          │ │Candidate)│ │+ Timer + │ │   WebSocket)     │  │
+│  │          │ │          │ │FaceAPI)  │ │                  │  │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────────────┘  │
+│                HTML / CSS / JavaScript / face-api.js            │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ REST API (JSON) + WebSocket
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      APPLICATION LAYER                          │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                    Flask Application                     │   │
+│  │                (app.py — 172+ API routes)                │   │
+│  │  ┌──────────────────────────────────────────────────┐   │   │
+│  │  │                  Route Blueprints                  │   │   │
+│  │  │  auth · jobs · candidates · smart-assessments     │   │   │
+│  │  │  interviews · fairness · analytics · onboarding   │   │   │
+│  │  │  blacklist · committee · email · uploads          │   │   │
+│  │  └──────────────────────────────────────────────────┘   │   │
+│  │  ┌──────────────────────────────────────────────────┐   │   │
+│  │  │                  Service Layer                    │   │   │
+│  │  │  MLMatchingService · AIQuestionGenerator          │   │   │
+│  │  │  AIInterviewerServiceV2 · FairnessEngine          │   │   │
+│  │  │  BiasCorrection · JobOptimizer · EmailService     │   │   │
+│  │  └──────────────────────────────────────────────────┘   │   │
+│  │  ┌──────────────────────────────────────────────────┐   │   │
+│  │  │               Middleware / Security               │   │   │
+│  │  │  JWT Auth · RBAC · CORS · Rate Limiting · CSRF   │   │   │
+│  │  └──────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│  Flask 3.0 · Flask-JWT-Extended · Flask-SocketIO · Gunicorn    │
+└───────────┬─────────────────────────────────┬───────────────────┘
+            │                                 │
+            ▼                                 ▼
+┌───────────────────────┐    ┌────────────────────────────────────┐
+│      DATA LAYER       │    │        EXTERNAL SERVICES           │
+│  ┌─────────────────┐  │    │  ┌────────────┐ ┌──────────────┐  │
+│  │    MongoDB       │  │    │  │  Groq API  │ │ Piston API   │  │
+│  │  (PyMongo 4.3)  │  │    │  │ (LLaMA-3.3)│ │(Code Sandbox)│  │
+│  │                 │  │    │  └────────────┘ └──────────────┘  │
+│  │  Collections:   │  │    │  ┌────────────┐ ┌──────────────┐  │
+│  │  · users        │  │    │  │ Claude API │ │  Judge0 API  │  │
+│  │  · jobs         │  │    │  │ (Fallback) │ │  (Fallback)  │  │
+│  │  · applications │  │    │  └────────────┘ └──────────────┘  │
+│  │  · smart_session│  │    │  ┌────────────┐ ┌──────────────┐  │
+│  │  · interviews   │  │    │  │ OpenAI API │ │  SMTP Email  │  │
+│  │  · fairness_    │  │    │  │ (Fallback) │ │  (Offers +   │  │
+│  │    audits       │  │    │  └────────────┘ │   Alerts)    │  │
+│  │  · onboarding   │  │    │                 └──────────────┘  │
+│  │  · blacklist    │  │    │  ┌──────────────────────────────┐  │
+│  └─────────────────┘  │    │  │  Sentence-BERT (Local ML)    │  │
+│  ┌─────────────────┐  │    │  │  all-MiniLM-L6-v2 · spaCy   │  │
+│  │  File Storage   │  │    │  │  Flan-T5 · TF-IDF (sklearn)  │  │
+│  │  (uploads/)     │  │    │  └──────────────────────────────┘  │
+│  └─────────────────┘  │    └────────────────────────────────────┘
+└───────────────────────┘
+</pre>
+    </div>
+
+    <h3>3.4 Data Flow Diagrams</h3>
+
+    <p><strong>Level-0 DFD (Context Diagram):</strong></p>
+    <p>
+        The context diagram shows the system as a single process with three external entities:
+        Candidate, Recruiter/Company, and Admin.
+    </p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:15px;">Fig 3.2: Level-0 Data Flow Diagram (Context Diagram)</p>
+<pre style="font-family:monospace; font-size:9pt; line-height:1.5; text-align:center;">
+    ┌──────────┐                                    ┌──────────────┐
+    │          │── Resume, Answers, Responses ──────▶│              │
+    │Candidate │                                    │              │
+    │          │◀── Questions, Scores, Offers ──────│              │
+    └──────────┘                                    │              │
+                                                    │    SMART     │
+    ┌──────────┐                                    │   HIRING     │
+    │Recruiter/│── Job Descriptions, Rubrics ──────▶│   SYSTEM     │
+    │ Company  │                                    │              │
+    │          │◀── Rankings, Reports, Audits ──────│              │
+    └──────────┘                                    │              │
+                                                    │              │
+    ┌──────────┐                                    │              │
+    │  Admin   │── Blacklist, Config, Overrides ───▶│              │
+    │          │◀── Audit Logs, Fairness Reports ──│              │
+    └──────────┘                                    └──────────────┘
+</pre>
+    </div>
+
+    <p><strong>Level-1 DFD:</strong></p>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:15px;">Fig 3.3: Level-1 Data Flow Diagram</p>
+<pre style="font-family:monospace; font-size:9pt; line-height:1.4; text-align:center;">
+  Recruiter                                                    Candidate
+     │                                                            │
+     ▼                                                            ▼
+┌─────────┐    Job Data    ┌──────────┐   Resume    ┌──────────────┐
+│  P1:    │───────────────▶│          │◀────────────│   P2:        │
+│Job Post │                │ MongoDB  │             │Resume Refine │
+│Optimizer│                │          │             │(SBERT+TFIDF) │
+└─────────┘                │          │             └──────┬───────┘
+                           │          │                    │
+                           │          │    Match Scores     │
+                           │          │◀───────────────────┘
+                           │          │
+     ┌─────────────────────│          │──────────────────────┐
+     │                     │          │                      │
+     ▼                     │          │                      ▼
+┌──────────┐  Questions    │          │  Responses   ┌───────────┐
+│  P3:     │◀──────────────│          │─────────────▶│   P4:     │
+│Smart     │               │          │              │AI Inter-  │
+│Assessment│───Scores──────▶          │◀──Eval──────│viewer      │
+│Engine    │               │          │              └───────────┘
+└──────────┘               │          │
+                           │          │
+     ┌─────────────────────│          │──────────────────────┐
+     │                     │          │                      │
+     ▼                     │          │                      ▼
+┌──────────┐  Metrics      │          │  Offer Data  ┌───────────┐
+│  P5:     │───────────────▶          │◀─────────────│   P6:     │
+│Fairness  │               │          │              │Digital    │
+│Audit     │◀──Decisions───│          │──Onboard────▶│Onboarding │
+└──────────┘               └──────────┘              └───────────┘
+</pre>
+    </div>
+
+    <h3>3.5 Use Case Diagram</h3>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:15px;">Fig 3.4: Use Case Diagram</p>
+<pre style="font-family:monospace; font-size:9pt; line-height:1.3; text-align:center;">
+                         ┌─────────────────────────────────────────┐
+                         │           SMART HIRING SYSTEM           │
+                         │                                         │
+  ┌──────────┐          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Register / Login              │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Upload Resume                 │       │
+  │Candidate │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Take Smart Assessment         │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Attend AI Interview           │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Accept/Reject Offer           │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Complete Onboarding           │       │
+  └──────────┘          │  └──────────────────────────────┘       │
+                         │                                         │
+  ┌──────────┐          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Create/Edit Job Posting       │       │
+  │          │          │  └──────────────────────────────┘       │
+  │Recruiter/│          │  ┌──────────────────────────────┐       │
+  │ Company  │──────────│─▶│ View Ranked Candidates        │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Review Assessment Results     │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Download Recordings           │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Send Offer Letters            │       │
+  └──────────┘          │  └──────────────────────────────┘       │
+                         │                                         │
+  ┌──────────┐          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Run Fairness Audit            │       │
+  │  Admin   │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Manage Blacklist              │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Committee Override            │       │
+  │          │          │  └──────────────────────────────┘       │
+  │          │          │  ┌──────────────────────────────┐       │
+  │          │──────────│─▶│ Apply Bias Correction         │       │
+  └──────────┘          │  └──────────────────────────────┘       │
+                         └─────────────────────────────────────────┘
+</pre>
+    </div>
+
+    <h3>3.6 Entity-Relationship Diagram</h3>
+
+    <div class="diagram-box">
+        <p style="text-align:center; font-weight:bold; margin-bottom:15px;">Fig 3.5: Entity-Relationship Diagram</p>
+<pre style="font-family:monospace; font-size:9pt; line-height:1.3; text-align:center;">
+┌─────────────┐       ┌──────────────┐       ┌─────────────────┐
+│    USERS     │       │     JOBS     │       │  APPLICATIONS   │
+│─────────────│       │──────────────│       │─────────────────│
+│ _id (PK)    │       │ _id (PK)     │       │ _id (PK)        │
+│ name        │       │ title        │       │ candidate_id(FK)│
+│ email       │       │ description  │       │ job_id (FK)     │
+│ password    │──1:N─▶│ skills[]     │◀─N:1──│ match_score     │
+│ role        │       │ experience   │       │ status          │
+│ phone       │       │ company_id   │       │ applied_at      │
+│ created_at  │       │ salary_range │       │ resume_url      │
+└─────┬───────┘       │ posted_at    │       └────────┬────────┘
+      │               └──────────────┘                │
+      │                                               │
+      │ 1:N                                      1:1  │
+      ▼                                               ▼
+┌──────────────────┐                    ┌──────────────────────┐
+│  SMART_SESSIONS  │                    │     INTERVIEWS       │
+│──────────────────│                    │──────────────────────│
+│ _id (PK)         │                    │ _id (PK)             │
+│ candidate_id(FK) │                    │ application_id (FK)  │
+│ job_id (FK)      │                    │ candidate_id (FK)    │
+│ questions[]      │                    │ questions[]          │
+│ answers[]        │                    │ responses[]          │
+│ score            │                    │ evaluation           │
+│ violations[]     │                    │ recording_url        │
+│ recordings[]     │                    │ score                │
+│ started_at       │                    │ status               │
+│ completed_at     │                    │ created_at           │
+│ status           │                    └──────────────────────┘
+└──────────────────┘
+                                        ┌──────────────────────┐
+┌──────────────────┐                    │   FAIRNESS_AUDITS    │
+│    ONBOARDING    │                    │──────────────────────│
+│──────────────────│                    │ _id (PK)             │
+│ _id (PK)         │                    │ job_id (FK)          │
+│ candidate_id(FK) │                    │ metrics{}            │
+│ job_id (FK)      │                    │ demographic_parity   │
+│ offer_status     │                    │ disparate_impact     │
+│ digital_sign     │                    │ equal_opportunity    │
+│ documents[]      │                    │ equalized_odds       │
+│ nda_signed       │                    │ predictive_parity    │
+│ it_setup_status  │                    │ corrections[]        │
+│ orientation_date │                    │ created_at           │
+└──────────────────┘                    └──────────────────────┘
+
+┌──────────────────┐                    ┌──────────────────────┐
+│    BLACKLIST     │                    │  COMMITTEE_OVERRIDES │
+│──────────────────│                    │──────────────────────│
+│ _id (PK)         │                    │ _id (PK)             │
+│ candidate_id(FK) │                    │ application_id (FK)  │
+│ reason           │                    │ original_score       │
+│ blacklisted_by   │                    │ override_score       │
+│ created_at       │                    │ reason               │
+│ active           │                    │ overridden_by        │
+└──────────────────┘                    │ created_at           │
+                                        └──────────────────────┘
+</pre>
+    </div>
+
+    <h3>3.7 Hardware and Software Requirements</h3>
+
+    <p><strong>Hardware Requirements:</strong></p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Component</th><th>Minimum Requirement</th><th>Recommended</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Processor</td><td>Intel Core i3 / AMD Ryzen 3</td><td>Intel Core i5 / AMD Ryzen 5 or above</td></tr>
+            <tr><td>RAM</td><td>4 GB</td><td>8 GB or above</td></tr>
+            <tr><td>Storage</td><td>2 GB free disk space</td><td>10 GB SSD</td></tr>
+            <tr><td>Network</td><td>Broadband Internet (1 Mbps)</td><td>10 Mbps or above</td></tr>
+            <tr><td>Webcam</td><td>VGA (640×480) for proctoring</td><td>HD (1280×720)</td></tr>
+            <tr><td>Microphone</td><td>Built-in or USB microphone</td><td>Noise-cancelling</td></tr>
+            <tr><td>GPU</td><td>Not required (CPU inference)</td><td>Optional for faster ML</td></tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 3.1: Hardware Requirements</p>
+
+    <p><strong>Software Requirements:</strong></p>
+
+    <table class="data-table">
+        <thead>
+            <tr><th>Software</th><th>Version</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Python</td><td>3.10+</td><td>Backend runtime</td></tr>
+            <tr><td>Flask</td><td>3.0.0</td><td>Web framework</td></tr>
+            <tr><td>MongoDB</td><td>6.0+</td><td>NoSQL database</td></tr>
+            <tr><td>PyMongo</td><td>4.3.3</td><td>MongoDB Python driver</td></tr>
+            <tr><td>Flask-JWT-Extended</td><td>4.6.0</td><td>JWT authentication</td></tr>
+            <tr><td>Flask-SocketIO</td><td>5.3.5</td><td>WebSocket for real-time features</td></tr>
+            <tr><td>sentence-transformers</td><td>3.0+</td><td>SBERT semantic matching</td></tr>
+            <tr><td>scikit-learn</td><td>1.5.2</td><td>TF-IDF vectorization, cosine similarity</td></tr>
+            <tr><td>spaCy</td><td>3.7.2</td><td>NLP, Named Entity Recognition</td></tr>
+            <tr><td>NumPy</td><td>1.26.4</td><td>Numerical computing for fairness metrics</td></tr>
+            <tr><td>Pandas</td><td>2.2.3</td><td>Data analysis and manipulation</td></tr>
+            <tr><td>PyTorch</td><td>2.0+</td><td>Deep learning backend for SBERT</td></tr>
+            <tr><td>Transformers (HuggingFace)</td><td>4.36+</td><td>Flan-T5 model for interview questions</td></tr>
+            <tr><td>face-api.js</td><td>1.7.12 (vladmandic)</td><td>Browser-based face detection</td></tr>
+            <tr><td>Monaco Editor</td><td>0.44.0</td><td>In-browser code editor</td></tr>
+            <tr><td>Web Browser</td><td>Chrome 90+ / Firefox 88+</td><td>Frontend runtime</td></tr>
+            <tr><td>Node.js (optional)</td><td>18+</td><td>Desktop app (Electron)</td></tr>
+        </tbody>
+    </table>
+    <p class="table-caption">Table 3.2: Software Requirements</p>
+</div>

@@ -11,10 +11,12 @@ import os
 import requests
 import secrets
 import logging
+import hashlib
 
 from backend.models.database import get_db
 from backend.models.user import User, Candidate
 from backend.utils.email_service import email_service
+from backend.security.encryption import decrypt_pii_fields
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('google_oauth', __name__)
@@ -181,7 +183,13 @@ def google_callback():
         db = get_db()
         users_collection = db['users']
         
-        existing_user = users_collection.find_one({'email': email})
+        # Try encrypted lookup first, then plaintext fallback
+        email_hash = hashlib.sha256(email.lower().strip().encode()).hexdigest()
+        existing_user = users_collection.find_one({'email_hash': email_hash})
+        if existing_user:
+            existing_user = decrypt_pii_fields(existing_user)
+        else:
+            existing_user = users_collection.find_one({'email': email})
         
         if existing_user:
             # User exists - log them in
@@ -386,7 +394,13 @@ def google_token_auth():
         db = get_db()
         users_collection = db['users']
         
-        existing_user = users_collection.find_one({'email': email})
+        # Try encrypted lookup first, then plaintext fallback
+        email_hash = hashlib.sha256(email.lower().strip().encode()).hexdigest()
+        existing_user = users_collection.find_one({'email_hash': email_hash})
+        if existing_user:
+            existing_user = decrypt_pii_fields(existing_user)
+        else:
+            existing_user = users_collection.find_one({'email': email})
         
         if existing_user:
             user_id = str(existing_user['_id'])

@@ -15,10 +15,24 @@ from backend.utils.sanitizer import sanitizer
 from backend.utils.rate_limiter import rate_limit
 from backend.utils.email_service import email_service
 from backend.tasks.email_tasks import send_verification_email
+from backend.security.encryption import decrypt_pii_fields
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('auth', __name__)
 bcrypt = Bcrypt()
+
+
+def find_user_by_email(users_collection, email):
+    """Find user by email, supporting both encrypted (email_hash) and plaintext storage."""
+    email_lower = email.lower().strip()
+    # Try encrypted lookup via email_hash first
+    email_hash = hashlib.sha256(email_lower.encode()).hexdigest()
+    user = users_collection.find_one({'email_hash': email_hash})
+    if user:
+        return decrypt_pii_fields(user)
+    # Fallback: plaintext email (legacy / seed accounts)
+    user = users_collection.find_one({'email': email_lower})
+    return user
 
 def validate_email(email):
     """Validate email format"""
@@ -88,7 +102,7 @@ def register():
         
         # Check if user already exists
         print(f"🔍 Checking if email exists: {email}")
-        existing_user = users_collection.find_one({'email': email})
+        existing_user = find_user_by_email(users_collection, email)
         if existing_user:
             print(f"❌ Email already registered: {email}")
             return jsonify({'error': 'Email already registered'}), 409
@@ -230,7 +244,7 @@ def login():
         
         # Find user
         print(f"🔍 Looking up user: {email}")
-        user = users_collection.find_one({'email': email})
+        user = find_user_by_email(users_collection, email)
         if not user:
             print("❌ User not found")
             return jsonify({'error': 'Invalid credentials'}), 401
@@ -384,7 +398,7 @@ def forgot_password():
         users_collection = db['users']
         
         # Check if user exists
-        user = users_collection.find_one({'email': email})
+        user = find_user_by_email(users_collection, email)
         
         if not user:
             # Return success even if user doesn't exist (security best practice)
@@ -655,15 +669,25 @@ def verify_email():
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         
         # Find user with matching email and valid verification token
+        email_hash_val = hashlib.sha256(email.encode()).hexdigest()
         user = users_collection.find_one({
-            'email': email,
+            'email_hash': email_hash_val,
             'verification_token': token_hash,
             'verification_expires': {'$gt': datetime.utcnow()}
         })
+        if not user:
+            # Fallback: try plaintext email (legacy records)
+            user = users_collection.find_one({
+                'email': email,
+                'verification_token': token_hash,
+                'verification_expires': {'$gt': datetime.utcnow()}
+            })
+        if user:
+            user = decrypt_pii_fields(user)
         
         if not user:
             # Check if email is already verified
-            existing_user = users_collection.find_one({'email': email})
+            existing_user = find_user_by_email(users_collection, email)
             if existing_user and existing_user.get('email_verified'):
                 return jsonify({
                     'message': 'Email already verified',
@@ -722,7 +746,7 @@ def resend_verification():
         users_collection = db['users']
         
         # Find user
-        user = users_collection.find_one({'email': email})
+        user = find_user_by_email(users_collection, email)
         
         if not user:
             # Security: Don't reveal if email exists
@@ -840,7 +864,7 @@ def report_fraud():
         users_collection = db['users']
         
         # Find user
-        user = users_collection.find_one({'email': email})
+        user = find_user_by_email(users_collection, email)
         
         if not user:
             # Security: Don't reveal if email exists

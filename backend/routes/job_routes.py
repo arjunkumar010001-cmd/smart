@@ -480,3 +480,31 @@ def get_job_applications(job_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/optimize-description', methods=['POST'])
+@jwt_required()
+@require_permission(Permissions.CREATE_JOB)
+def optimize_job_description_endpoint():
+    """AI-powered job description optimizer. Enhances descriptions for clarity, inclusivity, and SEO."""
+    try:
+        data = request.get_json() or {}
+        title = data.get('title', '')
+        description = data.get('description', '')
+
+        if not title or not description:
+            return jsonify({'error': 'title and description are required'}), 400
+
+        from backend.services.job_optimizer_service import optimize_job_description
+        result = optimize_job_description(
+            title=title,
+            description=description,
+            required_skills=data.get('required_skills', []),
+            job_type=data.get('job_type', 'Full-time'),
+            experience_required=data.get('experience_required', 0),
+        )
+
+        return jsonify({'success': True, **result}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

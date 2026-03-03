@@ -406,3 +406,28 @@ class EmailTemplates:
     @staticmethod
     def _account_verification(data: Dict) -> str:
         return EmailTemplates._wrap_content(f"<p>Account verification template - {data}</p>", "✉️", "Verify Account", "Verify Your Account")
+
+
+# ── Standalone helper used by onboarding_routes ──────────────────────────────
+
+def render_offer_letter_email(
+    candidate_name: str,
+    position: str,
+    company_name: str,
+    salary: str,
+    start_date: str,
+    response_deadline: str,
+) -> str:
+    """Render an offer letter HTML email using the existing template."""
+    return EmailTemplates._offer_letter({
+        "candidate_name": candidate_name,
+        "job_title": position,
+        "company_name": company_name,
+        "salary": salary,
+        "start_date": start_date,
+        "response_deadline": response_deadline,
+        "department": "As assigned",
+        "location": "As communicated",
+        "accept_url": "#",
+        "view_document_url": "#",
+    })

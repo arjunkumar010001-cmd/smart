@@ -353,13 +353,29 @@ def _anonymise_resume_text(text, name, email, phone):
     """Replace PII in resume text with comprehensive anonymised placeholders.
 
     Redacts: name, email, phone, street addresses, city/country/state,
-    college/university/school names, CGPA/GPA/percentage scores, LinkedIn/GitHub URLs,
-    and date-of-birth patterns.
+    college/university/school names, company names, CGPA/GPA/percentage scores,
+    LinkedIn/GitHub URLs, and date-of-birth patterns.
+
+    IMPORTANT: email/phone exact-value and regex replacement runs BEFORE name
+    replacement to avoid partial-name corruption of email addresses.
     """
     import re
     result = text
 
-    # --- 1. Name ---
+    # --- 1. Email (BEFORE name — name parts may exist inside emails) ---
+    if email:
+        result = result.replace(email, '[EMAIL REDACTED]')
+    result = re.sub(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', '[EMAIL REDACTED]', result)
+
+    # --- 2. Phone (BEFORE name — phone digits are safe but do it early) ---
+    if phone:
+        result = result.replace(phone, '[PHONE REDACTED]')
+    # International / Indian / US formats
+    result = re.sub(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', '[PHONE REDACTED]', result)
+    result = re.sub(r'\b\d{10}\b', '[PHONE REDACTED]', result)
+    result = re.sub(r'\+91[-.\s]?\d{5}[-.\s]?\d{5}', '[PHONE REDACTED]', result)
+
+    # --- 3. Name (after email/phone to avoid corrupting them) ---
     if name and len(name) > 1:
         for variant in [name, name.upper(), name.lower(), name.title()]:
             result = result.replace(variant, '[CANDIDATE]')
@@ -368,28 +384,18 @@ def _anonymise_resume_text(text, name, email, phone):
             if len(part) > 2:
                 result = re.sub(r'\b' + re.escape(part) + r'\b', '[REDACTED]', result, flags=re.IGNORECASE)
 
-    # --- 2. Email ---
-    if email:
-        result = result.replace(email, '[EMAIL REDACTED]')
-    result = re.sub(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', '[EMAIL REDACTED]', result)
-
-    # --- 3. Phone ---
-    if phone:
-        result = result.replace(phone, '[PHONE REDACTED]')
-    # International / Indian / US formats
-    result = re.sub(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', '[PHONE REDACTED]', result)
-    result = re.sub(r'\b\d{10}\b', '[PHONE REDACTED]', result)
-    result = re.sub(r'\+91[-.\s]?\d{5}[-.\s]?\d{5}', '[PHONE REDACTED]', result)
-
-    # --- 4. Street addresses ---
+    # --- 4. Street addresses (including Indian-style: "No. 12, 2nd Cross, ..." / "H.No ...") ---
     result = re.sub(
         r'\d{1,5}\s[\w\s]{3,40}(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Court|Ct|Place|Pl)\.?'
         r'(?:\s*,?\s*[\w\s]+,?\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)?',
         '[ADDRESS REDACTED]', result, flags=re.IGNORECASE)
+    result = re.sub(
+        r'(?:H\.?\s*No\.?|No\.?|Plot|Flat|Door)\s*[\d/\-]+[\w\s,\-]{5,60}',
+        '[ADDRESS REDACTED]', result, flags=re.IGNORECASE)
 
     # --- 5. City / State / Country ---
     _CITIES = (
-        'Mumbai|Delhi|Bangalore|Bengaluru|Hyderabad|Chennai|Kolkata|Pune|Ahmedabad|Jaipur|Lucknow|Kanpur|Nagpur|Indore|Thane|Bhopal|'
+        'Mumbai|Bombay|Delhi|Bangalore|Bengaluru|Hyderabad|Chennai|Kolkata|Pune|Ahmedabad|Jaipur|Lucknow|Kanpur|Nagpur|Indore|Thane|Bhopal|'
         'Visakhapatnam|Patna|Vadodara|Ghaziabad|Ludhiana|Agra|Nashik|Faridabad|Meerut|Rajkot|Varanasi|Srinagar|Aurangabad|'
         'Coimbatore|Madurai|Kochi|Trivandrum|Thiruvananthapuram|Noida|Gurgaon|Gurugram|Chandigarh|Mysore|Mysuru|Mangalore|'
         'New York|San Francisco|Los Angeles|Chicago|Houston|Seattle|Austin|Boston|London|Berlin|Toronto|Sydney|Singapore|Dubai|'
@@ -413,10 +419,14 @@ def _anonymise_resume_text(text, name, email, phone):
     result = re.sub(
         r'\b(' + _STATES + r')\s*[,\-]\s*(' + _COUNTRIES + r')\b',
         '[LOCATION REDACTED]', result, flags=re.IGNORECASE)
-    # Standalone city when preceded/followed by comma or newline (avoids false positives on skill words)
+    # Standalone city — match when city appears near a comma, newline, dash, or whitespace-bounded context
     result = re.sub(
-        r'(?:^|[,\n])\s*\b(' + _CITIES + r')\b\s*(?:[,\n]|$)',
+        r'(?:^|[,\n\-])\s*\b(' + _CITIES + r')\b\s*(?:[,\n\-]|$)',
         ' [LOCATION REDACTED] ', result, flags=re.IGNORECASE | re.MULTILINE)
+    # City after a comma (common in "Role - Company, City    Date" lines)
+    result = re.sub(
+        r',\s*\b(' + _CITIES + r')\b(?=\s|,|$)',
+        ', [LOCATION REDACTED]', result, flags=re.IGNORECASE)
     # PIN codes (Indian 6-digit)
     result = re.sub(r'\b\d{6}\b', '[PIN REDACTED]', result)
     # US ZIP codes
@@ -424,8 +434,10 @@ def _anonymise_resume_text(text, name, email, phone):
 
     # --- 6. College / University / School names ---
     _INSTITUTIONS = (
-        'IIT|Indian Institute of Technology|NIT|National Institute of Technology|IIIT|'
-        'Indian Institute of Information Technology|BITS|Birla Institute|VIT|SRM|'
+        'IIT\\s+\\w+|NIT\\s+\\w+|IIIT\\s+\\w+|BITS\\s+\\w+|'
+        'Indian Institute of Technology|National Institute of Technology|'
+        'Indian Institute of Information Technology|Birla Institute|'
+        'IIT|NIT|IIIT|BITS|VIT|SRM|'
         'Anna University|Amity|Manipal|LPU|Lovely Professional|Jadavpur|'
         'JNTU|Jawaharlal Nehru|Osmania|Savitribai Phule|Mumbai University|'
         'Delhi University|Calcutta University|Madras University|'
@@ -437,6 +449,21 @@ def _anonymise_resume_text(text, name, email, phone):
     result = re.sub(
         r'\b(' + _INSTITUTIONS + r')(?:\s*,\s*[\w\s,]+)?',
         '[INSTITUTION REDACTED]', result, flags=re.IGNORECASE)
+
+    # --- 6b. Company / Employer names ---
+    _COMPANIES = (
+        'TCS|Tata Consultancy|Infosys|Wipro|HCL|Tech Mahindra|Cognizant|'
+        'Accenture|Capgemini|IBM|Oracle|Microsoft|Google|Amazon|Meta|Facebook|'
+        'Apple|Netflix|Uber|Flipkart|Zomato|Swiggy|Paytm|Razorpay|Freshworks|'
+        'Zoho|Mindtree|Mphasis|L&T Infotech|LTIMindtree|Deloitte|PwC|EY|KPMG|'
+        'McKinsey|BCG|Bain|Goldman Sachs|JPMorgan|Morgan Stanley|Barclays|'
+        'SAP|Salesforce|Adobe|VMware|Cisco|Intel|Qualcomm|Samsung|'
+        'Reliance|Jio|Ola|BYJU|Unacademy|PhonePe|CRED|Meesho|Dunzo|'
+        'Thoughtworks|Atlassian|Shopify|Stripe|Twilio|Databricks|Snowflake'
+    )
+    result = re.sub(
+        r'\b(' + _COMPANIES + r')\b',
+        '[COMPANY REDACTED]', result, flags=re.IGNORECASE)
 
     # --- 7. CGPA / GPA / Percentage scores ---
     result = re.sub(r'\b(?:CGPA|GPA|CPI|SPI)\s*[:\-]?\s*\d+\.?\d*\s*(?:/\s*\d+\.?\d*)?', '[SCORE REDACTED]', result, flags=re.IGNORECASE)
@@ -605,15 +632,24 @@ def _generate_resume_pdf(name, email, phone, skills, resume_text):
 
         def _body_text(self, text, bold=False):
             self.set_font('Helvetica', 'B' if bold else '', 9.5)
+            self.set_x(self.l_margin)  # always reset to left margin
             clean = text.encode('latin-1', errors='replace').decode('latin-1')
             self.multi_cell(0, 4.5, clean)
 
         def _bullet_line(self, text):
             self.set_font('Helvetica', '', 9.5)
-            x = self.get_x()
-            self.cell(5, 4.5, chr(8226))  # bullet char
+            self.set_x(self.l_margin)
+            self.cell(5, 4.5, '-')  # safe latin-1 bullet
             clean = text.strip().encode('latin-1', errors='replace').decode('latin-1')
-            self.multi_cell(0, 4.5, clean)
+            if not clean:
+                self.ln(4.5)
+                return
+            avail_w = self.w - self.r_margin - self.get_x()
+            if avail_w < 20:
+                self.ln(4.5)
+                self.set_x(self.l_margin + 5)
+                avail_w = self.w - self.r_margin - self.l_margin - 5
+            self.multi_cell(avail_w, 4.5, clean)
 
         def _tag_row(self, items, per_row=6):
             """Draw skill tags in a row."""
@@ -800,7 +836,26 @@ def _generate_resume_pdf(name, email, phone, skills, resume_text):
         pdf._section_heading('Resume Content')
         clean_text = resume_text.encode('latin-1', errors='replace').decode('latin-1')
         pdf.set_font('Helvetica', '', 9.5)
+        pdf.set_x(pdf.l_margin)
         pdf.multi_cell(0, 4.5, clean_text)
+
+    # ===== BIAS-FREE HIRING FOOTER =====
+    # Add a notice at the bottom if name contains "Candidate [" (anonymised view)
+    if name.startswith('Candidate ['):
+        pdf.ln(6)
+        pdf.set_draw_color(*ResumePDF._accent)
+        pdf.set_line_width(0.3)
+        pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+        pdf.ln(3)
+        pdf.set_font('Helvetica', 'I', 7.5)
+        pdf.set_text_color(130, 130, 130)
+        pdf.set_x(pdf.l_margin)
+        notice = (
+            'CONFIDENTIAL - Bias-Free Hiring: This resume has been automatically anonymised to remove '
+            'personally identifiable information (name, contact details, institutions, locations, scores) '
+            'to support fair and unbiased candidate evaluation. Generated by Smart Hiring System.'
+        )
+        pdf.multi_cell(0, 3.5, notice.encode('latin-1', errors='replace').decode('latin-1'))
 
     return pdf.output()
 
@@ -926,6 +981,12 @@ def apply_to_job(job_id):
         
         if role != 'candidate':
             return jsonify({'error': 'Only candidates can apply to jobs'}), 403
+        
+        # ── Blacklist enforcement ──
+        from backend.routes.blacklist_routes import enforce_blacklist
+        bl = enforce_blacklist(user_id)
+        if bl:
+            return bl
         
         db = get_db()
         jobs_collection = db['jobs']
@@ -1408,9 +1469,39 @@ def update_candidate_profile():
             {'$set': {'full_name': full_name}}
         )
         
+        # Bug #6 fix: Recompute and persist completion_score on every profile save
+        completion_details = {
+            'name': bool(update_data.get('first_name') and update_data.get('last_name')),
+            'phone': bool(update_data.get('phone')),
+            'location': bool(update_data.get('location')),
+            'bio': bool(update_data.get('bio') and len(update_data.get('bio', '')) > 50),
+            'skills': bool(update_data.get('skills') and len(update_data.get('skills', [])) >= 3),
+            'experience': bool(update_data.get('experience_years')),
+            'education': bool(update_data.get('education')),
+            'resume': False  # check from DB
+        }
+        # Check resume from existing profile
+        existing = candidates_collection.find_one({'user_id': user_id})
+        if existing and (existing.get('resume_file') or existing.get('resume_uploaded')):
+            completion_details['resume'] = True
+        
+        weights = {
+            'name': 10, 'phone': 10, 'location': 10, 'bio': 15,
+            'skills': 15, 'experience': 15, 'education': 15, 'resume': 10
+        }
+        completion_score = sum(weights[k] for k, v in completion_details.items() if v)
+        
+        # Persist the score
+        candidates_collection.update_one(
+            {'user_id': user_id},
+            {'$set': {'completion_score': completion_score, 'completion_details': completion_details}}
+        )
+        
         return jsonify({
             'message': 'Profile updated successfully',
-            'profile': update_data
+            'profile': update_data,
+            'completion_score': completion_score,
+            'completion_details': completion_details
         }), 200
         
     except Exception as e:
